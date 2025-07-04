@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -83,7 +84,7 @@ public class CliCommandParser
             {
                 // Long option: --key value or --key=value
                 var (key, value) = ParseLongOption(arg, argList, ref index);
-                if (value != null)
+                if (value  is not null)
                     options.Arguments[key.ToLowerInvariant()] = value;
                 else
                     options.Flags[key.ToLowerInvariant()] = true;
@@ -92,7 +93,7 @@ public class CliCommandParser
             {
                 // Short option: -k value
                 var (key, value) = ParseShortOption(arg, argList, ref index);
-                if (value != null)
+                if (value  is not null)
                     options.Arguments[key.ToLowerInvariant()] = value;
                 else
                     options.Flags[key.ToLowerInvariant()] = true;

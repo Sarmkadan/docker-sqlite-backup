@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -93,7 +94,7 @@ public class NotificationEventListener : IBackupEventListener
 
         await SendNotificationsAsync(title, message, ct);
 
-        if (_webhookClient != null && !string.IsNullOrEmpty(_webhookUrl))
+        if (_webhookClient  is not null && !string.IsNullOrEmpty(_webhookUrl))
         {
             try
             {

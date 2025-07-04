@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -50,7 +51,7 @@ public class BackupJob
     /// </summary>
     public TimeSpan GetElapsedTime()
     {
-        if (StartedAt == null)
+        if (StartedAt  is null)
             return TimeSpan.Zero;
 
         var endTime = CompletedAt ?? DateTime.UtcNow;
