@@ -3,6 +3,8 @@
 // CTO & Software Architect
 // =============================================================================
 
+#nullable enable
+
 using Cronos;
 using DockerSqliteBackup.Configuration;
 using DockerSqliteBackup.Constants;
