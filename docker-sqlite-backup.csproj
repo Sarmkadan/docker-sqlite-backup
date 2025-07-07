@@ -1,31 +1,30 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Worker">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>DockerSqliteBackup</RootNamespace>
-    <AssemblyName>docker-sqlite-backup</AssemblyName>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
     <Version>1.0.0</Version>
     <Authors>Vladyslav Zaiets</Authors>
-    <Description>Automated SQLite backup tool with S3/local storage, scheduling, rotation, and restore verification</Description>
-    <RepositoryUrl>https://github.com/vladyslav-zaiets/docker-sqlite-backup</RepositoryUrl>
-    <License>MIT</License>
+    <PackageProjectUrl>https://github.com/zaiets/docker-sqlite-backup</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Description>Automated SQLite backup tool for .NET - scheduled snapshots, S3/local storage, rotation, restore verification</Description>
+    <RepositoryUrl>https://github.com/zaiets/docker-sqlite-backup</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
-    <PackageReference Include="System.Data.SQLite" Version="1.0.118.0" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.401.3" />
-    <PackageReference Include="Cronos" Version="0.7.1" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.400.1" />
+    <PackageReference Include="Cronos" Version="2.3.1" />
   </ItemGroup>
 
 </Project>
