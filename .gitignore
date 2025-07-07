@@ -1,0 +1,52 @@
+## Rider IDE
+.idea/
+*.sln.iml
+
+## Visual Studio Code
+.vscode/
+*.code-workspace
+
+## Visual Studio
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.sln.DotSettings.user
+packages/
+.resharper*
+
+## Build Results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+
+## Project-specific
+appsettings.Development.json
+appsettings.Local.json
+*.db
+*.db-shm
+*.db-wal
+backup-storage/
+logs/
+.env
+.env.local
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Node
+node_modules/
+npm-debug.log
+
+## Python
+__pycache__/
+*.pyc
+
+## Misc
+.config/
+.local/
