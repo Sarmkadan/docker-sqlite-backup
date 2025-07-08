@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -7,10 +7,10 @@
     <LangVersion>latest</LangVersion>
     <Version>1.0.0</Version>
     <Authors>Vladyslav Zaiets</Authors>
-    <PackageProjectUrl>https://github.com/zaiets/docker-sqlite-backup</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/sarmkadan/docker-sqlite-backup</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Description>Automated SQLite backup tool for .NET - scheduled snapshots, S3/local storage, rotation, restore verification</Description>
-    <RepositoryUrl>https://github.com/zaiets/docker-sqlite-backup</RepositoryUrl>
+    <RepositoryUrl>https://github.com/sarmkadan/docker-sqlite-backup</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
