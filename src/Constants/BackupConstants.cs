@@ -38,8 +38,8 @@ public static class BackupConstants
     public const int StorageOperationTimeoutDefault = 300; // 5 minutes
 
     // File Size Limits (in bytes)
-    public const long MaxLocalBackupSizeBytes = 10 * 1024 * 1024 * 1024; // 10 GB
-    public const long MaxS3BackupSizeBytes = 100 * 1024 * 1024 * 1024; // 100 GB
+    public const long MaxLocalBackupSizeBytes = 10L * 1024 * 1024 * 1024; // 10 GB
+    public const long MaxS3BackupSizeBytes = 100L * 1024 * 1024 * 1024; // 100 GB
     public const long CompressionThresholdDefault = 1024 * 1024; // 1 MB
 
     // Database
@@ -86,6 +86,9 @@ public static class BackupConstants
     public const int HttpStatusNotFound = 404;
     public const int HttpStatusConflict = 409;
     public const int HttpStatusUnavailable = 503;
+
+    // Application
+    public const string ApplicationVersion = "1.0.0";
 
     // User Agent String
     public const string UserAgent = "docker-sqlite-backup/1.0.0 (.NET 10.0)";

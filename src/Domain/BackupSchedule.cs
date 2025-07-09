@@ -28,6 +28,12 @@ public class BackupSchedule
     /// <summary>Gets or sets whether this schedule is active.</summary>
     public bool IsActive { get; set; } = true;
 
+    /// <summary>Gets or sets whether this schedule is enabled (alias for IsActive).</summary>
+    public bool IsEnabled { get => IsActive; set => IsActive = value; }
+
+    /// <summary>Gets or sets the next calculated run time for this schedule.</summary>
+    public DateTime? NextRunTime { get; set; }
+
     /// <summary>Gets or sets the timestamp when this schedule was created.</summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

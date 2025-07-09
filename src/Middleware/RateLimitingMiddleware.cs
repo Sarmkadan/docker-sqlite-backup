@@ -86,7 +86,7 @@ public class RateLimitContext
 /// <summary>
 /// Represents a rate limit bucket for a client.
 /// </summary>
-private class RateLimitBucket
+internal class RateLimitBucket
 {
     private readonly TimeSpan _windowDuration;
     private int _requestCount;

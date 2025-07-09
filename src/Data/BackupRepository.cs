@@ -608,6 +608,8 @@ public class BackupRepository : IBackupRepository
         };
     }
 
+    #endregion
+
     #region SQL Schema Definitions
 
     private const string CreateSchedulesTable = @"
