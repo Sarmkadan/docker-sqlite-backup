@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\docker-sqlite-backup.csproj" />
+    <ProjectReference Include="../../docker-sqlite-backup.csproj" />
   </ItemGroup>
 
 </Project>
