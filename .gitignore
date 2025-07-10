@@ -1,0 +1,63 @@
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio
+.vs/
+*.sln.iml
+*.userprefs
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+.vscode/
+*.swp
+*.swo
+
+# Rider
+.idea/
+*.sln.iml
+
+# NuGet
+*.nupkg
+*.snupkg
+*.nuget.props
+*.nuget.targets
+
+# Entity Framework
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment
+.env
+.env.local
+appsettings.Development.json
+appsettings.Production.json
+
+# Backup files
+*.bak
+*.backup
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Artifacts
+artifacts/
+backup-storage/
+restore-temp/
