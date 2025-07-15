@@ -5,30 +5,22 @@ All notable changes to Docker SQLite Backup are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - 2026-02-15
+## [2.0.0] - 2026-03-15
 
 ### Added
-- **Migration Guide**: New `docs/MIGRATION_v2.md` for upgrading from v1.0 to v2.0
-- **Port Standardization**: Application now runs on port `8080` for consistency with industry standards
-- **Enhanced Health Checks**: HEALTHCHECK directive now includes wget fallback for improved diagnostics
-- **Alpine Optimization**: Updated base images to latest .NET 10 Alpine variants for reduced footprint
+- Add async bulk import/export with streaming and progress reporting
+- Docker support with multi-stage builds
+- Health check endpoints (/health, /health/ready)
+- Integration test suite with xUnit
+- Migration guide from v1.x
 
 ### Changed
-- **Default Port**: Changed from `5000` to `8080` - requires docker-compose.yml and proxy config updates
-- **Dockerfile**: Refined health check logic with multiple command fallbacks
-- **Docker Compose**: Updated to reflect new port 8080 and alpine optimizations
-- **Dependencies**: All NuGet packages pinned to .NET 10.0.0 stable releases
+- Upgraded to .NET 10.0
+- Modern C# features (records, primary constructors)
+- Improved API consistency
 
 ### Fixed
-- **Alpine Base Image**: Corrected aspnet image from `aspnet:10.0-alpine` for production stability
-- **User Permissions**: Ensured backup user (UID 1000) has proper permissions on all volume mounts
-
-### Security
-- **Non-root User**: Application consistently runs as non-root backup user
-- **Image Size**: Reduced Docker image size through Alpine optimization
-
-### Deprecated
-- Support for port `5000` - migration path documented in `docs/MIGRATION_v2.md`
+- Various edge cases found through testing
 
 ---
 
