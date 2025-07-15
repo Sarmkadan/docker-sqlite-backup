@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -21,5 +22,5 @@ public class AppSettings
     public int MaxBackupCount { get; set; } = 10;
     public string LocalStoragePath { get; set; } = "backups";
     public bool CompressBackups { get; set; } = false;
-    public string[] NotificationEmails { get; set; } = Array.Empty<string>();
+    public string[] NotificationEmails { get; set; } = [];
 }

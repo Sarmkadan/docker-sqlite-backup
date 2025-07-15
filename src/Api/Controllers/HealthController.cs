@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -88,7 +89,7 @@ public class HealthController
     {
         try
         {
-            if (_metricsListener == null)
+            if (_metricsListener  is null)
                 return ApiResponse<object>.ErrorResponse("METRICS_UNAVAILABLE", "Metrics listener not configured");
 
             var metrics = _metricsListener.GetMetrics();

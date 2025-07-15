@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -63,7 +64,7 @@ public class ScheduleController
         try
         {
             var schedule = await _scheduleService.GetScheduleAsync(scheduleId, ct);
-            if (schedule == null)
+            if (schedule  is null)
                 return ApiResponse<object>.ErrorResponse("NOT_FOUND", $"Schedule {scheduleId} not found");
 
             return ApiResponse<object>.SuccessResponse(new
@@ -127,7 +128,7 @@ public class ScheduleController
         try
         {
             var schedule = await _scheduleService.GetScheduleAsync(scheduleId, ct);
-            if (schedule == null)
+            if (schedule  is null)
                 return ApiResponse<object>.ErrorResponse("NOT_FOUND", $"Schedule {scheduleId} not found");
 
             // Apply updates

@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -283,7 +284,7 @@ public class BackupRepository : IBackupRepository
     {
         var existing = await GetRotationPolicyAsync(policy.ScheduleId);
         
-        if (existing != null)
+        if (existing  is not null)
         {
             policy.Id = existing.Id;
             await UpdateRotationPolicyAsync(policy);
