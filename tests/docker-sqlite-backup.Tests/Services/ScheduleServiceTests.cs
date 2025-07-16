@@ -75,7 +75,7 @@ public class ScheduleServiceTests
             .Setup(r => r.CreateScheduleAsync(It.IsAny<BackupSchedule>()))
             .ReturnsAsync(schedule);
 
-        var result = await _sut.CreateScheduleAsync(schedule);
+        var result = await _sut.CreateScheduleAsync(schedule).ConfigureAwait(false);
 
         _repositoryMock.Verify(r => r.CreateScheduleAsync(It.IsAny<BackupSchedule>()), Times.Once);
         result.Should().NotBeNull();
@@ -119,7 +119,7 @@ public class ScheduleServiceTests
             .Setup(r => r.GetScheduleAsync(scheduleId))
             .ReturnsAsync(schedule);
 
-        var result = await _sut.GetScheduleAsync(scheduleId);
+        var result = await _sut.GetScheduleAsync(scheduleId).ConfigureAwait(false);
 
         result.Should().NotBeNull();
         result!.Id.Should().Be(scheduleId);
@@ -132,7 +132,7 @@ public class ScheduleServiceTests
             .Setup(r => r.GetScheduleAsync(It.IsAny<Guid>()))
             .ReturnsAsync((BackupSchedule?)null);
 
-        var result = await _sut.GetScheduleAsync(Guid.NewGuid());
+        var result = await _sut.GetScheduleAsync(Guid.NewGuid()).ConfigureAwait(false);
 
         result.Should().BeNull();
     }
@@ -156,7 +156,7 @@ public class ScheduleServiceTests
             .Setup(r => r.UpdateScheduleAsync(It.IsAny<BackupSchedule>()))
             .ReturnsAsync(schedule);
 
-        await _sut.DeactivateScheduleAsync(scheduleId);
+        await _sut.DeactivateScheduleAsync(scheduleId).ConfigureAwait(false);
 
         _repositoryMock.Verify(
             r => r.UpdateScheduleAsync(It.Is<BackupSchedule>(s => !s.IsActive)),

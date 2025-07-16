@@ -44,7 +44,7 @@ public class BackupEventPublisher : IBackupEventPublisher
         }
 
         var tasks = applicableListeners.Select(listener => HandleListenerAsync(listener, @event, cancellationToken));
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -102,7 +102,7 @@ public class BackupEventPublisher : IBackupEventPublisher
     {
         try
         {
-            await listener.HandleAsync(@event, cancellationToken);
+            await listener.HandleAsync(@event, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

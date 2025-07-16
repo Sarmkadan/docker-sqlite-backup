@@ -68,12 +68,12 @@ public class BackupService : IBackupService
                 Directory.CreateDirectory(backupDir!);
             }
 
-            await SafeCopyDatabaseAsync(schedule.DatabasePath, backupPath);
+            await SafeCopyDatabaseAsync(schedule.DatabasePath, backupPath).ConfigureAwait(false);
             _logger.LogInformation("Backup file created at {BackupPath}", backupPath);
 
             result.BackupFilePath = backupPath;
             result.BackupFileSizeBytes = new FileInfo(backupPath).Length;
-            result.Checksum = await CalculateBackupChecksumAsync(backupPath);
+            result.Checksum = await CalculateBackupChecksumAsync(backupPath).ConfigureAwait(false);
             result.Status = (int)Constants.BackupStatus.Success;
 
             _logger.LogInformation("Backup completed successfully. Size: {Size} bytes, Checksum: {Checksum}",
@@ -103,7 +103,7 @@ public class BackupService : IBackupService
     {
         using var sha256 = SHA256.Create();
         using var stream = File.OpenRead(filePath);
-        var hash = await Task.Run(() => sha256.ComputeHash(stream));
+        var hash = await Task.Run(() => sha256.ComputeHash(stream)).ConfigureAwait(false);
         return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
     }
 
@@ -112,7 +112,7 @@ public class BackupService : IBackupService
     /// </summary>
     public async Task<IEnumerable<BackupResult>> GetBackupHistoryAsync(Guid scheduleId, int limit = 10)
     {
-        return await _repository.GetBackupHistoryAsync(scheduleId, limit);
+        return await _repository.GetBackupHistoryAsync(scheduleId, limit).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -120,7 +120,7 @@ public class BackupService : IBackupService
     /// </summary>
     public async Task DeleteBackupAsync(Guid backupResultId)
     {
-        var backup = await _repository.GetBackupResultAsync(backupResultId);
+        var backup = await _repository.GetBackupResultAsync(backupResultId).ConfigureAwait(false);
         if (backup  is null)
         {
             throw new BackupException("Backup not found", backupResultId);
@@ -132,7 +132,7 @@ public class BackupService : IBackupService
             _logger.LogInformation("Deleted backup file: {FilePath}", backup.BackupFilePath);
         }
 
-        await _repository.DeleteBackupResultAsync(backupResultId);
+        await _repository.DeleteBackupResultAsync(backupResultId).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -140,7 +140,7 @@ public class BackupService : IBackupService
     /// </summary>
     public async Task<BackupResult?> GetBackupResultAsync(Guid backupResultId)
     {
-        return await _repository.GetBackupResultAsync(backupResultId);
+        return await _repository.GetBackupResultAsync(backupResultId).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -154,8 +154,8 @@ public class BackupService : IBackupService
         {
             using var source = new SqliteConnection($"Data Source={sourcePath};Mode=ReadOnly");
             using var destination = new SqliteConnection($"Data Source={destinationPath}");
-            await source.OpenAsync();
-            await destination.OpenAsync();
+            await source.OpenAsync().ConfigureAwait(false);
+            await destination.OpenAsync().ConfigureAwait(false);
             source.BackupDatabase(destination);
             _logger.LogDebug("Database backed up using SQLite Online Backup API");
         }

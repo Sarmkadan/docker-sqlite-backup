@@ -91,7 +91,7 @@ public class S3Configuration : StorageConfiguration
             }
 
             using var client = new AmazonS3Client(AccessKeyId, SecretAccessKey, config);
-            var response = await client.ListBucketsAsync();
+            var response = await client.ListBucketsAsync().ConfigureAwait(false);
             return response?.Buckets?.Any(b => b.BucketName == BucketName) ?? false;
         }
         catch

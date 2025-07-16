@@ -66,7 +66,7 @@ public sealed class BulkTransferService : IBulkTransferService, IDisposable
     {
         var jobId = Guid.NewGuid();
         var startedAt = DateTime.UtcNow;
-        var backups = await ResolveExportCandidatesAsync(request, cancellationToken);
+        var backups = await ResolveExportCandidatesAsync(request, cancellationToken).ConfigureAwait(false);
         var estimatedBytes = backups.Sum(b => b.BackupFileSizeBytes);
 
         _logger.LogInformation("Export [{JobId}]: {Count} backups, ~{Bytes:N0} bytes", jobId, backups.Count, estimatedBytes);
@@ -89,7 +89,7 @@ public sealed class BulkTransferService : IBulkTransferService, IDisposable
         {
             while (true)
             {
-                var readResult = await pipe.Reader.ReadAsync(cancellationToken);
+                var readResult = await pipe.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
                 var buffer = readResult.Buffer;
 
                 var pos = buffer.Start;
@@ -110,8 +110,8 @@ public sealed class BulkTransferService : IBulkTransferService, IDisposable
         }
         finally
         {
-            await writeCts.CancelAsync();
-            await pipe.Reader.CompleteAsync();
+            await writeCts.CancelAsync().ConfigureAwait(false);
+            await pipe.Reader.CompleteAsync().ConfigureAwait(false);
         }
 
         await writeTask;
@@ -139,7 +139,7 @@ public sealed class BulkTransferService : IBulkTransferService, IDisposable
         long totalBytesRead = 0;
 
         _logger.LogInformation("Import [{JobId}] starting, dry-run={DryRun}", jobId, request.DryRun);
-        await _eventPublisher.PublishAsync(new BulkTransferStartedEvent { JobId = jobId, Direction = "import" }, cancellationToken);
+        await _eventPublisher.PublishAsync(new BulkTransferStartedEvent { JobId = jobId, Direction = "import" }, cancellationToken).ConfigureAwait(false);
 
         using var archive = new ZipArchive(source, ZipArchiveMode.Read, leaveOpen: true);
         var entries = archive.Entries
@@ -154,10 +154,10 @@ public sealed class BulkTransferService : IBulkTransferService, IDisposable
             progress?.Report(BuildProgress(jobId, entries.Count, importedCount, skippedCount, failedCount,
                 totalBytesRead, 0, entry.Name, startedAt));
 
-            await semaphore.WaitAsync(cancellationToken);
+            await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                var (outcome, backupId, errorMessage) = await ProcessImportEntryAsync(entry, request, cancellationToken);
+                var (outcome, backupId, errorMessage) = await ProcessImportEntryAsync(entry, request, cancellationToken).ConfigureAwait(false);
                 switch (outcome)
                 {
                     case ImportOutcome.Imported when backupId.HasValue:
@@ -232,7 +232,7 @@ public sealed class BulkTransferService : IBulkTransferService, IDisposable
         var job = CreateAndRegisterJob("import");
         _ = RunJobAsync(job, async cts =>
         {
-            job.ImportResult = await ImportAsync(source, request, CreateJobProgressReporter(job), cts.Token);
+            job.ImportResult = await ImportAsync(source, request, CreateJobProgressReporter(job), cts.Token).ConfigureAwait(false);
         });
         return Task.FromResult(job);
     }
@@ -261,7 +261,7 @@ public sealed class BulkTransferService : IBulkTransferService, IDisposable
     public async Task<bool> CancelJobAsync(Guid jobId, CancellationToken cancellationToken = default)
     {
         if (!_jobCancellations.TryGetValue(jobId, out var cts)) return false;
-        await cts.CancelAsync();
+        await cts.CancelAsync().ConfigureAwait(false);
         return true;
     }
 
@@ -291,7 +291,7 @@ public sealed class BulkTransferService : IBulkTransferService, IDisposable
             using (var archive = new ZipArchive(pipeStream, ZipArchiveMode.Create, leaveOpen: true))
             {
                 if (_options.EmbedManifest && request.IncludeManifest)
-                    await WriteManifestEntryAsync(archive, backups, ct);
+                    await WriteManifestEntryAsync(archive, backups, ct).ConfigureAwait(false);
 
                 long bytesProcessed = 0;
                 var processedCount = 0;
@@ -311,7 +311,7 @@ public sealed class BulkTransferService : IBulkTransferService, IDisposable
 
                     await using (var entryStream = entry.Open())
                     await using (var fileStream = new FileStream(backup.BackupFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 81_920, useAsync: true))
-                        await fileStream.CopyToAsync(entryStream, ct);
+                        await fileStream.CopyToAsync(entryStream, ct).ConfigureAwait(false);
 
                     bytesProcessed += backup.BackupFileSizeBytes;
                     processedCount++;
@@ -320,12 +320,12 @@ public sealed class BulkTransferService : IBulkTransferService, IDisposable
                 }
             }
 
-            await pipeStream.FlushAsync(ct);
-            await writer.CompleteAsync();
+            await pipeStream.FlushAsync(ct).ConfigureAwait(false);
+            await writer.CompleteAsync().ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            await writer.CompleteAsync(ex);
+            await writer.CompleteAsync(ex).ConfigureAwait(false);
         }
     }
 
@@ -339,7 +339,7 @@ public sealed class BulkTransferService : IBulkTransferService, IDisposable
 
         var entry = archive.CreateEntry("manifest.json", CompressionLevel.Fastest);
         await using var writer = new StreamWriter(entry.Open());
-        await writer.WriteAsync(JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }));
+        await writer.WriteAsync(JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true })).ConfigureAwait(false);
     }
 
     // ── Private: import entry processor ──────────────────────────────────────
@@ -355,13 +355,13 @@ public sealed class BulkTransferService : IBulkTransferService, IDisposable
         {
             await using (var src = entry.Open())
             await using (var dst = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None, 81_920, useAsync: true))
-                await src.CopyToAsync(dst, ct);
+                await src.CopyToAsync(dst, ct).ConfigureAwait(false);
 
-            var checksum = await _backupService.CalculateBackupChecksumAsync(tempPath);
+            var checksum = await _backupService.CalculateBackupChecksumAsync(tempPath).ConfigureAwait(false);
 
             if (request.ValidateChecksums)
             {
-                var (isValid, _) = await _verificationService.PerformIntegrityCheckAsync(tempPath);
+                var (isValid, _) = await _verificationService.PerformIntegrityCheckAsync(tempPath).ConfigureAwait(false);
                 if (!isValid)
                     return (ImportOutcome.Failed, null, "SQLite integrity check failed");
             }
@@ -382,10 +382,10 @@ public sealed class BulkTransferService : IBulkTransferService, IDisposable
                 Notes = $"Bulk imported from archive: {entry.FullName}"
             };
 
-            var created = await _repository.CreateBackupResultAsync(result);
+            var created = await _repository.CreateBackupResultAsync(result).ConfigureAwait(false);
 
             if (request.RunVerification)
-                await _verificationService.VerifyBackupAsync(created, ct);
+                await _verificationService.VerifyBackupAsync(created, ct).ConfigureAwait(false);
 
             return (ImportOutcome.Imported, created.Id, null);
         }
@@ -422,7 +422,7 @@ public sealed class BulkTransferService : IBulkTransferService, IDisposable
 
         try
         {
-            await work(cts);
+            await work(cts).ConfigureAwait(false);
             job.State = TransferJobState.Completed;
         }
         catch (OperationCanceledException)
@@ -461,7 +461,7 @@ public sealed class BulkTransferService : IBulkTransferService, IDisposable
     {
         IEnumerable<Guid> scheduleIds = request.ScheduleIds?.Count > 0
             ? request.ScheduleIds
-            : (await _repository.GetAllSchedulesAsync()).Select(s => s.Id);
+            : (await _repository.GetAllSchedulesAsync()).Select(s => s.Id).ConfigureAwait(false);
 
         var limit = request.MaxItems > 0 ? request.MaxItems : 10_000;
         var all = new List<BackupResult>();
@@ -469,7 +469,7 @@ public sealed class BulkTransferService : IBulkTransferService, IDisposable
         foreach (var id in scheduleIds)
         {
             ct.ThrowIfCancellationRequested();
-            var history = await _repository.GetBackupHistoryAsync(id, limit);
+            var history = await _repository.GetBackupHistoryAsync(id, limit).ConfigureAwait(false);
             all.AddRange(history);
         }
 

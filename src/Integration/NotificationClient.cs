@@ -129,7 +129,7 @@ public class SlackNotificationClient : INotificationClient
             var json = System.Text.Json.JsonSerializer.Serialize(payload);
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
             var client = _httpClientFactory.GetClient("slack");
-            var response = await client.PostAsync(_webhookUrl!, content, cancellationToken);
+            var response = await client.PostAsync(_webhookUrl!, content, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
         }
         catch (Exception ex)

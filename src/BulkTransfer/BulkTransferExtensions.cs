@@ -87,7 +87,7 @@ public static class BulkTransferExtensions
         CancellationToken cancellationToken = default)
     {
         await foreach (var chunk in chunks.WithCancellation(cancellationToken))
-            await destination.WriteAsync(chunk.Data, cancellationToken);
+            await destination.WriteAsync(chunk.Data, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

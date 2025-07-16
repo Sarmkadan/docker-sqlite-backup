@@ -63,7 +63,7 @@ public class WebhookClient
             }
         };
 
-        await SendWithRetryAsync(webhookUrl, payload, cancellationToken);
+        await SendWithRetryAsync(webhookUrl, payload, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -89,7 +89,7 @@ public class WebhookClient
             }
         };
 
-        await SendWithRetryAsync(webhookUrl, payload, cancellationToken);
+        await SendWithRetryAsync(webhookUrl, payload, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -107,7 +107,7 @@ public class WebhookClient
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var client = _httpClientFactory.GetClient("webhooks");
-            var response = await client.PostAsync(url, content, cancellationToken);
+            var response = await client.PostAsync(url, content, cancellationToken).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
@@ -124,8 +124,8 @@ public class WebhookClient
                         response.StatusCode,
                         delay.TotalMilliseconds);
 
-                    await Task.Delay(delay, cancellationToken);
-                    await SendWithRetryAsync(url, payload, cancellationToken, attempt + 1);
+                    await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                    await SendWithRetryAsync(url, payload, cancellationToken, attempt + 1).ConfigureAwait(false);
                 }
                 else
                 {
