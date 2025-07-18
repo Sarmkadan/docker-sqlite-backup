@@ -65,6 +65,15 @@ public class BackupResult
     /// <summary>Gets or sets the S3 object key if stored in S3.</summary>
     public string? S3ObjectKey { get; set; }
 
+    /// <summary>Gets or sets the backup mode used to create this backup.</summary>
+    public int BackupMode { get; set; } = (int)Constants.BackupMode.Full;
+
+    /// <summary>
+    /// Gets or sets the ID of the full-backup result that serves as the base for this
+    /// incremental backup. Null when <see cref="BackupMode"/> is <see cref="Constants.BackupMode.Full"/>.
+    /// </summary>
+    public Guid? BaseBackupResultId { get; set; }
+
     /// <summary>
     /// Indicates whether the backup operation was successful.
     /// </summary>

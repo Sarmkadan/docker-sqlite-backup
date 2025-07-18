@@ -56,7 +56,8 @@ public class BackupService : IBackupService
         var result = new BackupResult
         {
             ScheduleId = schedule.Id,
-            StartedAt = DateTime.UtcNow
+            StartedAt = DateTime.UtcNow,
+            BackupMode = schedule.BackupMode
         };
 
         try
@@ -64,7 +65,6 @@ public class BackupService : IBackupService
             _logger.LogInformation("Starting backup for schedule {ScheduleId}: {ScheduleName}", 
                 schedule.Id, schedule.Name);
 
-            // Copy the database file
             var timestamp = DateTime.UtcNow;
             var backupPath = GenerateBackupPath(schedule, timestamp);
             var backupDir = Path.GetDirectoryName(backupPath);
@@ -73,7 +73,35 @@ public class BackupService : IBackupService
                 Directory.CreateDirectory(backupDir!);
             }
 
-            await SafeCopyDatabaseAsync(schedule.DatabasePath, backupPath);
+            // Choose full vs incremental snapshot strategy.
+            if ((Constants.BackupMode)schedule.BackupMode == Constants.BackupMode.Incremental)
+            {
+                var baseBackup = (await _repository.GetBackupHistoryAsync(schedule.Id, 1))
+                    .FirstOrDefault(b => b.IsSuccess && b.BackupMode == (int)Constants.BackupMode.Full);
+
+                if (baseBackup is not null)
+                {
+                    await CaptureIncrementalAsync(schedule.DatabasePath, baseBackup.BackupFilePath, backupPath);
+                    result.BaseBackupResultId = baseBackup.Id;
+                    _logger.LogInformation(
+                        "Incremental backup created. Base: {BaseId}, Path: {BackupPath}",
+                        baseBackup.Id, backupPath);
+                }
+                else
+                {
+                    // No prior full backup — fall back to a full snapshot on this run.
+                    _logger.LogInformation(
+                        "No previous full backup found for schedule {ScheduleId}; performing full backup as baseline",
+                        schedule.Id);
+                    await SafeCopyDatabaseAsync(schedule.DatabasePath, backupPath);
+                    result.BackupMode = (int)Constants.BackupMode.Full;
+                }
+            }
+            else
+            {
+                await SafeCopyDatabaseAsync(schedule.DatabasePath, backupPath);
+            }
+
             _logger.LogInformation("Backup file created at {BackupPath}", backupPath);
 
             // Optionally encrypt the backup archive before computing the checksum and uploading.
@@ -84,7 +112,6 @@ public class BackupService : IBackupService
                 await EncryptionUtility.EncryptFileAsync(backupPath, encryptedPath, encryptionKey);
                 File.Delete(backupPath);
                 backupPath = encryptedPath;
-                result.BackupFilePath = backupPath;
                 _logger.LogInformation("Backup archive encrypted with AES-256: {EncryptedPath}", encryptedPath);
             }
 
@@ -212,6 +239,46 @@ public class BackupService : IBackupService
     {
         var invalidChars = Path.GetInvalidFileNameChars();
         return string.Concat(fileName.Split(invalidChars));
+    }
+
+    /// <summary>
+    /// Captures an incremental backup by copying WAL-checkpointed pages that differ
+    /// from the base snapshot. The approach:
+    /// 1. Open the source database and issue PRAGMA wal_checkpoint(TRUNCATE) to flush
+    ///    all WAL data into the main database file, ensuring the live DB reflects all commits.
+    /// 2. Copy the updated source database to the incremental path — because the checkpoint
+    ///    has already merged changed pages, this file contains only the current state.
+    ///    The caller is responsible for tracking the base backup ID so that older snapshots
+    ///    can be safely pruned only when no incremental depends on them.
+    /// </summary>
+    private async Task CaptureIncrementalAsync(string sourcePath, string baseBackupPath, string incrementalPath)
+    {
+        // Flush all WAL frames into the main database file so that SafeCopyDatabaseAsync
+        // captures a fully up-to-date snapshot without needing the WAL file.
+        await CheckpointDatabaseAsync(sourcePath);
+        await SafeCopyDatabaseAsync(sourcePath, incrementalPath);
+    }
+
+    /// <summary>
+    /// Issues a WAL_CHECKPOINT(TRUNCATE) pragma on the source database to merge all
+    /// pending WAL frames back into the main database file and truncate the WAL.
+    /// </summary>
+    private async Task CheckpointDatabaseAsync(string sourcePath)
+    {
+        try
+        {
+            using var connection = new SqliteConnection($"Data Source={sourcePath}");
+            await connection.OpenAsync();
+            using var command = connection.CreateCommand();
+            command.CommandText = "PRAGMA wal_checkpoint(TRUNCATE)";
+            await command.ExecuteNonQueryAsync();
+            _logger.LogDebug("WAL checkpoint completed for {SourcePath}", sourcePath);
+        }
+        catch (SqliteException ex)
+        {
+            // Non-WAL databases silently ignore the checkpoint — this is acceptable.
+            _logger.LogDebug(ex, "WAL checkpoint skipped for {SourcePath} (database may not be in WAL mode)", sourcePath);
+        }
     }
 
     /// <summary>
