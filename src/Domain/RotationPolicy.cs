@@ -49,13 +49,18 @@ public class RotationPolicy
     /// </summary>
     public bool IsValid()
     {
-        if (MaxBackupCount < 1)
+        // MaxBackupCount of 0 means unlimited — skip count-based rotation entirely.
+        if (MaxBackupCount < 0)
             return false;
 
         if (MaxAgeDays < 1)
             return false;
 
-        if (MinimumBackupCount < 1 || MinimumBackupCount > MaxBackupCount)
+        // When MaxBackupCount is 0 (unlimited), MinimumBackupCount only needs to be positive.
+        if (MaxBackupCount > 0 && (MinimumBackupCount < 1 || MinimumBackupCount > MaxBackupCount))
+            return false;
+
+        if (MaxBackupCount == 0 && MinimumBackupCount < 1)
             return false;
 
         return true;
@@ -71,7 +76,7 @@ public class RotationPolicy
         return strategy switch
         {
             Constants.RotationStrategy.NoRotation => false,
-            Constants.RotationStrategy.MaxFileCount => totalBackupCount > MaxBackupCount && totalBackupCount > MinimumBackupCount,
+            Constants.RotationStrategy.MaxFileCount => MaxBackupCount > 0 && totalBackupCount > MaxBackupCount && totalBackupCount > MinimumBackupCount,
             Constants.RotationStrategy.MaxAge => (DateTime.UtcNow - backupDate).TotalDays > MaxAgeDays && totalBackupCount > MinimumBackupCount,
             Constants.RotationStrategy.Combined => ShouldRotateByCount(totalBackupCount) || ShouldRotateByAge(backupDate),
             _ => false
@@ -80,6 +85,10 @@ public class RotationPolicy
 
     private bool ShouldRotateByCount(int totalBackupCount)
     {
+        // MaxBackupCount of 0 means unlimited — never rotate by count.
+        if (MaxBackupCount == 0)
+            return false;
+
         return totalBackupCount > MaxBackupCount && totalBackupCount > MinimumBackupCount;
     }
 
