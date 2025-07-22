@@ -65,7 +65,7 @@ public class PipelineBuilder
                 if (middleware is Func<Task> asyncFunc)
                     await asyncFunc();
                 else if (middleware is Func<Func<Task>, Task> asyncWith)
-                    await asyncWith(() => next());
+                    await asyncWith(() => next!());
                 else if (middleware is Action syncAction)
                     syncAction();
             };
