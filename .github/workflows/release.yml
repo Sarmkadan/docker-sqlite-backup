@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Pack NuGet
+      run: dotnet pack --configuration Release --no-build --output ./nupkg
+
+    - name: Create GitHub Release
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const tag = context.ref.replace('refs/tags/', '');
+          await github.rest.repos.createRelease({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            tag_name: tag,
+            name: tag,
+            generate_release_notes: true,
+          });
+
+    - name: Upload NuGet packages as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: nuget-packages
+        path: ./nupkg/*.nupkg
+        retention-days: 30
