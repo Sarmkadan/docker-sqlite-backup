@@ -1,7 +1,4 @@
-// =============================================================================
-// Author: Vladyslav Zaiets | https://sarmkadan.com
-// CTO & Software Architect
-// =============================================================================
+// Author: Vladyslav Zaiets
 
 using DockerSqliteBackup.Configuration;
 using DockerSqliteBackup.Services;
