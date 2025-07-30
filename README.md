@@ -117,6 +117,27 @@ export BACKUP_ENCRYPTION_KEY=<output>
 dotnet test
 ```
 
+## Benchmarks
+
+This project includes a BenchmarkDotNet suite to monitor performance of critical operations like encryption and checksum generation.
+
+To run the benchmarks:
+
+```bash
+cd tests/docker-sqlite-backup.Benchmarks
+dotnet run -c Release
+```
+
+### Results
+
+| Method | Mean | Error | StdDev | Allocated |
+| :--- | :--- | :--- | :--- | :--- |
+| CalculateSha256 | 9.073 ms | 0.176 ms | 0.164 ms | 1.44 KB |
+| CalculateCrc32 | 53.566 ms | 1.059 ms | 1.177 ms | 109.99 KB |
+| GenerateQuickChecksum | 8.441 us | 0.166 us | 0.237 us | 5.76 KB |
+| Encrypt | 1.856 ms | 0.050 ms | 0.063 ms | 9.31 KB |
+| Decrypt | 2.518 ms | 0.132 ms | 0.132 ms | 23.93 KB |
+
 ## License
 
 MIT - Copyright (c) 2026 Vladyslav Zaiets
