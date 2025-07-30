@@ -26,49 +26,105 @@ public class StorageService : IStorageService
     /// <summary>
     /// Uploads a backup file to the configured storage backend.
     /// </summary>
+    /// <param name="filePath">The path to the backup file to upload.</param>
+    /// <param name="config">The storage configuration.</param>
+    /// <returns>The remote key/path where the file was uploaded.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when filePath or config is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when filePath is empty or invalid.</exception>
+    /// <exception cref="StorageException">Thrown when upload fails.</exception>
     public async Task<string> UploadBackupAsync(string filePath, StorageConfiguration config)
     {
+        if (filePath == null)
+        {
+            throw new ArgumentNullException(nameof(filePath));
+        }
+
+        if (config == null)
+        {
+            throw new ArgumentNullException(nameof(config));
+        }
+
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            throw new ArgumentException(nameof(filePath), "File path cannot be null or whitespace.");
+        }
+
         if (!File.Exists(filePath))
         {
             throw new LocalStorageException($"File not found: {filePath}");
         }
 
-        switch (config)
+        try
         {
-            case S3Configuration s3Config:
-                return await UploadToS3Async(filePath, s3Config);
-            case AzureConfiguration azureConfig:
-                return await UploadToAzureAsync(filePath, azureConfig);
-            case LocalStorageConfiguration localConfig:
-                return UploadToLocal(filePath, localConfig);
-            default:
-                throw new StorageException($"Unknown storage configuration type: {config.GetType().Name}");
+            switch (config)
+            {
+                case S3Configuration s3Config:
+                    return await UploadToS3Async(filePath, s3Config);
+                case AzureConfiguration azureConfig:
+                    return await UploadToAzureAsync(filePath, azureConfig);
+                case LocalStorageConfiguration localConfig:
+                    return UploadToLocal(filePath, localConfig);
+                default:
+                    throw new StorageException($"Unknown storage configuration type: {config.GetType().Name}");
+            }
+        }
+        catch (Exception ex) when (ex is not StorageException)
+        {
+            throw new StorageException("Failed to upload backup to storage", ex);
         }
     }
 
     /// <summary>
     /// Downloads a backup file from storage to a local temporary location.
     /// </summary>
+    /// <param name="storagePath">The remote path/key of the backup file.</param>
+    /// <param name="config">The storage configuration.</param>
+    /// <returns>The path to the downloaded file.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when storagePath or config is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when storagePath is empty or invalid.</exception>
+    /// <exception cref="StorageException">Thrown when download fails.</exception>
     public async Task<string> DownloadBackupAsync(string storagePath, StorageConfiguration config)
     {
-        var tempFile = Path.Combine(Path.GetTempPath(), Path.GetFileName(storagePath));
-
-        switch (config)
+        if (storagePath == null)
         {
-            case S3Configuration s3Config:
-                await DownloadFromS3Async(storagePath, tempFile, s3Config);
-                break;
-            case AzureConfiguration azureConfig:
-                await DownloadFromAzureAsync(storagePath, tempFile, azureConfig);
-                break;
-            case LocalStorageConfiguration:
-                File.Copy(storagePath, tempFile, overwrite: true);
-                break;
-            default:
-                throw new StorageException($"Unknown storage configuration type: {config.GetType().Name}");
+            throw new ArgumentNullException(nameof(storagePath));
         }
 
-        return tempFile;
+        if (config == null)
+        {
+            throw new ArgumentNullException(nameof(config));
+        }
+
+        if (string.IsNullOrWhiteSpace(storagePath))
+        {
+            throw new ArgumentException(nameof(storagePath), "Storage path cannot be null or whitespace.");
+        }
+
+        var tempFile = Path.Combine(Path.GetTempPath(), Path.GetFileName(storagePath));
+
+        try
+        {
+            switch (config)
+            {
+                case S3Configuration s3Config:
+                    await DownloadFromS3Async(storagePath, tempFile, s3Config);
+                    break;
+                case AzureConfiguration azureConfig:
+                    await DownloadFromAzureAsync(storagePath, tempFile, azureConfig);
+                    break;
+                case LocalStorageConfiguration:
+                    File.Copy(storagePath, tempFile, overwrite: true);
+                    break;
+                default:
+                    throw new StorageException($"Unknown storage configuration type: {config.GetType().Name}");
+            }
+
+            return tempFile;
+        }
+        catch (Exception ex) when (ex is not StorageException)
+        {
+            throw new StorageException("Failed to download backup from storage", ex);
+        }
     }
 
     /// <summary>

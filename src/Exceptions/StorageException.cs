@@ -6,7 +6,7 @@ namespace DockerSqliteBackup.Exceptions;
 /// <summary>
 /// Exception thrown for storage-related errors.
 /// </summary>
-public class StorageException : Exception
+public class StorageException : DockerSqliteBackupException
 {
     /// <summary>Gets the storage type that failed.</summary>
     public string? StorageType { get; }
