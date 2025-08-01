@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="docker-sqlite-backup.csproj" />
+  <Project Path="tests/docker-sqlite-backup.Tests/docker-sqlite-backup.Tests.csproj" />
+</Solution>
