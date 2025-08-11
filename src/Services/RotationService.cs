@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -31,7 +32,7 @@ public class RotationService : IRotationService
     public async Task<int> ExecuteRotationAsync(Guid scheduleId)
     {
         var policy = await _repository.GetRotationPolicyAsync(scheduleId);
-        if (policy == null || policy.Strategy == (int)Constants.RotationStrategy.NoRotation)
+        if (policy  is null || policy.Strategy == (int)Constants.RotationStrategy.NoRotation)
         {
             _logger.LogInformation("No rotation policy or rotation disabled for schedule {ScheduleId}", scheduleId);
             return 0;
@@ -102,7 +103,7 @@ public class RotationService : IRotationService
         var history = await _repository.GetBackupHistoryAsync(scheduleId, int.MaxValue);
         var policy = await _repository.GetRotationPolicyAsync(scheduleId);
 
-        if (policy == null)
+        if (policy  is null)
         {
             return Enumerable.Empty<BackupResult>();
         }

@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -50,7 +51,7 @@ public class JsonOutputFormatter : IOutputFormatter
     /// </summary>
     public string Format(object? value)
     {
-        if (value == null)
+        if (value  is null)
             return "null";
 
         return JsonSerializer.Serialize(value, _options);

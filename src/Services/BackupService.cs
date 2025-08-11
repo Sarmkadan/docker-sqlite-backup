@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -119,7 +120,7 @@ public class BackupService : IBackupService
     public async Task DeleteBackupAsync(Guid backupResultId)
     {
         var backup = await _repository.GetBackupResultAsync(backupResultId);
-        if (backup == null)
+        if (backup  is null)
         {
             throw new BackupException("Backup not found", backupResultId);
         }
