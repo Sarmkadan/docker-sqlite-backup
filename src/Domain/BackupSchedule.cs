@@ -60,6 +60,15 @@ public class BackupSchedule
     public int StorageType { get; set; } = 0; // StorageType.Local
 
     /// <summary>
+    /// Gets or sets the backup mode for this schedule.
+    /// <see cref="Constants.BackupMode.Full"/> (default) captures a complete database snapshot each run.
+    /// <see cref="Constants.BackupMode.Incremental"/> captures only WAL pages changed since the last
+    /// successful backup, referencing the previous snapshot as the base. Falls back to a full backup
+    /// when no prior successful backup exists.
+    /// </summary>
+    public int BackupMode { get; set; } = (int)Constants.BackupMode.Full;
+
+    /// <summary>
     /// Gets or sets an optional storage configuration for non-local backends (e.g. S3).
     /// When set, <see cref="BackupService"/> will upload the completed backup to this
     /// backend after the local snapshot is created. Any upload failure will be surfaced
