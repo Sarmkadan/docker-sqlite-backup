@@ -5,9 +5,11 @@
 // =============================================================================
 
 using System.Security.Cryptography;
+using DockerSqliteBackup.Configuration;
 using DockerSqliteBackup.Data;
 using DockerSqliteBackup.Domain;
 using DockerSqliteBackup.Exceptions;
+using DockerSqliteBackup.Utilities;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 
@@ -20,15 +22,18 @@ public class BackupService : IBackupService
 {
     private readonly IBackupRepository _repository;
     private readonly IStorageService _storageService;
+    private readonly AppSettings _appSettings;
     private readonly ILogger<BackupService> _logger;
 
     public BackupService(
         IBackupRepository repository,
         IStorageService storageService,
+        AppSettings appSettings,
         ILogger<BackupService> logger)
     {
         _repository = repository;
         _storageService = storageService;
+        _appSettings = appSettings;
         _logger = logger;
     }
 
@@ -70,6 +75,18 @@ public class BackupService : IBackupService
 
             await SafeCopyDatabaseAsync(schedule.DatabasePath, backupPath);
             _logger.LogInformation("Backup file created at {BackupPath}", backupPath);
+
+            // Optionally encrypt the backup archive before computing the checksum and uploading.
+            var encryptionKey = ResolveEncryptionKey();
+            if (encryptionKey is not null)
+            {
+                var encryptedPath = backupPath + ".enc";
+                await EncryptionUtility.EncryptFileAsync(backupPath, encryptedPath, encryptionKey);
+                File.Delete(backupPath);
+                backupPath = encryptedPath;
+                result.BackupFilePath = backupPath;
+                _logger.LogInformation("Backup archive encrypted with AES-256: {EncryptedPath}", encryptedPath);
+            }
 
             result.BackupFilePath = backupPath;
             result.BackupFileSizeBytes = new FileInfo(backupPath).Length;
@@ -195,5 +212,36 @@ public class BackupService : IBackupService
     {
         var invalidChars = Path.GetInvalidFileNameChars();
         return string.Concat(fileName.Split(invalidChars));
+    }
+
+    /// <summary>
+    /// Returns the AES-256 encryption key if encryption is enabled, or null otherwise.
+    /// The key is sourced from the <c>BACKUP_ENCRYPTION_KEY</c> environment variable first,
+    /// then from <see cref="AppSettings.EncryptionKey"/> in configuration.
+    /// </summary>
+    private string? ResolveEncryptionKey()
+    {
+        if (!_appSettings.EnableEncryption)
+            return null;
+
+        var key = Environment.GetEnvironmentVariable("BACKUP_ENCRYPTION_KEY")
+                  ?? _appSettings.EncryptionKey;
+
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            _logger.LogWarning(
+                "Encryption is enabled but no key was found. " +
+                "Set BACKUP_ENCRYPTION_KEY or AppSettings__EncryptionKey. Skipping encryption.");
+            return null;
+        }
+
+        if (!EncryptionUtility.IsValidKey(key))
+        {
+            _logger.LogError(
+                "Encryption key is invalid (must be a Base64-encoded 32-byte value). Skipping encryption.");
+            return null;
+        }
+
+        return key;
     }
 }
