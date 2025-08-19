@@ -18,5 +18,8 @@ public enum StorageType
     S3 = 1,
 
     /// <summary>Store backups in both local and S3 (redundancy).</summary>
-    Both = 2
+    Both = 2,
+
+    /// <summary>Store backups in Azure Blob Storage.</summary>
+    Azure = 3
 }
