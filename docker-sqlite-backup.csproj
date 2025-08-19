@@ -38,7 +38,6 @@
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.400.1" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.24.0" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
     <PackageReference Include="Cronos" Version="0.13.0" />
   </ItemGroup>
 
