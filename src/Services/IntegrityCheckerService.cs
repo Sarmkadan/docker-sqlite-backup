@@ -1,8 +1,5 @@
 #nullable enable
-// =============================================================================
-// Author: Vladyslav Zaiets | https://sarmkadan.com
-// CTO & Software Architect
-// =============================================================================
+// Author: Vladyslav Zaiets
 
 using System.Text;
 using DockerSqliteBackup.Domain;
