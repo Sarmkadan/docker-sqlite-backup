@@ -1,0 +1,30 @@
+# Build artifacts
+bin/
+obj/
+*.db
+*.sqlite
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE/Editor
+.vs/
+.vscode/
+.idea/
+.editorconfig
+
+# Docker/Compose
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Misc
+*.log
+*.tmp
+*.bak
+publish/

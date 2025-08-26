@@ -17,11 +17,11 @@ services:
     container_name: sqlite-backup-dev
     restart: unless-stopped
     ports:
-      - "5000:5000"      # Application port
+      - "8080:8080"      # Application port
       - "5001:5001"      # Debug port (if needed)
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_URLS: "http://0.0.0.0:5000"
+      ASPNETCORE_URLS: "http://0.0.0.0:8080"
       DOTNET_USE_POLLING_FILE_WATCHER: "true"  # Required for file watching in containers
       AppSettings__DatabasePath: /data/app.db
       AppSettings__LocalStoragePath: /backups
@@ -38,7 +38,7 @@ services:
       - ./appsettings.json:/app/appsettings.json:ro
     command: dotnet watch run --project docker-sqlite-backup.csproj --no-launch-profile
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3

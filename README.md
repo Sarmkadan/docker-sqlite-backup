@@ -29,6 +29,22 @@ See the [examples/](examples/) directory for practical usage scenarios:
 - [IntegrationExample.cs](examples/IntegrationExample.cs) - ASP.NET DI integration
 
 
+## Docker
+
+You can run the application using Docker Compose:
+
+```bash
+docker-compose up -d
+```
+
+The application will be available at `http://localhost:8080`.
+
+For development with hot-reload enabled:
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+```
+
 ## Configuration
 
 `appsettings.json`:
