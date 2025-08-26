@@ -6,7 +6,7 @@ namespace DockerSqliteBackup.Exceptions;
 /// <summary>
 /// Exception thrown for backup verification errors.
 /// </summary>
-public class VerificationException : Exception
+public class VerificationException : DockerSqliteBackupException
 {
     /// <summary>Gets the backup ID being verified.</summary>
     public Guid? BackupId { get; }

@@ -6,7 +6,7 @@ namespace DockerSqliteBackup.Exceptions;
 /// <summary>
 /// Base exception for backup-related errors.
 /// </summary>
-public class BackupException : Exception
+public class BackupException : DockerSqliteBackupException
 {
     /// <summary>Gets or sets the backup ID associated with the error.</summary>
     public Guid? BackupId { get; }
