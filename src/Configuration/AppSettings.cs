@@ -1,5 +1,7 @@
 #nullable enable
 
+using DockerSqliteBackup.Exceptions;
+
 namespace DockerSqliteBackup.Configuration;
 
 /// <summary>

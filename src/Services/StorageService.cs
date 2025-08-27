@@ -9,6 +9,9 @@ using DockerSqliteBackup.Domain;
 using DockerSqliteBackup.Exceptions;
 using Microsoft.Extensions.Logging;
 
+using ArgumentNullException = DockerSqliteBackup.Exceptions.ArgumentNullException;
+using ArgumentException = DockerSqliteBackup.Exceptions.ArgumentException;
+
 namespace DockerSqliteBackup.Services;
 
 /// <summary>

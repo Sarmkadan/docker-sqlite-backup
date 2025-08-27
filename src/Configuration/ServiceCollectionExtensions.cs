@@ -6,6 +6,8 @@ using DockerSqliteBackup.Exceptions;
 using DockerSqliteBackup.Services;
 using Microsoft.Extensions.DependencyInjection;
 
+using ArgumentNullException = DockerSqliteBackup.Exceptions.ArgumentNullException;
+
 namespace DockerSqliteBackup.Configuration;
 
 /// <summary>
