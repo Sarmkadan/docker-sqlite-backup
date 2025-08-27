@@ -32,21 +32,50 @@ public class HealthCheckService
         var result = new HealthCheckResult();
 
         // Check storage
-        var storageHealth = CheckStorageHealth();
-        result.Components["storage"] = storageHealth;
+        try
+        {
+            var storageHealth = CheckStorageHealth();
+            result.Components["storage"] = storageHealth;
+            _logger.LogInformation("Storage health check completed: {Status}", storageHealth.IsHealthy);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to check storage health");
+            result.Components["storage"] = new ComponentHealth { IsHealthy = false, Message = "Failed to check storage health" };
+        }
 
         // Check disk space
-        var diskHealth = CheckDiskSpace();
-        result.Components["disk"] = diskHealth;
+        try
+        {
+            var diskHealth = CheckDiskSpace();
+            result.Components["disk"] = diskHealth;
+            _logger.LogInformation("Disk space check completed: {Status}", diskHealth.IsHealthy);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to check disk space");
+            result.Components["disk"] = new ComponentHealth { IsHealthy = false, Message = "Failed to check disk space" };
+        }
 
         // Check database
-        var dbHealth = CheckDatabaseHealth();
-        result.Components["database"] = dbHealth;
+        try
+        {
+            var dbHealth = CheckDatabaseHealth();
+            result.Components["database"] = dbHealth;
+            _logger.LogInformation("Database health check completed: {Status}", dbHealth.IsHealthy);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to check database health");
+            result.Components["database"] = new ComponentHealth { IsHealthy = false, Message = "Failed to check database health" };
+        }
 
         // Calculate overall status
         result.Status = result.Components.Values.All(c => c.IsHealthy) ? "healthy" : "degraded";
 
         await PublishHealthCheckEventAsync(result, cancellationToken);
+
+        _logger.LogInformation("Health check completed: {Status}", result.Status);
 
         return result;
     }

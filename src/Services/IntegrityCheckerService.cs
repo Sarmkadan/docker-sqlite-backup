@@ -38,7 +38,10 @@ public class IntegrityCheckerService : IIntegrityCheckerService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
         if (!File.Exists(databasePath))
+        {
+            _logger.LogWarning("Database file not found: {DatabasePath}", databasePath);
             throw new FileNotFoundException($"Database file not found: {databasePath}", databasePath);
+        }
 
         var started = DateTime.UtcNow;
         var report = new IntegrityReport { DatabasePath = databasePath, CheckedAt = started };
@@ -49,24 +52,64 @@ public class IntegrityCheckerService : IIntegrityCheckerService
 
         var cs = $"Data Source={databasePath};Mode=ReadOnly;";
         using var connection = new SqliteConnection(cs);
-        await connection.OpenAsync(ct);
+        try
+        {
+            await connection.OpenAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open database connection: {DatabasePath}", databasePath);
+            throw;
+        }
 
         // 1. Collect database metadata.
-        await PopulateMetadataAsync(connection, report, ct);
+        try
+        {
+            await PopulateMetadataAsync(connection, report, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to collect database metadata: {DatabasePath}", databasePath);
+            throw;
+        }
 
         // 2. Quick check — always performed.
-        (report.PassedQuickCheck, report.QuickCheckErrors) =
-            await RunPragmaCheckAsync(connection, "quick_check", ct);
+        try
+        {
+            (report.PassedQuickCheck, report.QuickCheckErrors) =
+                await RunPragmaCheckAsync(connection, "quick_check", ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to run quick check: {DatabasePath}", databasePath);
+            throw;
+        }
 
         if (fullCheck)
         {
             // 3. Full integrity check.
-            (report.PassedFullCheck, report.FullCheckErrors) =
-                await RunPragmaCheckAsync(connection, "integrity_check", ct);
+            try
+            {
+                (report.PassedFullCheck, report.FullCheckErrors) =
+                    await RunPragmaCheckAsync(connection, "integrity_check", ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to run full integrity check: {DatabasePath}", databasePath);
+                throw;
+            }
 
             // 4. Foreign key check.
-            (report.PassedForeignKeyCheck, report.ForeignKeyErrors) =
-                await RunForeignKeyCheckAsync(connection, ct);
+            try
+            {
+                (report.PassedForeignKeyCheck, report.ForeignKeyErrors) =
+                    await RunForeignKeyCheckAsync(connection, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to run foreign key check: {DatabasePath}", databasePath);
+                throw;
+            }
         }
         else
         {
