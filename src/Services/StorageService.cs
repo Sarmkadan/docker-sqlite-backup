@@ -17,7 +17,7 @@ namespace DockerSqliteBackup.Services;
 /// <summary>
 /// Service for managing backup storage operations across multiple backends.
 /// </summary>
-public class StorageService : IStorageService
+public sealed class StorageService : IStorageService
 {
     private readonly ILogger<StorageService> _logger;
 

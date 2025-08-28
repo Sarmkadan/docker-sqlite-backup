@@ -18,7 +18,7 @@ namespace DockerSqliteBackup.Services;
 ///   <item><description><c>PRAGMA foreign_key_check</c> — verifies all FK constraints are satisfied.</description></item>
 /// </list>
 /// </summary>
-public class IntegrityCheckerService : IIntegrityCheckerService
+public sealed class IntegrityCheckerService : IIntegrityCheckerService
 {
     private readonly ILogger<IntegrityCheckerService> _logger;
 

@@ -13,7 +13,7 @@ namespace DockerSqliteBackup.Services;
 /// <summary>
 /// Service for managing backup rotation and cleanup.
 /// </summary>
-public class RotationService : IRotationService
+public sealed class RotationService : IRotationService
 {
     private readonly IBackupRepository _repository;
     private readonly ILogger<RotationService> _logger;

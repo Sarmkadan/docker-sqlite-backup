@@ -18,7 +18,7 @@ namespace DockerSqliteBackup.Services;
 /// <summary>
 /// Service for verifying backup integrity and restoration.
 /// </summary>
-public class VerificationService : IVerificationService
+public sealed class VerificationService : IVerificationService
 {
     private readonly IBackupRepository _repository;
     private readonly AppSettings _appSettings;

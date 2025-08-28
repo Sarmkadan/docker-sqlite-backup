@@ -14,7 +14,7 @@ namespace DockerSqliteBackup.Services;
 /// <summary>
 /// Service for managing backup schedules.
 /// </summary>
-public class ScheduleService : IScheduleService
+public sealed class ScheduleService : IScheduleService
 {
     private readonly IBackupRepository _repository;
     private readonly ILogger<ScheduleService> _logger;
