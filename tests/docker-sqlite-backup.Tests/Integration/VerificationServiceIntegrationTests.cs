@@ -79,14 +79,12 @@ public class VerificationServiceIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task PerformIntegrityCheckAsync_NonExistentFile_ReturnsInvalidWithError()
+    public async Task PerformIntegrityCheckAsync_NonExistentFile_ThrowsFileNotFoundException()
     {
         var nonExistent = Path.Combine(_tempDir, "no-such-db.sqlite");
 
-        var (isValid, errors) = await _sut.PerformIntegrityCheckAsync(nonExistent);
-
-        isValid.Should().BeFalse();
-        errors.Should().NotBeNullOrEmpty();
+        await _sut.Invoking(s => s.PerformIntegrityCheckAsync(nonExistent))
+            .Should().ThrowAsync<FileNotFoundException>();
     }
 
     [Fact]
