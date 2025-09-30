@@ -1,0 +1,46 @@
+# =============================================================================
+# Author: Vladyslav Zaiets | https://sarmkadan.com
+# CTO & Software Architect
+# =============================================================================
+# Docker Compose configuration for local development and testing
+# Provides SQLite Backup service with persistent volumes
+
+version: '3.8'
+
+services:
+  sqlite-backup:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sqlite-backup:latest
+    container_name: sqlite-backup
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: "http://0.0.0.0:5000"
+      AppSettings__DatabasePath: /data/app.db
+      AppSettings__LocalStoragePath: /backups
+      AppSettings__MaxConcurrentBackups: "3"
+      AppSettings__BackupTimeoutSeconds: "3600"
+      AppSettings__EnableVerificationByDefault: "true"
+      AppSettings__RetentionDays: "30"
+      AppSettings__MaxBackupCount: "10"
+      Logging__LogLevel__Default: "Information"
+    volumes:
+      - ./data:/data
+      - ./backups:/backups
+      - ./appsettings.json:/app/appsettings.json:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - backup-network
+
+networks:
+  backup-network:
+    driver: bridge
