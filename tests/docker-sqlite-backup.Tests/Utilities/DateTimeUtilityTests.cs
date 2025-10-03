@@ -6,8 +6,18 @@ using Xunit;
 
 namespace DockerSqliteBackup.Tests.Utilities;
 
+/// <summary>
+/// Provides unit tests for the <see cref="DateTimeUtility"/> class.
+/// Tests various date and time utility methods including ISO 8601 formatting,
+/// parsing, display formatting, relative time calculations, duration formatting,
+/// and date manipulation functions.
+/// </summary>
 public class DateTimeUtilityTests
 {
+    /// <summary>
+    /// Tests that <see cref="DateTimeUtility.ToIso8601"/> correctly formats a UTC DateTime
+    /// in ISO 8601 round-trip format with 'Z' timezone indicator.
+    /// </summary>
     [Fact]
     public void ToIso8601_UtcDateTime_ReturnsRoundTripFormat()
     {
@@ -19,6 +29,10 @@ public class DateTimeUtilityTests
         result.Should().EndWith("Z");
     }
 
+    /// <summary>
+    /// Tests that <see cref="DateTimeUtility.TryParseIso8601"/> successfully parses a valid ISO 8601 string
+    /// and returns true with the correctly parsed DateTime.
+    /// </summary>
     [Fact]
     public void TryParseIso8601_ValidIso8601String_ReturnsTrueAndParsedDate()
     {
@@ -32,6 +46,9 @@ public class DateTimeUtilityTests
         result.Day.Should().Be(15);
     }
 
+    /// <summary>
+    /// Tests that <see cref="DateTimeUtility.TryParseIso8601"/> returns false when given an invalid date string.
+    /// </summary>
     [Fact]
     public void TryParseIso8601_InvalidString_ReturnsFalse()
     {
@@ -40,6 +57,10 @@ public class DateTimeUtilityTests
         success.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that <see cref="DateTimeUtility.FormatForDisplay"/> formats a DateTime using the default pattern
+    /// in the format "yyyy-MM-dd HH:mm:ss".
+    /// </summary>
     [Fact]
     public void FormatForDisplay_DefaultFormat_ReturnsExpectedPattern()
     {
@@ -50,6 +71,10 @@ public class DateTimeUtilityTests
         result.Should().Be("2024-03-07 14:05:09");
     }
 
+    /// <summary>
+    /// Tests that <see cref="DateTimeUtility.FormatForDisplay"/> formats a DateTime using a custom format string
+    /// provided as a parameter.
+    /// </summary>
     [Fact]
     public void FormatForDisplay_CustomFormat_ReturnsFormattedString()
     {
@@ -60,6 +85,11 @@ public class DateTimeUtilityTests
         result.Should().Be("2024/01/01");
     }
 
+    /// <summary>
+    /// Tests that <see cref="DateTimeUtility.GetRelativeTime"/> returns the correct time suffix for various time intervals.
+    /// </summary>
+    /// <param name="secondsAgo">The number of seconds in the past to test.</param>
+    /// <param name="expectedSuffix">The expected time suffix string.</param>
     [Theory]
     [InlineData(30, "s ago")]
     [InlineData(90, "m ago")]
@@ -74,6 +104,9 @@ public class DateTimeUtilityTests
         result.Should().EndWith(expectedSuffix);
     }
 
+    /// <summary>
+    /// Tests that <see cref="DateTimeUtility.GetRelativeTime"/> returns the correct "mo ago" suffix for dates approximately one month in the past.
+    /// </summary>
     [Fact]
     public void GetRelativeTime_OneMonthAgo_ReturnsMoAgoSuffix()
     {
@@ -84,6 +117,9 @@ public class DateTimeUtilityTests
         result.Should().EndWith("mo ago");
     }
 
+    /// <summary>
+    /// Tests that <see cref="DateTimeUtility.GetRelativeTime"/> returns the correct "y ago" suffix for dates approximately one year in the past.
+    /// </summary>
     [Fact]
     public void GetRelativeTime_OneYearAgo_ReturnsYAgoSuffix()
     {
@@ -94,6 +130,10 @@ public class DateTimeUtilityTests
         result.Should().EndWith("y ago");
     }
 
+    /// <summary>
+    /// Tests that <see cref="DateTimeUtility.FormatDuration"/> formats a TimeSpan of less than one minute
+    /// using the seconds format (e.g., "45s").
+    /// </summary>
     [Fact]
     public void FormatDuration_LessThanOneMinute_ReturnsSFormat()
     {
@@ -104,6 +144,10 @@ public class DateTimeUtilityTests
         result.Should().Be("45s");
     }
 
+    /// <summary>
+    /// Tests that <see cref="DateTimeUtility.FormatDuration"/> formats a TimeSpan between one and sixty minutes
+    /// using minutes and seconds format (e.g., "5m 30s").
+    /// </summary>
     [Fact]
     public void FormatDuration_BetweenOneAndSixtyMinutes_ReturnsMSFormat()
     {
@@ -114,6 +158,10 @@ public class DateTimeUtilityTests
         result.Should().Be("5m 30s");
     }
 
+    /// <summary>
+    /// Tests that <see cref="DateTimeUtility.FormatDuration"/> formats a TimeSpan between one and twenty-four hours
+    /// using hours and minutes format (e.g., "3h 15m").
+    /// </summary>
     [Fact]
     public void FormatDuration_BetweenOneAndTwentyFourHours_ReturnsHMFormat()
     {
@@ -124,6 +172,10 @@ public class DateTimeUtilityTests
         result.Should().Be("3h 15m");
     }
 
+    /// <summary>
+    /// Tests that <see cref="DateTimeUtility.FormatDuration"/> formats a TimeSpan of more than one day
+    /// using days and hours format (e.g., "2d 6h").
+    /// </summary>
     [Fact]
     public void FormatDuration_MoreThanOneDay_ReturnsDHFormat()
     {
@@ -134,6 +186,10 @@ public class DateTimeUtilityTests
         result.Should().Be("2d 6h");
     }
 
+    /// <summary>
+    /// Tests that <see cref="DateTimeUtility.GetDayStart"/> returns a DateTime with the time portion set to midnight (00:00:00)
+    /// for the given input DateTime.
+    /// </summary>
     [Fact]
     public void GetDayStart_SpecificDate_ReturnsDateWithZeroTime()
     {
@@ -147,6 +203,10 @@ public class DateTimeUtilityTests
         result.Day.Should().Be(20);
     }
 
+    /// <summary>
+    /// Tests that <see cref="DateTimeUtility.GetDayEnd"/> returns a DateTime with the time portion set to the last moment of the day (23:59:59)
+    /// for the given input DateTime.
+    /// </summary>
     [Fact]
     public void GetDayEnd_SpecificDate_ReturnsLastTickOfDay()
     {
@@ -160,6 +220,10 @@ public class DateTimeUtilityTests
         result.Day.Should().Be(20);
     }
 
+    /// <summary>
+    /// Tests that <see cref="DateTimeUtility.GetMonthStart"/> returns a DateTime representing the first day of the month
+    /// with the time portion set to midnight (00:00:00).
+    /// </summary>
     [Fact]
     public void GetMonthStart_SpecificDate_ReturnsFirstDayOfMonth()
     {
@@ -173,6 +237,10 @@ public class DateTimeUtilityTests
         result.Hour.Should().Be(0);
     }
 
+    /// <summary>
+    /// Tests that <see cref="DateTimeUtility.GetMonthEnd"/> returns a DateTime representing the last moment of the month
+    /// with the time portion set to 23:59:59.
+    /// </summary>
     [Fact]
     public void GetMonthEnd_SpecificDate_ReturnsLastMomentOfMonth()
     {
@@ -185,6 +253,10 @@ public class DateTimeUtilityTests
         result.Hour.Should().Be(23);
     }
 
+    /// <summary>
+    /// Tests that <see cref="DateTimeUtility.RoundDown"/> rounds a DateTime down to the nearest hour interval,
+    /// setting minutes and seconds to zero.
+    /// </summary>
     [Fact]
     public void RoundDown_ToHourInterval_ReturnsFlooredHour()
     {
@@ -197,6 +269,10 @@ public class DateTimeUtilityTests
         result.Second.Should().Be(0);
     }
 
+    /// <summary>
+    /// Tests that <see cref="DateTimeUtility.RoundUp"/> rounds a DateTime up to the nearest hour interval,
+    /// incrementing the hour if minutes or seconds are non-zero.
+    /// </summary>
     [Fact]
     public void RoundUp_ToHourInterval_ReturnsCeiledHour()
     {
@@ -209,6 +285,10 @@ public class DateTimeUtilityTests
         result.Second.Should().Be(0);
     }
 
+    /// <summary>
+    /// Tests that <see cref="DateTimeUtility.RoundUp"/> returns the same DateTime unchanged when it's already aligned
+    /// to the specified time interval.
+    /// </summary>
     [Fact]
     public void RoundUp_AlreadyAligned_ReturnsUnchanged()
     {
