@@ -6,10 +6,16 @@ using Xunit;
 
 namespace DockerSqliteBackup.Tests.Utilities;
 
+/// <summary>
+/// Contains unit tests for the <see cref="ChecksumUtility"/> class.
+/// </summary>
 public class ChecksumUtilityTests : IAsyncLifetime
 {
     private string _tempDir = string.Empty;
 
+    /// <summary>
+    /// Initializes the test class by creating a unique temporary directory for test files.
+    /// </summary>
     public Task InitializeAsync()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), $"checksum-tests-{Guid.NewGuid()}");
@@ -17,6 +23,9 @@ public class ChecksumUtilityTests : IAsyncLifetime
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Cleans up the test environment by deleting the temporary directory if it exists.
+    /// </summary>
     public Task DisposeAsync()
     {
         if (Directory.Exists(_tempDir))
@@ -31,6 +40,10 @@ public class ChecksumUtilityTests : IAsyncLifetime
         return path;
     }
 
+    /// <summary>
+    /// Tests that <see cref="ChecksumUtility.CalculateFileSha256Async"/> returns a deterministic hash
+    /// for two files containing identical content.
+    /// </summary>
     [Fact]
     public async Task CalculateFileSha256Async_KnownContent_ReturnsDeterministicHash()
     {
@@ -45,6 +58,10 @@ public class ChecksumUtilityTests : IAsyncLifetime
         hash1.Should().MatchRegex("^[0-9a-f]{64}$");
     }
 
+    /// <summary>
+    /// Tests that <see cref="ChecksumUtility.CalculateFileSha256Async"/> returns different hashes
+    /// for files with different content.
+    /// </summary>
     [Fact]
     public async Task CalculateFileSha256Async_DifferentContent_ReturnsDifferentHash()
     {
@@ -57,6 +74,10 @@ public class ChecksumUtilityTests : IAsyncLifetime
         hash1.Should().NotBe(hash2);
     }
 
+    /// <summary>
+    /// Tests that <see cref="ChecksumUtility.CalculateFileSha256Async"/> throws a
+    /// <see cref="FileNotFoundException"/> when the specified file does not exist.
+    /// </summary>
     [Fact]
     public async Task CalculateFileSha256Async_NonExistentFile_ThrowsFileNotFoundException()
     {
@@ -67,6 +88,10 @@ public class ChecksumUtilityTests : IAsyncLifetime
         await act.Should().ThrowAsync<FileNotFoundException>();
     }
 
+    /// <summary>
+    /// Tests that <see cref="ChecksumUtility.CalculateStringSha256"/> returns a deterministic hash
+    /// for the same string input.
+    /// </summary>
     [Fact]
     public void CalculateStringSha256_KnownInput_ReturnsDeterministicHash()
     {
@@ -77,6 +102,10 @@ public class ChecksumUtilityTests : IAsyncLifetime
         hash1.Should().HaveLength(64);
     }
 
+    /// <summary>
+    /// Tests that <see cref="ChecksumUtility.CalculateStringSha256"/> returns different hashes
+    /// for different string inputs.
+    /// </summary>
     [Fact]
     public void CalculateStringSha256_DifferentInputs_ReturnsDifferentHashes()
     {
@@ -86,6 +115,10 @@ public class ChecksumUtilityTests : IAsyncLifetime
         hash1.Should().NotBe(hash2);
     }
 
+    /// <summary>
+    /// Tests that <see cref="ChecksumUtility.VerifyFileSha256Async"/> returns true
+    /// when the provided hash matches the file's calculated hash.
+    /// </summary>
     [Fact]
     public async Task VerifyFileSha256Async_CorrectHash_ReturnsTrue()
     {
@@ -97,6 +130,10 @@ public class ChecksumUtilityTests : IAsyncLifetime
         isValid.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that <see cref="ChecksumUtility.VerifyFileSha256Async"/> returns false
+    /// when the provided hash does not match the file's calculated hash.
+    /// </summary>
     [Fact]
     public async Task VerifyFileSha256Async_WrongHash_ReturnsFalse()
     {
@@ -107,6 +144,10 @@ public class ChecksumUtilityTests : IAsyncLifetime
         isValid.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that <see cref="ChecksumUtility.VerifyFileSha256Async"/> returns true
+    /// when the provided hash matches the file's hash, regardless of casing.
+    /// </summary>
     [Fact]
     public async Task VerifyFileSha256Async_HashIsCaseInsensitive_ReturnsTrue()
     {
@@ -118,6 +159,10 @@ public class ChecksumUtilityTests : IAsyncLifetime
         isValidUpper.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that <see cref="ChecksumUtility.CalculateFileMd5Async"/> returns a deterministic hash
+    /// for a file with known content.
+    /// </summary>
     [Fact]
     public async Task CalculateFileMd5Async_KnownContent_ReturnsDeterministicHash()
     {
@@ -131,6 +176,10 @@ public class ChecksumUtilityTests : IAsyncLifetime
         hash1.Should().MatchRegex("^[0-9a-f]{32}$");
     }
 
+    /// <summary>
+    /// Tests that <see cref="ChecksumUtility.CalculateFileMd5Async"/> throws a
+    /// <see cref="FileNotFoundException"/> when the specified file does not exist.
+    /// </summary>
     [Fact]
     public async Task CalculateFileMd5Async_NonExistentFile_ThrowsFileNotFoundException()
     {
@@ -141,6 +190,10 @@ public class ChecksumUtilityTests : IAsyncLifetime
         await act.Should().ThrowAsync<FileNotFoundException>();
     }
 
+    /// <summary>
+    /// Tests that <see cref="ChecksumUtility.CalculateCollectionChecksum"/> returns the same hash
+    /// when provided with the same sequence of values.
+    /// </summary>
     [Fact]
     public void CalculateCollectionChecksum_SameValues_ReturnsSameHash()
     {
@@ -150,6 +203,10 @@ public class ChecksumUtilityTests : IAsyncLifetime
         hash1.Should().Be(hash2);
     }
 
+    /// <summary>
+    /// Tests that <see cref="ChecksumUtility.CalculateCollectionChecksum"/> returns different hashes
+    /// when provided with different values.
+    /// </summary>
     [Fact]
     public void CalculateCollectionChecksum_DifferentValues_ReturnsDifferentHash()
     {
@@ -159,6 +216,10 @@ public class ChecksumUtilityTests : IAsyncLifetime
         hash1.Should().NotBe(hash2);
     }
 
+    /// <summary>
+    /// Tests that <see cref="ChecksumUtility.GenerateQuickChecksumAsync"/> returns a consistent checksum
+    /// when called multiple times on the same file.
+    /// </summary>
     [Fact]
     public async Task GenerateQuickChecksumAsync_SameFile_ReturnsSameChecksum()
     {
@@ -171,6 +232,10 @@ public class ChecksumUtilityTests : IAsyncLifetime
         cs1.Should().HaveLength(16);
     }
 
+    /// <summary>
+    /// Tests that <see cref="ChecksumUtility.GenerateQuickChecksumAsync"/> throws a
+    /// <see cref="FileNotFoundException"/> when the specified file does not exist.
+    /// </summary>
     [Fact]
     public async Task GenerateQuickChecksumAsync_NonExistentFile_ThrowsFileNotFoundException()
     {
@@ -179,6 +244,10 @@ public class ChecksumUtilityTests : IAsyncLifetime
         await act.Should().ThrowAsync<FileNotFoundException>();
     }
 
+    /// <summary>
+    /// Tests that <see cref="ChecksumUtility.CalculateFileCrc32Async"/> returns a deterministic result
+    /// for a file with known content.
+    /// </summary>
     [Fact]
     public async Task CalculateFileCrc32Async_KnownContent_ReturnsDeterministicResult()
     {
@@ -190,6 +259,10 @@ public class ChecksumUtilityTests : IAsyncLifetime
         crc1.Should().Be(crc2);
     }
 
+    /// <summary>
+    /// Tests that <see cref="ChecksumUtility.CalculateFileCrc32Async"/> throws a
+    /// <see cref="FileNotFoundException"/> when the specified file does not exist.
+    /// </summary>
     [Fact]
     public async Task CalculateFileCrc32Async_NonExistentFile_ThrowsFileNotFoundException()
     {
