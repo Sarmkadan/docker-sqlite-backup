@@ -5,7 +5,7 @@ using DockerSqliteBackup.Constants;
 namespace DockerSqliteBackup.Domain;
 
 /// <summary>
-/// Extension methods for <see cref="BackupJob"/> providing additional functionality.
+/// Extension methods for <see cref="BackupJob"/> providing additional functionality for backup job status checks and formatting.
 /// </summary>
 public static class BackupJobExtensions
 {
@@ -14,10 +14,12 @@ public static class BackupJobExtensions
     /// </summary>
     /// <param name="job">The backup job to check.</param>
     /// <returns>True if the job completed successfully; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="job"/> is null.</exception>
     public static bool IsSuccessful(this BackupJob job)
     {
-        return job.Status == (int)BackupStatus.Success ||
-               job.Status == (int)BackupStatus.VerifiedSuccess;
+        ArgumentNullException.ThrowIfNull(job);
+
+        return job.Status is (int)BackupStatus.Success or (int)BackupStatus.VerifiedSuccess;
     }
 
     /// <summary>
@@ -25,10 +27,12 @@ public static class BackupJobExtensions
     /// </summary>
     /// <param name="job">The backup job to check.</param>
     /// <returns>True if the job failed; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="job"/> is null.</exception>
     public static bool IsFailed(this BackupJob job)
     {
-        return job.Status == (int)BackupStatus.Failed ||
-               job.Status == (int)BackupStatus.VerificationFailed;
+        ArgumentNullException.ThrowIfNull(job);
+
+        return job.Status is (int)BackupStatus.Failed or (int)BackupStatus.VerificationFailed;
     }
 
     /// <summary>
@@ -36,8 +40,11 @@ public static class BackupJobExtensions
     /// </summary>
     /// <param name="job">The backup job to check.</param>
     /// <returns>True if the job is pending; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="job"/> is null.</exception>
     public static bool IsPending(this BackupJob job)
     {
+        ArgumentNullException.ThrowIfNull(job);
+
         return job.Status == (int)BackupStatus.Pending &&
                !job.IsProcessing &&
                job.StartedAt is null;
@@ -48,10 +55,25 @@ public static class BackupJobExtensions
     /// </summary>
     /// <param name="job">The backup job to check.</param>
     /// <returns>True if the job is in progress; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="job"/> is null.</exception>
     public static bool IsInProgress(this BackupJob job)
     {
-        return job.Status == (int)BackupStatus.InProgress &&
-               job.IsProcessing;
+        ArgumentNullException.ThrowIfNull(job);
+
+        return job.Status == (int)BackupStatus.InProgress && job.IsProcessing;
+    }
+
+    /// <summary>
+    /// Determines if the backup job has been cancelled.
+    /// </summary>
+    /// <param name="job">The backup job to check.</param>
+    /// <returns>True if the job was cancelled; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="job"/> is null.</exception>
+    public static bool IsCancelled(this BackupJob job)
+    {
+        ArgumentNullException.ThrowIfNull(job);
+
+        return job.Status == (int)BackupStatus.Cancelled;
     }
 
     /// <summary>
@@ -59,8 +81,11 @@ public static class BackupJobExtensions
     /// </summary>
     /// <param name="job">The backup job.</param>
     /// <returns>A formatted string representing the elapsed time (e.g., "2m 30s").</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="job"/> is null.</exception>
     public static string GetFormattedDuration(this BackupJob job)
     {
+        ArgumentNullException.ThrowIfNull(job);
+
         var elapsed = job.GetElapsedTime();
         return FormatTimeSpan(elapsed);
     }
@@ -70,8 +95,11 @@ public static class BackupJobExtensions
     /// </summary>
     /// <param name="job">The backup job.</param>
     /// <returns>A string representing retry progress (e.g., "2/3").</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="job"/> is null.</exception>
     public static string GetRetryProgress(this BackupJob job)
     {
+        ArgumentNullException.ThrowIfNull(job);
+
         return $"{job.RetryCount}/{job.MaxRetries}";
     }
 
@@ -80,8 +108,11 @@ public static class BackupJobExtensions
     /// </summary>
     /// <param name="job">The backup job to check.</param>
     /// <returns>True if max retries exceeded; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="job"/> is null.</exception>
     public static bool HasExceededRetries(this BackupJob job)
     {
+        ArgumentNullException.ThrowIfNull(job);
+
         return job.RetryCount >= job.MaxRetries;
     }
 
@@ -90,14 +121,38 @@ public static class BackupJobExtensions
     /// </summary>
     /// <param name="job">The backup job.</param>
     /// <returns>The backup result if available; otherwise, null.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="job"/> is null.</exception>
     public static BackupResult? GetResult(this BackupJob job)
     {
+        ArgumentNullException.ThrowIfNull(job);
+
         return job.Result;
+    }
+
+    /// <summary>
+    /// Determines if the backup job has a completed status (success, verified success, failed, or cancelled).
+    /// </summary>
+    /// <param name="job">The backup job to check.</param>
+    /// <returns>True if the job has reached a terminal status; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="job"/> is null.</exception>
+    public static bool IsCompleted(this BackupJob job)
+    {
+        ArgumentNullException.ThrowIfNull(job);
+
+        return job.Status switch
+        {
+            (int)BackupStatus.Success => true,
+            (int)BackupStatus.Failed => true,
+            (int)BackupStatus.Cancelled => true,
+            (int)BackupStatus.VerifiedSuccess => true,
+            (int)BackupStatus.VerificationFailed => true,
+            _ => false
+        };
     }
 
     private static string FormatTimeSpan(TimeSpan span)
     {
-        var parts = new List<string>();
+        var parts = new List<string>(3);
 
         if (span.TotalHours >= 1)
         {
