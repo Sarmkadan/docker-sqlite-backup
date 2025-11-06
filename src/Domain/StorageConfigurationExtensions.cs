@@ -12,74 +12,62 @@ public static class StorageConfigurationExtensions
     /// </summary>
     /// <param name="configuration">The configuration to copy.</param>
     /// <returns>A new instance with the same property values.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="configuration"/> is <see langword="null"/>.</exception>
     public static StorageConfiguration DeepCopy(this StorageConfiguration configuration)
     {
-        if (configuration == null)
-        {
-            throw new ArgumentNullException(nameof(configuration));
-        }
+        ArgumentNullException.ThrowIfNull(configuration);
 
-        StorageConfiguration copy;
-        switch (configuration)
+        return configuration switch
         {
-            case LocalStorageConfiguration local:
-                copy = new LocalStorageConfiguration
-                {
-                    Id = local.Id,
-                    Name = local.Name,
-                    IsDefault = local.IsDefault,
-                    CreatedAt = local.CreatedAt,
-                    LastModifiedAt = local.LastModifiedAt,
-                    BaseDirectory = local.BaseDirectory,
-                    CreateSubdirectoriesBySchedule = local.CreateSubdirectoriesBySchedule,
-                    FilePermissions = local.FilePermissions,
-                    CompressBackups = local.CompressBackups,
-                    MinimumFreeSpaceBytes = local.MinimumFreeSpaceBytes,
-                    PreserveFileTimestamp = local.PreserveFileTimestamp
-                };
-                break;
-            case S3Configuration s3:
-                copy = new S3Configuration
-                {
-                    Id = s3.Id,
-                    Name = s3.Name,
-                    IsDefault = s3.IsDefault,
-                    CreatedAt = s3.CreatedAt,
-                    LastModifiedAt = s3.LastModifiedAt,
-                    AccessKeyId = s3.AccessKeyId,
-                    SecretAccessKey = s3.SecretAccessKey,
-                    BucketName = s3.BucketName,
-                    RegionName = s3.RegionName,
-                    ObjectKeyPrefix = s3.ObjectKeyPrefix,
-                    UseSSL = s3.UseSSL,
-                    EnableServerSideEncryption = s3.EnableServerSideEncryption,
-                    StorageClass = s3.StorageClass,
-                    CustomEndpoint = s3.CustomEndpoint,
-                    TransitionToGlacierDays = s3.TransitionToGlacierDays
-                };
-                break;
-            case AzureConfiguration azure:
-                copy = new AzureConfiguration
-                {
-                    Id = azure.Id,
-                    Name = azure.Name,
-                    IsDefault = azure.IsDefault,
-                    CreatedAt = azure.CreatedAt,
-                    LastModifiedAt = azure.LastModifiedAt,
-                    ConnectionString = azure.ConnectionString,
-                    SasUri = azure.SasUri,
-                    ContainerName = azure.ContainerName,
-                    BlobPrefix = azure.BlobPrefix,
-                    AccessTier = azure.AccessTier,
-                    EnableImmutability = azure.EnableImmutability,
-                    SoftDeleteRetentionDays = azure.SoftDeleteRetentionDays
-                };
-                break;
-            default:
-                throw new InvalidOperationException("Unknown StorageConfiguration type");
-        }
-
-        return copy;
+            LocalStorageConfiguration local => new LocalStorageConfiguration
+            {
+                Id = local.Id,
+                Name = local.Name,
+                IsDefault = local.IsDefault,
+                CreatedAt = local.CreatedAt,
+                LastModifiedAt = local.LastModifiedAt,
+                BaseDirectory = local.BaseDirectory,
+                CreateSubdirectoriesBySchedule = local.CreateSubdirectoriesBySchedule,
+                FilePermissions = local.FilePermissions,
+                CompressBackups = local.CompressBackups,
+                MinimumFreeSpaceBytes = local.MinimumFreeSpaceBytes,
+                PreserveFileTimestamp = local.PreserveFileTimestamp
+            },
+            S3Configuration s3 => new S3Configuration
+            {
+                Id = s3.Id,
+                Name = s3.Name,
+                IsDefault = s3.IsDefault,
+                CreatedAt = s3.CreatedAt,
+                LastModifiedAt = s3.LastModifiedAt,
+                AccessKeyId = s3.AccessKeyId,
+                SecretAccessKey = s3.SecretAccessKey,
+                BucketName = s3.BucketName,
+                RegionName = s3.RegionName,
+                ObjectKeyPrefix = s3.ObjectKeyPrefix,
+                UseSSL = s3.UseSSL,
+                EnableServerSideEncryption = s3.EnableServerSideEncryption,
+                StorageClass = s3.StorageClass,
+                CustomEndpoint = s3.CustomEndpoint,
+                TransitionToGlacierDays = s3.TransitionToGlacierDays
+            },
+            AzureConfiguration azure => new AzureConfiguration
+            {
+                Id = azure.Id,
+                Name = azure.Name,
+                IsDefault = azure.IsDefault,
+                CreatedAt = azure.CreatedAt,
+                LastModifiedAt = azure.LastModifiedAt,
+                ConnectionString = azure.ConnectionString,
+                SasUri = azure.SasUri,
+                ContainerName = azure.ContainerName,
+                BlobPrefix = azure.BlobPrefix,
+                AccessTier = azure.AccessTier,
+                EnableImmutability = azure.EnableImmutability,
+                SoftDeleteRetentionDays = azure.SoftDeleteRetentionDays
+            },
+            _ => throw new InvalidOperationException("Unknown StorageConfiguration type")
+        };
     }
 
     /// <summary>
@@ -87,12 +75,10 @@ public static class StorageConfigurationExtensions
     /// </summary>
     /// <param name="configuration">The configuration to update.</param>
     /// <returns>The same configuration instance for method chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="configuration"/> is <see langword="null"/>.</exception>
     public static StorageConfiguration Touch(this StorageConfiguration configuration)
     {
-        if (configuration == null)
-        {
-            throw new ArgumentNullException(nameof(configuration));
-        }
+        ArgumentNullException.ThrowIfNull(configuration);
 
         configuration.LastModifiedAt = DateTime.UtcNow;
         return configuration;
@@ -103,12 +89,10 @@ public static class StorageConfigurationExtensions
     /// </summary>
     /// <param name="configuration">The configuration to check.</param>
     /// <returns>True if cloud storage, false otherwise.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="configuration"/> is <see langword="null"/>.</exception>
     public static bool IsCloudStorage(this StorageConfiguration configuration)
     {
-        if (configuration == null)
-        {
-            throw new ArgumentNullException(nameof(configuration));
-        }
+        ArgumentNullException.ThrowIfNull(configuration);
 
         return configuration switch
         {
@@ -123,12 +107,10 @@ public static class StorageConfigurationExtensions
     /// </summary>
     /// <param name="configuration">The configuration to check.</param>
     /// <returns>True if local storage, false otherwise.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="configuration"/> is <see langword="null"/>.</exception>
     public static bool IsLocalStorage(this StorageConfiguration configuration)
     {
-        if (configuration == null)
-        {
-            throw new ArgumentNullException(nameof(configuration));
-        }
+        ArgumentNullException.ThrowIfNull(configuration);
 
         return configuration is LocalStorageConfiguration;
     }
@@ -138,12 +120,10 @@ public static class StorageConfigurationExtensions
     /// </summary>
     /// <param name="configuration">The configuration.</param>
     /// <returns>A user-friendly display name.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="configuration"/> is <see langword="null"/>.</exception>
     public static string GetDisplayName(this StorageConfiguration configuration)
     {
-        if (configuration == null)
-        {
-            throw new ArgumentNullException(nameof(configuration));
-        }
+        ArgumentNullException.ThrowIfNull(configuration);
 
         return configuration switch
         {
@@ -159,12 +139,10 @@ public static class StorageConfigurationExtensions
     /// </summary>
     /// <param name="configuration">The configuration to validate.</param>
     /// <returns>True if name is valid, false otherwise.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="configuration"/> is <see langword="null"/>.</exception>
     public static bool ValidateName(this StorageConfiguration configuration)
     {
-        if (configuration == null)
-        {
-            throw new ArgumentNullException(nameof(configuration));
-        }
+        ArgumentNullException.ThrowIfNull(configuration);
 
         return !string.IsNullOrWhiteSpace(configuration.Name);
     }
@@ -174,12 +152,10 @@ public static class StorageConfigurationExtensions
     /// </summary>
     /// <param name="configuration">The configuration.</param>
     /// <returns>The age in days, or 0 if CreatedAt is in the future.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="configuration"/> is <see langword="null"/>.</exception>
     public static int GetAgeInDays(this StorageConfiguration configuration)
     {
-        if (configuration == null)
-        {
-            throw new ArgumentNullException(nameof(configuration));
-        }
+        ArgumentNullException.ThrowIfNull(configuration);
 
         var now = DateTime.UtcNow;
         var createdAt = configuration.CreatedAt > now ? now : configuration.CreatedAt;
