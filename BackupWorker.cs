@@ -64,6 +64,11 @@ public class BackupWorker : BackgroundService
                     // Check if this schedule should run
                     if (ShouldExecuteSchedule(schedule))
                     {
+                        // Stamp the last-run time here, on the polling thread, so that
+                        // a long-running backup is not launched a second time by the next
+                        // poll iteration, and so the dictionary is only ever touched by
+                        // this thread.
+                        _scheduleLastRun[schedule.Id] = DateTime.UtcNow;
                         _ = ExecuteScheduleAsync(schedule, stoppingToken);
                     }
                 }
@@ -194,7 +199,6 @@ public class BackupWorker : BackgroundService
                     // Update schedule's last backup time
                     schedule.LastBackupAt = DateTime.UtcNow;
                     await _scheduleService.UpdateScheduleAsync(schedule);
-                    _scheduleLastRun[schedule.Id] = DateTime.UtcNow;
 
                     job.MarkCompleted((int)BackupStatus.Success);
                 }
@@ -215,6 +219,12 @@ public class BackupWorker : BackgroundService
                     schedule.Id);
                 job.MarkCompleted((int)BackupStatus.Failed);
             }
+        }
+        catch (Exception ex)
+        {
+            // This method runs fire-and-forget; any exception escaping here would be
+            // an unobserved task exception, so it must be logged instead of thrown.
+            _logger.LogError(ex, "Unexpected error while executing schedule {ScheduleId}", schedule.Id);
         }
         finally
         {

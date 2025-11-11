@@ -50,14 +50,16 @@ public static class ServiceCollectionExtensions
                 return new BackupRepository(connectionString, logger);
             });
 
-            // Register services
-            services.AddScoped<IBackupService, BackupService>();
-            services.AddScoped<IScheduleService, ScheduleService>();
-            services.AddScoped<IStorageService, StorageService>();
-            services.AddScoped<IRotationService, RotationService>();
-            services.AddScoped<IVerificationService, VerificationService>();
-            services.AddScoped<IEncryptionService, EncryptionService>();
-            services.AddScoped<IIntegrityCheckerService, IntegrityCheckerService>();
+            // Register services as singletons: they are stateless and are consumed by
+            // the singleton BackupWorker hosted service. Scoped registrations would fail
+            // scope validation at startup when the host environment is Development.
+            services.AddSingleton<IBackupService, BackupService>();
+            services.AddSingleton<IScheduleService, ScheduleService>();
+            services.AddSingleton<IStorageService, StorageService>();
+            services.AddSingleton<IRotationService, RotationService>();
+            services.AddSingleton<IVerificationService, VerificationService>();
+            services.AddSingleton<IEncryptionService, EncryptionService>();
+            services.AddSingleton<IIntegrityCheckerService, IntegrityCheckerService>();
 
             return services;
         }
