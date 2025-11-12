@@ -171,9 +171,9 @@ public sealed class VerificationService : IVerificationService
         }
 
         using var sha256 = SHA256.Create();
-        using var stream = File.OpenRead(filePath);
-        var hash = await Task.Run(() => sha256.ComputeHash(stream));
-        var calculatedChecksum = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+        await using var stream = File.OpenRead(filePath);
+        var hash = await sha256.ComputeHashAsync(stream);
+        var calculatedChecksum = Convert.ToHexStringLower(hash);
 
         return calculatedChecksum.Equals(expectedChecksum, StringComparison.OrdinalIgnoreCase);
     }

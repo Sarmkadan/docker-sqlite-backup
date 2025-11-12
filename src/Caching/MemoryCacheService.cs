@@ -11,16 +11,30 @@ namespace DockerSqliteBackup.Caching;
 /// Suitable for single-instance applications and development.
 /// Supports automatic expiration with background cleanup.
 /// </summary>
-public class MemoryCacheService : ICacheService
+public class MemoryCacheService : ICacheService, IDisposable
 {
     private readonly ConcurrentDictionary<string, CacheEntry> _cache = [];
     private readonly Timer _cleanupTimer;
     private readonly object _cleanupLock = new();
+    private bool _disposed;
 
     public MemoryCacheService(TimeSpan? cleanupInterval = null)
     {
         var interval = cleanupInterval ?? TimeSpan.FromMinutes(5);
         _cleanupTimer = new Timer(_ => CleanupExpiredEntries(), null, interval, interval);
+    }
+
+    /// <summary>
+    /// Stops the background cleanup timer and releases its resources.
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        _cleanupTimer.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>
