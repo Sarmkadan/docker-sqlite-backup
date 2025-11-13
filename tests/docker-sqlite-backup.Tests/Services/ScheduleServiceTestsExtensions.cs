@@ -16,8 +16,8 @@ public static class ScheduleServiceTestsExtensions
     /// <summary>
     /// Creates a valid backup schedule with default test values.
     /// </summary>
-    /// <param name="tests">The test instance.</param>
-    /// <returns>A valid <see cref="BackupSchedule"/> instance.</returns>
+    /// <param name="tests">The test instance used for validation.</param>
+    /// <returns>A valid <see cref="BackupSchedule"/> instance with name "Test Backup", database path "/data/test.db", cron expression "0 2 * * *", and active status.</returns>
     public static BackupSchedule CreateValidSchedule(this ScheduleServiceTests tests)
     {
         ArgumentNullException.ThrowIfNull(tests);
@@ -32,10 +32,10 @@ public static class ScheduleServiceTestsExtensions
     }
 
     /// <summary>
-    /// Creates an invalid backup schedule with empty name.
+    /// Creates an invalid backup schedule with an empty name.
     /// </summary>
-    /// <param name="tests">The test instance.</param>
-    /// <returns>An invalid <see cref="BackupSchedule"/> instance with empty name.</returns>
+    /// <param name="tests">The test instance used for validation.</param>
+    /// <returns>An invalid <see cref="BackupSchedule"/> instance with empty name, valid database path, cron expression, and active status.</returns>
     public static BackupSchedule CreateInvalidSchedule(this ScheduleServiceTests tests)
     {
         ArgumentNullException.ThrowIfNull(tests);
@@ -52,8 +52,8 @@ public static class ScheduleServiceTestsExtensions
     /// <summary>
     /// Creates a backup schedule with an invalid cron expression.
     /// </summary>
-    /// <param name="tests">The test instance.</param>
-    /// <returns>A <see cref="BackupSchedule"/> instance with invalid cron expression.</returns>
+    /// <param name="tests">The test instance used for validation.</param>
+    /// <returns>A <see cref="BackupSchedule"/> instance with valid name and database path, but invalid cron expression "invalid-cron-expression", and active status.</returns>
     public static BackupSchedule CreateScheduleWithInvalidCron(this ScheduleServiceTests tests)
     {
         ArgumentNullException.ThrowIfNull(tests);
@@ -70,9 +70,9 @@ public static class ScheduleServiceTestsExtensions
     /// <summary>
     /// Asserts that a schedule has the expected active status.
     /// </summary>
-    /// <param name="tests">The test instance.</param>
+    /// <param name="tests">The test instance used for validation.</param>
     /// <param name="schedule">The schedule to assert.</param>
-    /// <param name="expectedIsActive">The expected active status.</param>
+    /// <param name="expectedIsActive">The expected active status to verify.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="schedule"/> is null.</exception>
     public static void AssertScheduleIsActive(this ScheduleServiceTests tests, BackupSchedule schedule, bool expectedIsActive)
     {
@@ -84,9 +84,9 @@ public static class ScheduleServiceTestsExtensions
     /// <summary>
     /// Asserts that a schedule has the expected identifier.
     /// </summary>
-    /// <param name="tests">The test instance.</param>
+    /// <param name="tests">The test instance used for validation.</param>
     /// <param name="schedule">The schedule to assert.</param>
-    /// <param name="expectedId">The expected identifier.</param>
+    /// <param name="expectedId">The expected identifier to verify.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="schedule"/> is null.</exception>
     public static void AssertScheduleHasId(this ScheduleServiceTests tests, BackupSchedule schedule, Guid expectedId)
     {
@@ -98,11 +98,10 @@ public static class ScheduleServiceTestsExtensions
     /// <summary>
     /// Asserts that a schedule has the expected name.
     /// </summary>
-    /// <param name="tests">The test instance.</param>
+    /// <param name="tests">The test instance used for validation.</param>
     /// <param name="schedule">The schedule to assert.</param>
-    /// <param name="expectedName">The expected name.</param>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="schedule"/> is null.</exception>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="expectedName"/> is null.</exception>
+    /// <param name="expectedName">The expected name to verify.</param>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="schedule"/> or <paramref name="expectedName"/> is null.</exception>
     public static void AssertScheduleHasName(this ScheduleServiceTests tests, BackupSchedule schedule, string expectedName)
     {
         ArgumentNullException.ThrowIfNull(schedule);
@@ -114,11 +113,10 @@ public static class ScheduleServiceTestsExtensions
     /// <summary>
     /// Asserts that a schedule has the expected database path.
     /// </summary>
-    /// <param name="tests">The test instance.</param>
+    /// <param name="tests">The test instance used for validation.</param>
     /// <param name="schedule">The schedule to assert.</param>
-    /// <param name="expectedPath">The expected database path.</param>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="schedule"/> is null.</exception>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="expectedPath"/> is null.</exception>
+    /// <param name="expectedPath">The expected database path to verify.</param>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="schedule"/> or <paramref name="expectedPath"/> is null.</exception>
     public static void AssertScheduleHasDatabasePath(this ScheduleServiceTests tests, BackupSchedule schedule, string expectedPath)
     {
         ArgumentNullException.ThrowIfNull(schedule);
