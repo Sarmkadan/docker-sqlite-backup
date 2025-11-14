@@ -178,6 +178,48 @@ bool isNameValid = localStorage.ValidateName(); // true
 int ageInDays = localStorage.GetAgeInDays();
 ```
 
+## NotificationEventListenerExtensions
+
+The `NotificationEventListenerExtensions` class provides extension methods for `NotificationEventListener` that simplify managing notification clients, handling specific event types, and checking supported event types. It includes methods for bulk-adding notification clients, creating and handling events by type string, and efficiently checking event type support.
+
+### Usage Examples
+
+```csharp
+// Create a notification event listener
+var listener = new NotificationEventListener();
+
+// Add multiple notification clients at once
+var emailClient = new EmailNotificationClient();
+var webhookClient = new WebhookNotificationClient();
+var teamsClient = new TeamsNotificationClient();
+
+listener.AddNotificationClients(new[] { emailClient, webhookClient, teamsClient });
+
+// Add notification clients using a factory method
+listener.AddNotificationClients(() => new INotificationClient[]
+{
+    new SlackNotificationClient(),
+    new DiscordNotificationClient()
+});
+
+// Handle an event by its type string
+var backupCompletedTask = listener.HandleAsync("backup.completed", cancellationToken);
+
+// Check if the listener can handle specific event types
+bool canHandleBackup = listener.CanHandle("backup.completed"); // true
+bool canHandleUnknown = listener.CanHandle("unknown.event"); // false
+
+// Get all supported event types as a hash set for efficient lookups
+var supportedTypes = listener.GetSupportedEventTypesSet();
+if (supportedTypes.Contains("backup.failed"))
+{
+    Console.WriteLine("Listener supports backup.failed events");
+}
+
+// Check if any of multiple event types are supported
+bool canHandleAny = listener.CanHandleAny(new[] { "backup.completed", "backup.failed", "unknown.event" });
+```
+
 ## StorageException
 
 The `StorageException` class and its derived exceptions (`S3StorageException`, `LocalStorageException`, `AzureStorageException`, `InsufficientStorageException`) are thrown when storage-related operations fail. These exceptions provide detailed information about the type of storage that encountered issues, enabling better error handling and debugging.
