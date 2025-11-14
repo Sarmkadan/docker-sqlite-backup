@@ -141,6 +141,43 @@ using var subscription = publisher.SubscribeTemporarily(new MyEventListener());
 // The subscription will be automatically unsubscribed when exiting the using block
 ```
 
+## StorageConfigurationExtensions
+
+The `StorageConfigurationExtensions` class provides extension methods for `StorageConfiguration` that simplify common operations like creating deep copies, updating timestamps, checking storage types, validating names, and calculating configuration age. These methods help with configuration management, validation, and type checking when working with different storage backends (local, S3, Azure).
+
+### Usage Examples
+
+```csharp
+// Create a storage configuration
+var localStorage = new LocalStorageConfiguration
+{
+    Name = "Local Backups",
+    BaseDirectory = "/var/backups/sqlite",
+    CompressBackups = true
+};
+
+// Create a deep copy for modification
+var backupStorage = localStorage.DeepCopy();
+backupStorage.Name = "Backup Storage";
+
+// Update the LastModifiedAt timestamp
+await Task.Delay(10); // Simulate some work
+var updatedStorage = localStorage.Touch();
+
+// Check storage type
+bool isCloud = localStorage.IsCloudStorage(); // false
+bool isLocal = localStorage.IsLocalStorage(); // true
+
+// Get a display name for the configuration
+string displayName = localStorage.GetDisplayName(); // "Local Storage: Local Backups"
+
+// Validate the configuration name
+bool isNameValid = localStorage.ValidateName(); // true
+
+// Calculate how old the configuration is in days
+int ageInDays = localStorage.GetAgeInDays();
+```
+
 ## Benchmarks
 
 This project includes a BenchmarkDotNet suite to monitor performance of critical operations like encryption and checksum generation.
