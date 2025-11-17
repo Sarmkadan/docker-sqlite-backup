@@ -95,3 +95,43 @@ public void TestValidSchedule()
     ScheduleServiceTestsExtensions.AssertScheduleHasDatabasePath(schedule);
 }
 ```
+
+## StorageAdapterTestsExtensions
+
+`StorageAdapterTestsExtensions` offers a set of utilities for unit‑testing storage adapters. It helps create temporary files and directories, configure local or Azure storage adapters, and provides fluent assertions to verify file existence, content, and expected exception behavior.
+
+### Usage Example
+
+```csharp
+using DockerSqliteBackup.Tests.Services;
+
+// Create temporary resources
+string tempFile = StorageAdapterTestsExtensions.CreateTempFile;
+string tempDir  = StorageAdapterTestsExtensions.CreateTempDirectory;
+
+// Configure storage adapters
+var localConfig = StorageAdapterTestsExtensions.WithLocalStorage(tempDir);
+var azureConfig = StorageAdapterTestsExtensions.WithAzureStorage(
+    accountName: "myaccount",
+    accountKey:  "mykey",
+    container:   "backups");
+
+// Assert that a file exists and contains the expected data
+await StorageAdapterTestsExtensions.ShouldExistWithContentAsync(
+    path: tempFile,
+    expectedContent: "sample data");
+
+// Verify that an operation throws the expected local‑storage exception
+await StorageAdapterTestsExtensions.ShouldThrowLocalStorageExceptionAsync(async () =>
+{
+    // code that triggers a local storage failure, e.g. accessing a locked file
+    await File.ReadAllTextAsync(tempFile);
+});
+
+// Ensure a file does not exist
+StorageAdapterTestsExtensions.ShouldNotExist("nonexistent.file");
+
+// Verify directory existence expectations
+StorageAdapterTestsExtensions.DirectoryShouldExist(tempDir);
+StorageAdapterTestsExtensions.DirectoryShouldNotExist("some/other/dir");
+```
