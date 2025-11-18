@@ -135,3 +135,30 @@ StorageAdapterTestsExtensions.ShouldNotExist("nonexistent.file");
 StorageAdapterTestsExtensions.DirectoryShouldExist(tempDir);
 StorageAdapterTestsExtensions.DirectoryShouldNotExist("some/other/dir");
 ```
+
+## EncryptionServiceTestsExtensions
+
+The `EncryptionServiceTestsExtensions` class provides utilities for testing encryption service functionality. It includes methods to create enabled/disabled encryption services, verify encryption states, create temporary files, perform encryption/decryption operations, and validate file content integrity.
+
+### Usage Example
+
+```csharp
+// Create an encryption service with encryption enabled
+var encryptionService = EncryptionServiceTestsExtensions.CreateEnabledService();
+
+// Verify encryption is enabled
+encryptionService.ShouldBeEncryptionEnabled();
+
+// Create a temporary file with encrypted content
+string encryptedFilePath = await EncryptionServiceTestsExtensions.EncryptToTempFileAsync("sensitive-data", encryptionService);
+
+// Verify the encrypted file exists and is not empty
+EncryptionServiceTestsExtensions.ShouldExistAndNotBeEmpty(encryptedFilePath);
+
+// Decrypt and verify content round-trips correctly
+await EncryptionServiceTestsExtensions.ShouldRoundTripSuccessfullyAsync(encryptedFilePath, encryptionService);
+
+// Create a disabled service and verify encryption is disabled
+var disabledService = EncryptionServiceTestsExtensions.CreateDisabledService();
+disabledService.ShouldBeEncryptionDisabled();
+```
