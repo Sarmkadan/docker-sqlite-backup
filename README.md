@@ -1,31 +1,21 @@
 // ... rest of README content ...
-## VerificationException
+## IntegrityCheckerServiceTestsExtensions
 
-The `VerificationException` is a custom exception type that represents a verification failure during the backup process. It provides additional information about the verification failure, including the backup ID and any associated errors.
+The `IntegrityCheckerServiceTestsExtensions` class provides a set of extension methods for testing the `IntegrityCheckerService`. It offers methods for creating test databases with various characteristics and for verifying the service's behavior.
 
 ### Usage Example
 
 ```csharp
-try
-{
-    // Attempt to verify a backup
-    var verificationResult = new RestoreVerification();
-    if (!verificationResult.IsValid)
-    {
-        throw new VerificationException("Backup verification failed", verificationResult.BackupId, verificationResult.Errors);
-    }
-}
-catch (VerificationException ex)
-{
-    Console.WriteLine($"Verification failed for backup {ex.BackupId}: {ex.Message}");
-    if (ex.Errors != null)
-    {
-        Console.WriteLine("Errors:");
-        foreach (var error in ex.Errors)
-        {
-            Console.WriteLine(error);
-        }
-    }
-}
-```
+using docker_sqlite_backup.Services;
+
+// Create a test database with complex data
+var complexTestDatabase = IntegrityCheckerServiceTestsExtensions.CreateComplexTestDatabase();
+
+// Check that the service indicates the database is healthy
+var mockService = IntegrityCheckerServiceTestsExtensions.CreateMockService();
+IntegrityCheckerServiceTestsExtensions.ShouldIndicateHealthy(mockService, complexTestDatabase);
+
+// Check that the service indicates corruption in a corrupted database
+var corruptedDatabase = IntegrityCheckerServiceTestsExtensions.CreateCorruptedDatabase();
+IntegrityCheckerServiceTestsExtensions.ShouldIndicateCorruption(mockService, corruptedDatabase);
 ```
