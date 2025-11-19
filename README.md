@@ -42,3 +42,25 @@ var isValid = StringUtilityTestsExtensions.IsValidEmailForTest(validEmail);
 var parts = new[] { "apple", "banana", "cherry" };
 var joined = StringUtilityTestsExtensions.JoinReadableForTest(parts);
 ```
+
+## ValidationException
+
+The `ValidationException` class represents a custom exception for validation errors. It provides information about the parameter that caused the validation failure and a collection of error messages.
+
+### Usage Example
+
+```csharp
+using docker_sqlite_backup.Exceptions;
+
+try
+{
+    // Attempt to validate a value
+    var validator = new MyValidator();
+    validator.Validate("invalid-value");
+}
+catch (ValidationException ex)
+{
+    Console.WriteLine($"Validation failed for parameter '{ex.ParameterName}': {string.Join(", ", ex.Errors?.Select(e => e.Key + ": " + e.Value))}");
+}
+```
+```
