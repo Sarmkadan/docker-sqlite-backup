@@ -84,4 +84,24 @@ catch (ConfigurationException ex)
     Console.WriteLine($"Configuration error for key '{ex.ConfigurationKey}': {ex.Message}");
 }
 ```
+
+## BackupException
+
+The `BackupException` class represents a custom exception for backup-related errors. It provides information about the backup ID, schedule ID, and the underlying exception that caused the error.
+
+### Usage Example
+
+```csharp
+using docker_sqlite_backup.Exceptions;
+
+try
+{
+    // Attempt to perform a backup
+    var backupService = new MyBackupService();
+    backupService.Backup();
+}
+catch (BackupException ex)
+{
+    Console.WriteLine($"Backup error for backup ID '{ex.BackupId}': {ex.Message}");
+}
 ```
