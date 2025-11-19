@@ -63,4 +63,3 @@ catch (ValidationException ex)
     Console.WriteLine($"Validation failed for parameter '{ex.ParameterName}': {string.Join(", ", ex.Errors?.Select(e => e.Key + ": " + e.Value))}");
 }
 ```
-```
