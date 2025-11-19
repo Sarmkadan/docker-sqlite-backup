@@ -63,3 +63,25 @@ catch (ValidationException ex)
     Console.WriteLine($"Validation failed for parameter '{ex.ParameterName}': {string.Join(", ", ex.Errors?.Select(e => e.Key + ": " + e.Value))}");
 }
 ```
+
+## ConfigurationException
+
+The `ConfigurationException` class represents a custom exception for configuration errors. It provides information about the configuration key that caused the error and a detailed error message.
+
+### Usage Example
+
+```csharp
+using docker_sqlite_backup.Exceptions;
+
+try
+{
+    // Attempt to load a configuration value
+    var config = new MyConfig();
+    var value = config.Load("invalid-key");
+}
+catch (ConfigurationException ex)
+{
+    Console.WriteLine($"Configuration error for key '{ex.ConfigurationKey}': {ex.Message}");
+}
+```
+```
