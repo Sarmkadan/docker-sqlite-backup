@@ -1,3 +1,24 @@
+## ScheduleException
+
+The `ScheduleException` class represents a custom exception for schedule-related errors. It provides information about the schedule ID that caused the error and a detailed error message.
+
+### Usage Example
+
+```csharp
+using docker_sqlite_backup.Exceptions;
+
+try
+{
+    // Attempt to validate a schedule
+    var scheduleService = new MyScheduleService();
+    scheduleService.ValidateSchedule();
+}
+catch (ScheduleException ex)
+{
+    Console.WriteLine($"Schedule error for schedule ID '{ex.ScheduleId}': {ex.Message}");
+}
+```
+
 ## IntegrityCheckerServiceTestsExtensions
 
 The `IntegrityCheckerServiceTestsExtensions` class provides a set of extension methods for testing the `IntegrityCheckerService`. It offers methods for creating test databases with various characteristics and for verifying the service's behavior.
