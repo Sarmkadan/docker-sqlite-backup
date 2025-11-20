@@ -126,3 +126,73 @@ catch (BackupException ex)
     Console.WriteLine($"Backup error for backup ID '{ex.BackupId}': {ex.Message}");
 }
 ```
+
+## BackupEvent
+
+The `BackupEvent` class is the base class for all domain events in the backup system. It provides common event tracking properties such as `EventType`, `EventId`, `OccurredAt`, and `CorrelationId`. All backup-related events inherit from this class, including events for backup lifecycle management (started, completed, failed, retry) and schedule management (created, updated, deleted).
+
+
+### Usage Example
+
+```csharp
+using DockerSqliteBackup.Events;
+using DockerSqliteBackup.Domain;
+
+// Create a backup started event
+var startedEvent = new BackupStartedEvent
+{
+    Schedule = new BackupSchedule
+    {
+        Id = Guid.NewGuid(),
+        Name = "daily-backup",
+        SourcePath = "/data/app.db",
+        DestinationPath = "/backups/app.db",
+        ScheduleType = ScheduleType.Daily,
+        ScheduleExpression = "0 2 * * *"
+    },
+    StartTime = DateTime.UtcNow
+};
+
+Console.WriteLine($"Event Type: {startedEvent.EventType}");
+Console.WriteLine($"Event ID: {startedEvent.EventId}");
+Console.WriteLine($"Occurred At: {startedEvent.OccurredAt}");
+Console.WriteLine($"Correlation ID: {startedEvent.CorrelationId}");
+
+// Create a backup completed event
+var completedEvent = new BackupCompletedEvent
+{
+    Result = new BackupResult
+    {
+        Id = Guid.NewGuid(),
+        ScheduleId = startedEvent.Schedule.Id,
+        StartedAt = startedEvent.StartTime,
+        CompletedAt = DateTime.UtcNow,
+        Status = BackupStatus.Success,
+        SizeBytes = 1024 * 1024,
+        FilePath = "/backups/app.db.20260714"
+    },
+    Duration = TimeSpan.FromMinutes(5)
+};
+
+// Create a backup failed event
+var failedEvent = new BackupFailedEvent
+{
+    ScheduleId = startedEvent.Schedule.Id,
+    ErrorMessage = "Failed to connect to database",
+    StackTrace = "System.Data.Sqlite.SqliteException: Connection timeout"
+};
+
+// Create a schedule created event
+var scheduleCreatedEvent = new ScheduleCreatedEvent
+{
+    Schedule = new BackupSchedule
+    {
+        Id = Guid.NewGuid(),
+        Name = "weekly-archive",
+        SourcePath = "/data/archive.db",
+        DestinationPath = "/backups/archive.db",
+        ScheduleType = ScheduleType.Weekly,
+        ScheduleExpression = "0 3 * * 0"
+    }
+};
+```
