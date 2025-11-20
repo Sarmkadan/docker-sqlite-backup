@@ -82,6 +82,48 @@ bool s3IsValid = await s3StorageConfig.TestConnectionAsync();
 Console.WriteLine($"S3 storage connection test: {s3IsValid}");
 ```
 
+## BackupSchedule
+
+The `BackupSchedule` class represents a scheduled backup configuration for a SQLite database. It defines all parameters needed to schedule, execute, and manage database backups including scheduling rules, retention policies, storage options, and notification settings.
+
+### Usage Example
+
+```csharp
+using DockerSqliteBackup.Domain;
+using System;
+
+// Create a new backup schedule
+var schedule = new BackupSchedule
+{
+    Id = Guid.NewGuid(),
+    Name = "Daily Application Database Backup",
+    Description = "Daily full backup of the main application database at 2 AM",
+    DatabasePath = @"/app/data/application.db",
+    CronExpression = "0 2 * * *", // Run daily at 2:00 AM
+    IsActive = true,
+    RetentionDays = 30, // Keep backups for 30 days
+    MaxBackupCount = 10, // Keep up to 10 backup files
+    NotificationEmails = "admin@example.com,devops@example.com",
+    VerifyAfterBackup = true,
+    StorageType = 0, // Local storage
+    BackupMode = 0, // Full backup mode
+    StorageConfiguration = null, // No additional storage configuration
+    CreatedAt = DateTime.UtcNow,
+    LastModifiedAt = DateTime.UtcNow
+};
+
+// Validate the schedule configuration
+bool isValid = schedule.IsValid();
+Console.WriteLine($"Schedule is valid: {isValid}");
+
+// Validate database file exists
+bool dbExists = schedule.ValidateDatabasePath();
+Console.WriteLine($"Database exists: {dbExists}");
+
+// Update next run time (typically handled by the scheduler)
+schedule.NextRunTime = DateTime.Parse("2026-07-16T02:00:00Z");
+```
+
 ## MetricsEventListener
 
 The `MetricsEventListener` aggregates statistics from backup events, such as total backups, success/failure counts, data transferred, and average duration. It exposes a `BackupMetrics` snapshot that can be queried at any time and can be reset for a fresh start.
