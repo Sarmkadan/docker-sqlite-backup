@@ -71,3 +71,37 @@ bool isConnected = await config.TestConnectionAsync();
 
 Console.WriteLine($"S3 connection successful: {isConnected}");
 ```
+
+## RestoreVerification
+
+The `RestoreVerification` class represents the result of a database restore verification process. It tracks the verification status, timing metrics, record counts, database size, and integrity check results to ensure that restored databases are consistent and functional. The class provides methods to mark completion and calculate elapsed duration.
+
+```csharp
+using DockerSqliteBackup.Domain;
+using System;
+
+var verification = new RestoreVerification
+{
+    Id = Guid.NewGuid(),
+    BackupResultId = Guid.Parse("123e4567-e89b-12d3-a456-426614174000"),
+    IsSuccessful = true,
+    StatusMessage = "Database restored and verified successfully",
+    StartedAt = DateTime.UtcNow.AddMinutes(-5),
+    CompletedAt = DateTime.UtcNow,
+    DurationMilliseconds = 300000,
+    RecordCount = 15000,
+    DatabaseSizeBytes = 256000000,
+    IntegrityCheckPassed = true,
+    IntegrityCheckErrors = null,
+    TemporaryDirectory = "/tmp/restore-verification-12345",
+    ErrorMessage = null
+};
+
+// Example: mark completion and get elapsed duration
+verification.MarkCompleted();
+TimeSpan elapsed = verification.GetElapsedDuration();
+
+Console.WriteLine($"Restore verification completed in {elapsed.TotalSeconds} seconds");
+Console.WriteLine($"Database has {verification.RecordCount} records, size: {verification.DatabaseSizeBytes / 1024 / 1024} MB");
+Console.WriteLine($"Integrity check: {(verification.IntegrityCheckPassed ? "PASSED" : "FAILED")}");
+```
