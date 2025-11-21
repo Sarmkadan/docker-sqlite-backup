@@ -166,3 +166,36 @@ Console.WriteLine(metrics);
 // Reset metrics if needed
 metricsListener.ResetMetrics();
 ```
+
+## LocalStorageConfiguration
+
+The `LocalStorageConfiguration` class represents configuration for local file system storage backend. It defines properties such as base directory, subdirectory creation, file permissions, compression, and minimum free space. It also provides methods to validate the configuration and test the connection.
+
+### Usage Example
+
+```csharp
+using DockerSqliteBackup.Domain;
+
+// Create a local storage configuration
+var localStorageConfig = new LocalStorageConfiguration
+{
+    BaseDirectory = "/backups",
+    CreateSubdirectoriesBySchedule = true,
+    FilePermissions = "0640",
+    CompressBackups = true,
+    MinimumFreeSpaceBytes = 1073741824, // 1 GB
+    PreserveFileTimestamp = true
+};
+
+// Validate the configuration
+bool isValid = localStorageConfig.IsValid();
+Console.WriteLine($"Configuration is valid: {isValid}");
+
+// Test the connection
+bool isConnected = await localStorageConfig.TestConnectionAsync();
+Console.WriteLine($"Connection test: {isConnected}");
+
+// Get the backup path
+var backupPath = localStorageConfig.GetBackupPath("my-schedule", DateTime.UtcNow);
+Console.WriteLine($"Backup path: {backupPath}");
+```
