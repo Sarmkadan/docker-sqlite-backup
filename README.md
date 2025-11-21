@@ -105,3 +105,49 @@ Console.WriteLine($"Restore verification completed in {elapsed.TotalSeconds} sec
 Console.WriteLine($"Database has {verification.RecordCount} records, size: {verification.DatabaseSizeBytes / 1024 / 1024} MB");
 Console.WriteLine($"Integrity check: {(verification.IntegrityCheckPassed ? "PASSED" : "FAILED")}");
 ```
+
+## IntegrityReport
+
+The `IntegrityReport` class provides a comprehensive analysis of SQLite database integrity by performing multiple validation checks including quick integrity checks, full integrity scans, and foreign key validation. It captures detailed metadata about the database structure and provides a health assessment based on all validation results.
+
+```csharp
+using DockerSqliteBackup.Domain;
+using System;
+
+var report = new IntegrityReport
+{
+    Id = Guid.NewGuid(),
+    DatabasePath = "/data/app.db",
+    CheckedAt = DateTime.UtcNow,
+    Duration = TimeSpan.FromSeconds(45),
+    PassedQuickCheck = true,
+    QuickCheckErrors = null,
+    PassedFullCheck = true,
+    FullCheckErrors = null,
+    PassedForeignKeyCheck = true,
+    ForeignKeyErrors = null,
+    PageCount = 12500,
+    PageSize = 4096,
+    FreePageCount = 250,
+    JournalMode = "WAL",
+    HasUncheckpointedWal = false,
+    TableCount = 15
+};
+
+// Example: check overall health status
+if (report.IsHealthy)
+{
+    Console.WriteLine($"Database is healthy: {report.Summary}");
+    Console.WriteLine($"Database has {report.PageCount} pages ({report.FreePageCount} free), {report.TableCount} tables");
+    Console.WriteLine($"Journal mode: {report.JournalMode}, Page size: {report.PageSize} bytes");
+}
+else
+{
+    Console.WriteLine($"Database integrity issues detected!");
+    Console.WriteLine(report.Summary);
+    if (!report.PassedQuickCheck && report.QuickCheckErrors != null)
+    {
+        Console.WriteLine($"Quick check errors: {report.QuickCheckErrors}");
+    }
+}
+```
