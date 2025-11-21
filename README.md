@@ -37,3 +37,37 @@ bool shouldRotate = policy.ShouldRotate(
 
 Console.WriteLine($"Should rotate: {shouldRotate}");
 ```
+
+## S3Configuration
+
+The `S3Configuration` class provides configuration for uploading backup files to S3-compatible storage. It includes properties for AWS credentials, bucket settings, region configuration, encryption options, and lifecycle management parameters like glacier transition settings.
+
+```csharp
+using DockerSqliteBackup.Domain;
+using System;
+using System.Threading.Tasks;
+
+var config = new S3Configuration
+{
+    AccessKeyId = "AKIAIOSFODNN7EXAMPLE",
+    SecretAccessKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+    BucketName = "my-backup-bucket",
+    RegionName = "us-east-1",
+    ObjectKeyPrefix = "sqlite-backups/",
+    UseSSL = true,
+    EnableServerSideEncryption = true,
+    StorageClass = "STANDARD_IA",
+    CustomEndpoint = null,
+    TransitionToGlacierDays = 30,
+};
+
+if (!config.IsValid)
+{
+    throw new InvalidOperationException("S3 configuration is not valid.");
+}
+
+// Example: test the connection to S3 storage
+bool isConnected = await config.TestConnectionAsync();
+
+Console.WriteLine($"S3 connection successful: {isConnected}");
+```
