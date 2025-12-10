@@ -1,0 +1,250 @@
+# =============================================================================
+# Author: Vladyslav Zaiets | https://sarmkadan.com
+# CTO & Software Architect
+# =============================================================================
+# Example 3: Kubernetes Deployment
+# Deploy Docker SQLite Backup on Kubernetes with persistent storage.
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sqlite-backup
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: sqlite-db-pv
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: fast
+  hostPath:
+    path: /mnt/data/sqlite
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sqlite-db-pvc
+  namespace: sqlite-backup
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: fast
+  resources:
+    requests:
+      storage: 100Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sqlite-backups-pvc
+  namespace: sqlite-backup
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: fast
+  resources:
+    requests:
+      storage: 500Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sqlite-backup
+  namespace: sqlite-backup
+  labels:
+    app: sqlite-backup
+    version: v1
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: sqlite-backup
+  template:
+    metadata:
+      labels:
+        app: sqlite-backup
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: sqlite-backup
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: sqlite-backup
+        image: sqlite-backup:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 5000
+          protocol: TCP
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: ASPNETCORE_URLS
+          value: "http://0.0.0.0:5000"
+        - name: AppSettings__DatabasePath
+          value: "/data/app.db"
+        - name: AppSettings__LocalStoragePath
+          value: "/backups"
+        - name: AppSettings__MaxConcurrentBackups
+          value: "2"
+        - name: AppSettings__BackupTimeoutSeconds
+          value: "3600"
+        - name: AppSettings__EnableVerificationByDefault
+          value: "true"
+        - name: AppSettings__RetentionDays
+          value: "30"
+        - name: AppSettings__MaxBackupCount
+          value: "10"
+        - name: Logging__LogLevel__Default
+          value: "Information"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+        volumeMounts:
+        - name: database
+          mountPath: /data
+          readOnly: false
+        - name: backups
+          mountPath: /backups
+          readOnly: false
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+              - ALL
+      volumes:
+      - name: database
+        persistentVolumeClaim:
+          claimName: sqlite-db-pvc
+      - name: backups
+        persistentVolumeClaim:
+          claimName: sqlite-backups-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sqlite-backup
+  namespace: sqlite-backup
+  labels:
+    app: sqlite-backup
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    app: sqlite-backup
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sqlite-backup
+  namespace: sqlite-backup
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sqlite-backup
+  namespace: sqlite-backup
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sqlite-backup
+  namespace: sqlite-backup
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: sqlite-backup
+subjects:
+- kind: ServiceAccount
+  name: sqlite-backup
+  namespace: sqlite-backup
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sqlite-backup-config
+  namespace: sqlite-backup
+data:
+  appsettings.json: |
+    {
+      "AppSettings": {
+        "DatabasePath": "/data/app.db",
+        "MaxConcurrentBackups": 2,
+        "BackupTimeoutSeconds": 3600,
+        "ScheduleCheckIntervalSeconds": 60,
+        "EnableVerificationByDefault": true,
+        "RetentionDays": 30,
+        "MaxBackupCount": 10,
+        "LocalStoragePath": "/backups"
+      },
+      "Schedules": [
+        {
+          "Id": "daily-backup",
+          "Name": "Daily Backup",
+          "CronExpression": "0 2 * * *",
+          "IsEnabled": true,
+          "StorageType": "Local",
+          "RotationStrategy": "AgeAndCount"
+        }
+      ],
+      "Logging": {
+        "LogLevel": {
+          "Default": "Information"
+        }
+      }
+    }
