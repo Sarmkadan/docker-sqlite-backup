@@ -8,7 +8,7 @@ insert_final_newline = true
 
 [*.cs]
 indent_size = 4
-max_line_length = 120
+csharp_space_between_method_declaration_parameter_list_parentheses = false
 
 # C# Coding Conventions
 dotnet_style_qualification_for_field = false:suggestion
@@ -43,4 +43,9 @@ csharp_indent_labels = flush_left
 csharp_space_after_cast = false
 csharp_space_after_keywords_in_control_flow_statements = true
 csharp_space_between_method_call_parameter_list_parentheses = false
-csharp_space_between_method_declaration_parameter_list_parentheses = false
+csharp_space_between_method_declaration_parameter_list_parentheses = true
+
+# New additions for Allman braces, namespace declarations, and using directives placement
+csharp_style_namespace_declarations = block_scoped:suggestion
+csharp_using_directive_placement = outside_namespace:suggestion
+csharp_style_brace_preference = Allman

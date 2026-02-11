@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -23,7 +24,7 @@ public class XmlOutputFormatter : IOutputFormatter
     /// </summary>
     public string Format(object? value)
     {
-        if (value == null)
+        if (value  is null)
             return "<null />";
 
         var doc = new XDocument(ObjectToXElement("item", value));
@@ -39,7 +40,7 @@ public class XmlOutputFormatter : IOutputFormatter
 
         foreach (var value in values)
         {
-            if (value != null)
+            if (value  is not null)
                 root.Add(ObjectToXElement("item", value));
         }
 
@@ -58,13 +59,13 @@ public class XmlOutputFormatter : IOutputFormatter
         {
             var element = new XElement(SanitizeXmlElementName(kvp.Key));
 
-            if (kvp.Value != null)
+            if (kvp.Value  is not null)
             {
                 if (kvp.Value is IEnumerable<object?> collection && kvp.Value is not string)
                 {
                     foreach (var item in collection)
                     {
-                        if (item != null)
+                        if (item  is not null)
                             element.Add(ObjectToXElement("item", item));
                     }
                 }
@@ -88,7 +89,7 @@ public class XmlOutputFormatter : IOutputFormatter
     {
         var element = new XElement(SanitizeXmlElementName(elementName));
 
-        if (obj == null)
+        if (obj  is null)
             return element;
 
         var type = obj.GetType();
@@ -112,7 +113,7 @@ public class XmlOutputFormatter : IOutputFormatter
         {
             foreach (var item in collection)
             {
-                if (item != null)
+                if (item  is not null)
                     element.Add(ObjectToXElement("item", item));
             }
 
@@ -128,7 +129,7 @@ public class XmlOutputFormatter : IOutputFormatter
             {
                 var value = property.GetValue(obj);
 
-                if (value != null)
+                if (value  is not null)
                 {
                     var propElement = ObjectToXElement(SanitizeXmlElementName(property.Name), value);
                     element.Add(propElement);

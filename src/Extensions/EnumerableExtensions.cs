@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -40,7 +41,7 @@ public static class EnumerableExtensions
     /// </summary>
     public static bool IsEmpty<T>(this IEnumerable<T>? source)
     {
-        return source == null || !source.Any();
+        return source  is null || !source.Any();
     }
 
     /// <summary>
@@ -48,7 +49,7 @@ public static class EnumerableExtensions
     /// </summary>
     public static bool HasItems<T>(this IEnumerable<T>? source)
     {
-        return source != null && source.Any();
+        return source  is not null && source.Any();
     }
 
     /// <summary>
@@ -56,7 +57,7 @@ public static class EnumerableExtensions
     /// </summary>
     public static T? FirstOrNull<T>(this IEnumerable<T?> source) where T : class
     {
-        return source.FirstOrDefault(x => x != null);
+        return source.FirstOrDefault(x => x  is not null);
     }
 
     /// <summary>
@@ -64,7 +65,7 @@ public static class EnumerableExtensions
     /// </summary>
     public static IEnumerable<T> WhereNotNull<T>(this IEnumerable<T?> source)
     {
-        return source.Where(x => x != null)!;
+        return source.Where(x => x  is not null)!;
     }
 
     /// <summary>
