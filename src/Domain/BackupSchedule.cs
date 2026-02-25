@@ -60,6 +60,14 @@ public class BackupSchedule
     public int StorageType { get; set; } = 0; // StorageType.Local
 
     /// <summary>
+    /// Gets or sets an optional storage configuration for non-local backends (e.g. S3).
+    /// When set, <see cref="BackupService"/> will upload the completed backup to this
+    /// backend after the local snapshot is created. Any upload failure will be surfaced
+    /// as an exception, preventing a silent success.
+    /// </summary>
+    public StorageConfiguration? StorageConfiguration { get; set; }
+
+    /// <summary>
     /// Validates the schedule configuration.
     /// </summary>
     /// <returns>True if valid, false otherwise.</returns>
