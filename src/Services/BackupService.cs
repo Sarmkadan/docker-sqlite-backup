@@ -76,6 +76,23 @@ public class BackupService : IBackupService
             result.Checksum = await CalculateBackupChecksumAsync(backupPath);
             result.Status = (int)Constants.BackupStatus.Success;
 
+            // Upload to the configured remote storage backend, if one is configured.
+            // Exceptions here (e.g. AmazonS3Exception for missing s3:PutObject permission)
+            // are intentionally NOT caught so they propagate and mark the job as failed.
+            if (schedule.StorageConfiguration is not null and not LocalStorageConfiguration)
+            {
+                _logger.LogInformation("Uploading backup to remote storage backend: {StorageType}",
+                    schedule.StorageConfiguration.GetType().Name);
+                var remoteKey = await _storageService.UploadBackupAsync(backupPath, schedule.StorageConfiguration);
+                _logger.LogInformation("Backup uploaded to remote storage. Key/path: {RemoteKey}", remoteKey);
+
+                if (schedule.StorageConfiguration is S3Configuration)
+                {
+                    result.IsStoredInS3 = true;
+                    result.S3ObjectKey = remoteKey;
+                }
+            }
+
             _logger.LogInformation("Backup completed successfully. Size: {Size} bytes, Checksum: {Checksum}",
                 result.BackupFileSizeBytes, result.Checksum);
         }
