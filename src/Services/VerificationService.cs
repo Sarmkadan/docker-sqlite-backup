@@ -5,9 +5,11 @@
 // =============================================================================
 
 using System.Security.Cryptography;
+using DockerSqliteBackup.Configuration;
 using DockerSqliteBackup.Data;
 using DockerSqliteBackup.Domain;
 using DockerSqliteBackup.Exceptions;
+using DockerSqliteBackup.Utilities;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 
@@ -19,13 +21,16 @@ namespace DockerSqliteBackup.Services;
 public class VerificationService : IVerificationService
 {
     private readonly IBackupRepository _repository;
+    private readonly AppSettings _appSettings;
     private readonly ILogger<VerificationService> _logger;
 
     public VerificationService(
         IBackupRepository repository,
+        AppSettings appSettings,
         ILogger<VerificationService> logger)
     {
         _repository = repository;
+        _appSettings = appSettings;
         _logger = logger;
     }
 
@@ -156,6 +161,8 @@ public class VerificationService : IVerificationService
 
     /// <summary>
     /// Restores a backup to a temporary location for verification.
+    /// If the backup file has a <c>.enc</c> extension it is decrypted first using the
+    /// configured AES-256 key so that the integrity check runs against the plaintext database.
     /// </summary>
     public async Task<string> RestoreToTemporaryAsync(BackupResult backup)
     {
@@ -163,7 +170,27 @@ public class VerificationService : IVerificationService
         Directory.CreateDirectory(tempDir);
 
         var tempDbPath = Path.Combine(tempDir, "restore-check.sqlite");
-        await Task.Run(() => File.Copy(backup.BackupFilePath, tempDbPath, overwrite: true));
+
+        if (backup.BackupFilePath.EndsWith(".enc", StringComparison.OrdinalIgnoreCase))
+        {
+            var encryptionKey = Environment.GetEnvironmentVariable("BACKUP_ENCRYPTION_KEY")
+                                ?? _appSettings.EncryptionKey;
+
+            if (string.IsNullOrWhiteSpace(encryptionKey) || !EncryptionUtility.IsValidKey(encryptionKey))
+            {
+                throw new VerificationException(
+                    "Backup file is encrypted but no valid decryption key is configured. " +
+                    "Set BACKUP_ENCRYPTION_KEY or AppSettings__EncryptionKey.",
+                    backup.Id);
+            }
+
+            _logger.LogInformation("Decrypting encrypted backup for verification: {FilePath}", backup.BackupFilePath);
+            await EncryptionUtility.DecryptFileAsync(backup.BackupFilePath, tempDbPath, encryptionKey);
+        }
+        else
+        {
+            await Task.Run(() => File.Copy(backup.BackupFilePath, tempDbPath, overwrite: true));
+        }
 
         return tempDbPath;
     }
