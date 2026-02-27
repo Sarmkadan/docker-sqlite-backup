@@ -17,6 +17,7 @@ An enterprise-grade automated SQLite backup tool for .NET — providing schedule
 - [CLI Reference](#cli-reference)
 - [Configuration Reference](#configuration-reference)
 - [Backup Strategies](#backup-strategies)
+- [Restore Verification](#restore-verification)
 - [Troubleshooting](#troubleshooting)
 - [Performance](#performance)
 - [Testing](#testing)
@@ -848,6 +849,106 @@ Immutable backups with extensive audit logging for regulatory requirements.
   }
 }
 ```
+
+## Restore Verification
+
+Restore verification is an automated integrity test that runs after every successful backup (when `VerifyAfterBackup: true`) or on demand via the API/CLI. It provides confidence that a backup can actually be restored before disaster strikes.
+
+### How Verification Works
+
+The `VerificationService` executes the following checks in order:
+
+1. **Checksum validation** — The SHA-256 hash of the backup file is recomputed and compared to the value recorded at backup time. A mismatch immediately fails verification, indicating the file was corrupted or tampered with during storage or transfer.
+
+2. **Restore to a temporary location** — The backup file is copied (and decrypted if `EnableEncryption: true`) to a unique temporary directory. No changes are made to the production database or the backup archive.
+
+3. **SQLite `integrity_check` pragma** — A read-only connection is opened against the restored file and `PRAGMA integrity_check` is executed. SQLite inspects every page of the database for structural corruption. A passing result returns `"ok"`.
+
+4. **Row-count comparison** — The total number of rows across all user tables is counted. This count is stored in the verification record and can be compared across backups to detect unexpected data loss.
+
+5. **Cleanup** — The temporary directory is deleted regardless of the verification outcome.
+
+### Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `VerifyAfterBackup` | `bool` | `true` | Automatically verify every successful backup. |
+| `EnableVerificationByDefault` | `bool` | `true` | Global default used when a schedule does not specify its own value. |
+
+```json
+{
+  "AppSettings": {
+    "EnableVerificationByDefault": true
+  },
+  "Schedules": [
+    {
+      "Id": "daily-local",
+      "CronExpression": "0 2 * * *",
+      "VerifyAfterBackup": true
+    }
+  ]
+}
+```
+
+### Triggering Verification On Demand
+
+```bash
+# Via REST API
+curl -X POST http://localhost:5000/api/backup/verify/daily-local \
+  -H "Content-Type: application/json" \
+  -d '{"backupId": "<backup-guid>"}'
+
+# Via CLI
+dotnet run -- verify-backup --backup <backup-guid> --verbose
+```
+
+### Interpreting Verification Results
+
+A successful verification produces a log entry similar to:
+
+```
+[INF] Backup verification completed successfully for {BackupId}
+      IntegrityCheck: ok  |  RecordCount: 15234  |  Duration: 420ms
+```
+
+A failed verification will log the specific failure:
+
+- **Checksum mismatch** — `Checksum mismatch for backup file: /path/to/backup.sqlite`
+  The backup file was modified or corrupted after being written. Treat the backup as untrustworthy.
+
+- **Integrity check failure** — `Database integrity check failed: <sqlite errors>`
+  SQLite found corruption inside the database pages. The backup cannot be used for a clean restore.
+
+- **Decryption failure** — `Backup file is encrypted but no valid decryption key is configured.`
+  Ensure `BACKUP_ENCRYPTION_KEY` is set in the environment or `AppSettings__EncryptionKey` is configured.
+
+The `VerificationResult` object returned by the API contains:
+
+```json
+{
+  "isSuccessful": true,
+  "integrityCheckPassed": true,
+  "integrityCheckErrors": null,
+  "recordCount": 15234,
+  "databaseSizeBytes": 1048576,
+  "durationMilliseconds": 420,
+  "errorMessage": null
+}
+```
+
+### Performance Implications
+
+Verification restores the backup to a temporary file and opens a read-only SQLite connection. The dominant cost is disk I/O proportional to the backup file size. Typical overhead:
+
+| Database Size | Verification Time |
+|---|---|
+| < 50 MB | < 1 second |
+| 50 – 500 MB | 1 – 10 seconds |
+| > 500 MB | 10+ seconds (consider scheduling during off-peak hours) |
+
+**Recommendation for production**: Keep `VerifyAfterBackup: true` for all schedules. The small I/O cost is negligible compared to the risk of discovering a corrupt backup during an actual disaster recovery.
+
+---
 
 ## Troubleshooting
 
