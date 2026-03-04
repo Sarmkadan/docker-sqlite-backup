@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -129,7 +130,7 @@ public class MemoryCacheService : ICacheService
     public T GetOrSet<T>(string key, Func<T> factory, TimeSpan? expiration = null)
     {
         var cached = Get<T>(key);
-        if (cached != null)
+        if (cached  is not null)
             return cached;
 
         var value = factory();
@@ -147,7 +148,7 @@ public class MemoryCacheService : ICacheService
         CancellationToken cancellationToken = default)
     {
         var cached = Get<T>(key);
-        if (cached != null)
+        if (cached  is not null)
             return cached;
 
         var value = await factory(cancellationToken);

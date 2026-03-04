@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -36,7 +37,7 @@ public class BackupController
         try
         {
             var schedule = await _scheduleService.GetScheduleAsync(request.ScheduleId, ct);
-            if (schedule == null)
+            if (schedule  is null)
                 return ApiResponse<object>.ErrorResponse("SCHEDULE_NOT_FOUND", $"Schedule {request.ScheduleId} not found");
 
             var result = await _backupService.ExecuteBackupAsync(schedule, ct);
@@ -66,7 +67,7 @@ public class BackupController
         try
         {
             var schedule = await _scheduleService.GetScheduleAsync(scheduleId, ct);
-            if (schedule == null)
+            if (schedule  is null)
                 return ApiResponse<object>.ErrorResponse("SCHEDULE_NOT_FOUND", $"Schedule {scheduleId} not found");
 
             var backups = await _backupService.GetBackupHistoryAsync(scheduleId, limit);
@@ -102,7 +103,7 @@ public class BackupController
         try
         {
             var backup = await _backupService.GetBackupResultAsync(backupId);
-            if (backup == null)
+            if (backup  is null)
                 return ApiResponse<object>.ErrorResponse("BACKUP_NOT_FOUND", $"Backup {backupId} not found");
 
             return ApiResponse<object>.SuccessResponse(new

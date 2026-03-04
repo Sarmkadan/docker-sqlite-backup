@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -166,7 +167,7 @@ public class ScheduleService : IScheduleService
     public async Task DeactivateScheduleAsync(Guid scheduleId, CancellationToken cancellationToken = default)
     {
         var schedule = await _repository.GetScheduleAsync(scheduleId);
-        if (schedule != null)
+        if (schedule  is not null)
         {
             schedule.IsActive = false;
             schedule.LastModifiedAt = DateTime.UtcNow;
@@ -181,7 +182,7 @@ public class ScheduleService : IScheduleService
     public async Task ActivateScheduleAsync(Guid scheduleId)
     {
         var schedule = await _repository.GetScheduleAsync(scheduleId);
-        if (schedule != null)
+        if (schedule  is not null)
         {
             schedule.IsActive = true;
             schedule.LastModifiedAt = DateTime.UtcNow;

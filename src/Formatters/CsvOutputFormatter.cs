@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -23,7 +24,7 @@ public class CsvOutputFormatter : IOutputFormatter
     /// </summary>
     public string Format(object? value)
     {
-        if (value == null)
+        if (value  is null)
             return "";
 
         var properties = value.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
@@ -36,7 +37,7 @@ public class CsvOutputFormatter : IOutputFormatter
     /// </summary>
     public string FormatCollection(IEnumerable<object?> values)
     {
-        var list = values.Where(v => v != null).ToList();
+        var list = values.Where(v => v  is not null).ToList();
         if (list.Count == 0)
             return "";
 

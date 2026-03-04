@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -74,7 +75,7 @@ public class AuditLogger
             Action = "CHANGED",
             TargetId = setting,
             Success = true,
-            Details = $"{oldValue} -> {newValue}" + (reason != null ? $" ({reason})" : "")
+            Details = $"{oldValue} -> {newValue}" + (reason  is not null ? $" ({reason})" : "")
         };
 
         LogAuditEntry(entry);
