@@ -157,8 +157,11 @@ public class BackupWorker : BackgroundService
 
                 if (result.IsSuccess)
                 {
-                    _logger.LogInformation("Backup successful for schedule {ScheduleId}: {BackupPath}",
-                        schedule.Id, result.BackupFilePath);
+                    var sizeMb = result.BackupFileSizeBytes / (1024.0 * 1024.0);
+                    var durationSec = result.DurationMilliseconds / 1000.0;
+                    _logger.LogInformation(
+                        "Backup completed for {DatabaseName}: {SizeMb:F1} MB in {DurationSec:F1}s — {BackupPath}",
+                        schedule.Name, sizeMb, durationSec, result.BackupFilePath);
 
                     // Verify if enabled
                     if (schedule.VerifyAfterBackup)
