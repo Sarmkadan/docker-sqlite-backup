@@ -113,9 +113,18 @@ public class RotationPolicyTests
     }
 
     [Fact]
-    public void IsValid_ZeroMaxBackupCount_ReturnsFalse()
+    public void IsValid_ZeroMaxBackupCount_ReturnsTrue_UnlimitedBackupsAllowed()
     {
-        var policy = new RotationPolicy { MaxBackupCount = 0 };
+        // MaxBackupCount = 0 means unlimited retention — the policy is still valid.
+        var policy = new RotationPolicy { MaxBackupCount = 0, MinimumBackupCount = 1 };
+
+        policy.IsValid().Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsValid_NegativeMaxBackupCount_ReturnsFalse()
+    {
+        var policy = new RotationPolicy { MaxBackupCount = -1 };
 
         policy.IsValid().Should().BeFalse();
     }
