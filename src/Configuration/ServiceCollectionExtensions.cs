@@ -39,6 +39,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IStorageService, StorageService>();
         services.AddScoped<IRotationService, RotationService>();
         services.AddScoped<IVerificationService, VerificationService>();
+        services.AddScoped<IEncryptionService, EncryptionService>();
 
         return services;
     }

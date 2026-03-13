@@ -112,12 +112,12 @@ public static class ChecksumUtility
 
         using (var stream = File.OpenRead(filePath))
         {
-            stream.Read(firstBytes, 0, Math.Min(16, (int)size));
+            _ = stream.Read(firstBytes, 0, Math.Min(16, (int)size));
 
             if (size > 16)
             {
                 stream.Seek(-16, SeekOrigin.End);
-                stream.Read(lastBytes, 0, 16);
+                _ = stream.Read(lastBytes, 0, 16);
             }
         }
 
@@ -130,6 +130,13 @@ public static class ChecksumUtility
         var hash = sha256.ComputeHash(combined);
         return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant()[..16];
     }
+
+    /// <summary>
+    /// Async wrapper around <see cref="GenerateQuickChecksum"/>. Returns a 16-character
+    /// hex string derived from the file's size and boundary bytes.
+    /// </summary>
+    public static Task<string> GenerateQuickChecksumAsync(string filePath) =>
+        Task.FromResult(GenerateQuickChecksum(filePath));
 
     /// <summary>
     /// Generates a checksum for a collection of values.
