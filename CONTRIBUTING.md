@@ -1,38 +1,78 @@
 # Contributing to docker-sqlite-backup
 
-First off, thank you for considering contributing to docker-sqlite-backup! We welcome your contributions.
+Thank you for considering contributing to docker-sqlite-backup! Contributions of all kinds are welcome.
 
 ## Development Requirements
 
-- **.NET SDK**: .NET 10.0 SDK is required for development.
+- **.NET SDK 10.0** — download from [dotnet.microsoft.com](https://dotnet.microsoft.com/download)
+- **Docker** — optional, for container-related testing
+- A Git client
+
+## Building Locally
+
+```bash
+# Clone your fork
+git clone https://github.com/your-username/docker-sqlite-backup.git
+cd docker-sqlite-backup
+
+# Restore dependencies
+dotnet restore
+
+# Build
+dotnet build --configuration Release
+```
+
+## Running Tests
+
+```bash
+# Run all tests
+dotnet test --verbosity normal
+
+# Run with detailed output and save results
+dotnet test --verbosity normal --logger "trx;LogFileName=test-results.trx"
+```
+
+Test results are written to `**/TestResults/*.trx`.
+
+## Docker Build
+
+```bash
+docker build -t docker-sqlite-backup .
+```
 
 ## How to Contribute
 
-### 1. Fork and Clone
+### 1. Fork and Branch
+
 1. Fork the repository on GitHub.
-2. Clone your fork locally: `git clone https://github.com/your-username/docker-sqlite-backup.git`
+2. Clone your fork: `git clone https://github.com/your-username/docker-sqlite-backup.git`
+3. Create a branch: `git checkout -b feature/your-feature` or `git checkout -b fix/your-bug`
 
-### 2. Create a Branch
-Create a branch for your feature or bug fix:
-`git checkout -b feature/your-feature-name` or `git checkout -b fix/your-bug-fix-name`
+### 2. Make Changes
 
-### 3. Make Changes and Run Tests
-Make your changes to the codebase. Ensure you run the existing tests and add new ones if applicable.
+- Write or update tests for any changed behaviour.
+- Ensure `dotnet build` and `dotnet test` pass without errors.
+- Follow the code style described below.
 
-### 4. Submit a Pull Request
-Push your branch to your fork and submit a Pull Request to the main repository. Please provide a clear description of the problem you are solving and how you solved it.
+### 3. Submit a Pull Request
+
+Push your branch and open a Pull Request against `main`. Include a clear description of what the PR changes and why.
 
 ## Code Style
 
-- Follow the existing codebase conventions and styling.
-- Provide XML documentation (XML docs) for public APIs and complex logic.
-- **IMPORTANT**: Keep all existing author headers intact in the source files. DO NOT remove them.
+- Follow conventions in `.editorconfig` at the repository root.
+- Provide XML documentation for public APIs.
+- Prefer `var` only when the type is apparent from the right-hand side.
+- Use Allman-style braces.
+- Keep methods focused and small; extract helpers where appropriate.
 
-## Issues
+## Reporting Issues
 
-If you find a bug or have a feature request, please use GitHub Issues. 
-When creating an issue, please include clear reproduction steps, expected behavior, and actual behavior.
+Use [GitHub Issues](https://github.com/sarmkadan/docker-sqlite-backup/issues). Include:
+- Clear steps to reproduce
+- Expected vs. actual behaviour
+- .NET version and OS
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+By contributing you agree that your contributions will be licensed under the [MIT License](LICENSE).
