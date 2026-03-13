@@ -1,10 +1,10 @@
-name: Build & Test
+name: CI
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [ main ]
 
 jobs:
   build:
@@ -28,13 +28,12 @@ jobs:
       run: dotnet build --no-restore --configuration Release
 
     - name: Test
-      run: dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
-      continue-on-error: false
+      run: dotnet test --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: test-results-${{ matrix.dotnet-version }}
+        name: test-results-dotnet-${{ matrix.dotnet-version }}
         path: '**/TestResults/*.trx'
         retention-days: 7
