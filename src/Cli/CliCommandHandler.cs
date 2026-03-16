@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -77,7 +78,7 @@ public class CliCommandHandler
         }
 
         var schedule = await _scheduleService.GetScheduleAsync(parsedId, ct);
-        if (schedule == null)
+        if (schedule  is null)
         {
             return WriteError($"Schedule not found: {scheduleId}", 1);
         }

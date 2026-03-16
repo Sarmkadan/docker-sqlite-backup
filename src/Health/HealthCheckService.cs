@@ -1,3 +1,4 @@
+#nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
 // CTO & Software Architect
@@ -149,7 +150,7 @@ public class HealthCheckService
         HealthCheckResult result,
         CancellationToken cancellationToken)
     {
-        if (_eventPublisher != null)
+        if (_eventPublisher  is not null)
         {
             var @event = new HealthCheckEvent
             {
