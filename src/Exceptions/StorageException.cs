@@ -55,6 +55,16 @@ public class LocalStorageException : StorageException
 }
 
 /// <summary>
+/// Exception thrown when Azure Blob Storage operation fails.
+/// </summary>
+public class AzureStorageException : StorageException
+{
+    public AzureStorageException(string message) : base(message, "Azure") { }
+    public AzureStorageException(string message, Exception innerException)
+        : base(message, innerException) { }
+}
+
+/// <summary>
 /// Exception thrown when insufficient disk space is available.
 /// </summary>
 public class InsufficientStorageException : StorageException
