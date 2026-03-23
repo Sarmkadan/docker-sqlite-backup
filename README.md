@@ -29,12 +29,34 @@ An enterprise-grade automated SQLite backup tool for .NET — providing schedule
 
 ### Core Backup Capabilities
 - **Automated Scheduling**: Full cron expression support for flexible backup scheduling (e.g., `0 2 * * *` for daily 2 AM backups)
-- **Multiple Storage Backends**: Store backups locally or on AWS S3 with configurable redundancy
+- **Multiple Storage Backends**: Store backups locally, on AWS S3, or on Azure Blob Storage with configurable redundancy
 - **Backup Rotation**: Intelligent cleanup based on age, count, or custom policies
 - **Incremental Awareness**: Track backup metadata for smart restoration decisions
 - **Compression Support**: Optional gzip compression for reduced storage footprint
 
+### Backup Encryption
+- **AES-256-CBC Encryption**: Backup archives encrypted at rest with industry-standard AES-256-CBC
+- **Per-backup Random IVs**: Each backup uses a unique randomly generated initialization vector
+- **Key Management API**: Generate, validate, and inspect encryption keys via REST API or service injection
+- **Key Fingerprinting**: Safely verify which key is active without exposing key material
+- **Transparent Decryption**: Verification service automatically decrypts encrypted backups for integrity checks
+- **Environment-first Key Loading**: Key sourced from `BACKUP_ENCRYPTION_KEY` env var, falling back to app config
+
+### Cloud Storage Adapters
+- **AWS S3**: Full lifecycle management — upload, download, delete, list with prefix filtering
+- **Azure Blob Storage**: Connection string and SAS URI authentication; Hot/Cool/Archive access tiers
+- **Soft-Delete & Immutability**: Optional Azure blob versioning and soft-delete retention
+- **S3 Storage Classes**: STANDARD, GLACIER, DEEP_ARCHIVE and all S3 storage tiers
+- **S3-Compatible Services**: Custom endpoint support for MinIO and other S3-compatible object stores
+- **Automatic Container Creation**: Azure containers created automatically on first upload
+
 ### Data Integrity & Verification
+- **Backup Integrity Checker**: Three-level SQLite integrity scan — quick check, full page scan, and FK audit
+- **PRAGMA quick_check**: Fast structural scan for B-tree pointer and page size validation
+- **PRAGMA integrity_check**: Full record-level validation walking every B-tree cell
+- **PRAGMA foreign_key_check**: Detects referential integrity violations across all tables
+- **WAL State Detection**: Identifies uncheckpointed WAL frames that may indicate an incomplete flush
+- **Database Metadata Collection**: Page count, page size, free pages, journal mode, table count
 - **Automated Verification**: Restore and integrity-check every backup automatically
 - **Record Counting**: Verify data completeness by comparing source and restored database records
 - **Checksum Validation**: SHA-256 checksums ensure backup file integrity
@@ -619,6 +641,64 @@ Health check endpoint for orchestration systems.
 }
 ```
 
+## Encryption API
+
+#### GET /api/encryption/status
+Returns current encryption configuration and key status.
+
+#### POST /api/encryption/generate-key
+Generates a new AES-256 key. Returns the Base64-encoded key — store it securely.
+
+#### POST /api/encryption/validate-key
+Validates whether a provided key is a valid 32-byte Base64-encoded AES-256 key.
+
+**Request Body:**
+```json
+{ "key": "base64encodedkey..." }
+```
+
+#### POST /api/encryption/encrypt
+Encrypts a file on disk using the configured key.
+
+**Request Body:**
+```json
+{ "sourcePath": "/path/to/file.sqlite", "destinationPath": "/path/to/file.sqlite.enc" }
+```
+
+#### POST /api/encryption/decrypt
+Decrypts a file previously encrypted with this service.
+
+**Request Body:**
+```json
+{ "sourcePath": "/path/to/file.sqlite.enc", "destinationPath": "/path/to/file.sqlite" }
+```
+
+## Integrity Checker API
+
+#### POST /api/integrity/check
+Runs a full integrity check (quick + full + foreign-key) on a SQLite database.
+
+**Request Body:**
+```json
+{ "databasePath": "/data/app.sqlite", "fullCheck": true }
+```
+
+#### POST /api/integrity/quick-check
+Runs a fast structural scan only. Suitable for frequent polling.
+
+**Request Body:**
+```json
+{ "databasePath": "/data/app.sqlite" }
+```
+
+#### POST /api/integrity/check-backup
+Runs a full integrity check against a stored backup file path.
+
+**Request Body:**
+```json
+{ "backupFilePath": "/backups/backup_2026-05-01.sqlite" }
+```
+
 ## CLI Reference
 
 ### Global Options
@@ -741,7 +821,7 @@ dotnet run -- cleanup \
       "Name": "string",                          // Human-readable name
       "CronExpression": "string",                // Cron expression
       "IsEnabled": true,
-      "StorageType": "Local|S3",
+      "StorageType": "Local|S3|Azure",
       "RotationStrategy": "Age|Count|AgeAndCount",
       "RetentionDays": 30,                       // If strategy=Age
       "MaxBackupCount": 10,                      // If strategy=Count
@@ -754,6 +834,12 @@ dotnet run -- cleanup \
         "EnableEncryption": true,
         "EnableVersioning": true,
         "StorageClass": "STANDARD"
+      },
+      "AzureConfig": {
+        "ConnectionString": "string",
+        "ContainerName": "string",
+        "BlobPrefix": "backups/",
+        "AccessTier": "Cool"
       }
     }
   ]
@@ -772,9 +858,130 @@ export AppSettings__DatabasePath=/data/production.db
 export AppSettings__S3BucketName=my-backups
 export AppSettings__S3Region=us-west-2
 
+# Enable backup encryption (AES-256)
+export BACKUP_ENCRYPTION_KEY=<base64-encoded-32-byte-key>
+export AppSettings__EnableEncryption=true
+
 # Enable debug logging
 export Logging__LogLevel__Default=Debug
 ```
+
+### Backup Encryption Configuration
+
+```json
+{
+  "AppSettings": {
+    "EnableEncryption": true,
+    "EncryptionKey": null
+  }
+}
+```
+
+> **Security note:** Never store the encryption key in `appsettings.json` for production deployments.
+> Inject it via the `BACKUP_ENCRYPTION_KEY` environment variable or a secrets manager.
+
+Generate a new key:
+```bash
+# Via the API
+curl -X POST http://localhost:5000/api/encryption/generate-key
+
+# Response:
+# {
+#   "success": true,
+#   "data": {
+#     "Key": "base64encodedkeyhere...",
+#     "Note": "Store this key securely. It cannot be recovered if lost."
+#   }
+# }
+```
+
+Check encryption status:
+```bash
+curl http://localhost:5000/api/encryption/status
+# {
+#   "success": true,
+#   "data": {
+#     "isEnabled": true,
+#     "hasValidKey": true,
+#     "keyFingerprint": "a3f1c2d8",
+#     "keySource": "Environment",
+#     "summary": "Encryption active — key fingerprint: a3f1c2d8 (source: Environment)"
+#   }
+# }
+```
+
+### Azure Blob Storage Configuration
+
+```json
+{
+  "Schedules": [
+    {
+      "Id": "azure-backup",
+      "CronExpression": "0 2 * * *",
+      "StorageType": "Azure",
+      "AzureConfig": {
+        "ConnectionString": "DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net",
+        "ContainerName": "sqlite-backups",
+        "BlobPrefix": "production/",
+        "AccessTier": "Cool",
+        "EnableImmutability": false
+      }
+    }
+  ]
+}
+```
+
+Environment variable alternative:
+```bash
+export AppSettings__AzureConnectionString="DefaultEndpointsProtocol=https;..."
+```
+
+#### Access Tier Options
+
+| Tier      | Cost    | Access Latency | Use Case                          |
+|-----------|---------|----------------|-----------------------------------|
+| `Hot`     | Higher  | Milliseconds   | Frequent access, last 30 days    |
+| `Cool`    | Lower   | Milliseconds   | Infrequent access, 30–90 days    |
+| `Archive` | Lowest  | Hours          | Long-term retention, 90+ days    |
+
+### Backup Integrity Checker API
+
+```bash
+# Full integrity check (quick + full + foreign-key)
+curl -X POST http://localhost:5000/api/integrity/check \
+  -H "Content-Type: application/json" \
+  -d '{"databasePath": "/data/app.sqlite", "fullCheck": true}'
+
+# Quick structural scan only
+curl -X POST http://localhost:5000/api/integrity/quick-check \
+  -H "Content-Type: application/json" \
+  -d '{"databasePath": "/data/app.sqlite"}'
+
+# Check a stored backup file
+curl -X POST http://localhost:5000/api/integrity/check-backup \
+  -H "Content-Type: application/json" \
+  -d '{"backupFilePath": "/backups/backup_2026-05-01.sqlite"}'
+```
+
+**Full check response example:**
+```json
+{
+  "success": true,
+  "data": {
+    "isHealthy": true,
+    "passedQuickCheck": true,
+    "passedFullCheck": true,
+    "passedForeignKeyCheck": true,
+    "pageCount": 128,
+    "pageSize": 4096,
+    "freePageCount": 4,
+    "journalMode": "wal",
+    "hasUncheckpointedWal": false,
+    "tableCount": 12,
+    "durationMs": 42,
+    "summary": "Database is healthy. Pages: 128, Tables: 12, Mode: wal"
+  }
+}
 
 ## Backup Strategies
 
