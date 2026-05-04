@@ -72,6 +72,47 @@ bool isConnected = await config.TestConnectionAsync();
 Console.WriteLine($"S3 connection successful: {isConnected}");
 ```
 
+## BackupResult
+
+The `BackupResult` class represents the outcome of a backup operation, containing metadata about the backup process, file characteristics, verification status, and storage locations. It tracks the entire backup lifecycle from initiation to completion, including timing metrics, file integrity, and storage destinations.
+
+```csharp
+using DockerSqliteBackup.Domain;
+using System;
+
+var backupResult = new BackupResult
+{
+    Id = Guid.NewGuid(),
+    ScheduleId = Guid.Parse("123e4567-e89b-12d3-a456-426614174000"),
+    BackupJobId = Guid.Parse("123e4567-e89b-12d3-a456-426614174001"),
+    Status = (int)BackupStatus.Completed,
+    BackupFilePath = "/backups/app_2026-07-15_14-30-00.db.backup",
+    BackupFileSizeBytes = 1073741824, // 1 GB
+    Checksum = "a1b2c3d4e5f67890abcdef1234567890abcdef12",
+    StartedAt = DateTime.UtcNow.AddMinutes(-10),
+    CompletedAt = DateTime.UtcNow,
+    DurationMilliseconds = 600000, // 10 minutes
+    ErrorMessage = null,
+    StackTrace = null,
+    IsVerified = true,
+    VerifiedAt = DateTime.UtcNow.AddMinutes(-2),
+    Notes = "Weekly full backup completed successfully",
+    IsStoredInS3 = true,
+    IsStoredLocally = true,
+    S3ObjectKey = "sqlite-backups/app_2026-07-15_14-30-00.db.backup",
+    BackupMode = (int)BackupMode.Full,
+    BaseBackupResultId = null
+};
+
+// Example: Verify backup integrity and log results
+Console.WriteLine($"Backup completed: {backupResult.BackupFilePath}");
+Console.WriteLine($"Size: {backupResult.BackupFileSizeBytes / 1024 / 1024} MB");
+Console.WriteLine($"Duration: {TimeSpan.FromMilliseconds(backupResult.DurationMilliseconds).TotalMinutes} minutes");
+Console.WriteLine($"Checksum: {backupResult.Checksum}");
+Console.WriteLine($"Status: {(BackupStatus)backupResult.Status}");
+Console.WriteLine($"Verified: {backupResult.IsVerified} at {backupResult.VerifiedAt}");
+```
+
 ## RestoreVerification
 
 The `RestoreVerification` class represents the result of a database restore verification process. It tracks the verification status, timing metrics, record counts, database size, and integrity check results to ensure that restored databases are consistent and functional. The class provides methods to mark completion and calculate elapsed duration.
