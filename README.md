@@ -1,8 +1,8 @@
-# Docker SQLite Backup
-
-[![.NET 10](https://img.shields.io/badge/.NET-10.0-blue)](https://dotnet.microsoft.com/)
+[![Build](https://github.com/sarmkadan/docker-sqlite-backup/actions/workflows/build.yml/badge.svg)](https://github.com/sarmkadan/docker-sqlite-backup/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub](https://img.shields.io/badge/GitHub-Sarmkadan-black)](https://github.com/Sarmkadan/docker-sqlite-backup)
+[![.NET](https://img.shields.io/badge/.NET-10.0-purple.svg)](https://dotnet.microsoft.com/)
+
+# Docker SQLite Backup
 
 An enterprise-grade automated SQLite backup tool for .NET — providing scheduled snapshots, multi-backend storage (S3/local), intelligent rotation, verification, and restore testing. Designed for production workloads where data reliability is paramount.
 
