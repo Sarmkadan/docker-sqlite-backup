@@ -19,8 +19,10 @@ bld/
 *.sln.iml
 *.userprefs
 *.user
+*.suo
 *.userosscache
 *.sln.docstates
+*.DotSettings.user
 .vscode/
 *.swp
 *.swo
