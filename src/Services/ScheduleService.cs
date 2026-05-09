@@ -82,7 +82,7 @@ public class ScheduleService : IScheduleService
     /// <summary>
     /// Deletes a backup schedule.
     /// </summary>
-    public async Task DeleteScheduleAsync(Guid scheduleId)
+    public async Task DeleteScheduleAsync(Guid scheduleId, CancellationToken cancellationToken = default)
     {
         await _repository.DeleteScheduleAsync(scheduleId);
         _logger.LogInformation("Schedule deleted: {ScheduleId}", scheduleId);
@@ -91,7 +91,7 @@ public class ScheduleService : IScheduleService
     /// <summary>
     /// Gets a specific schedule by ID.
     /// </summary>
-    public async Task<BackupSchedule?> GetScheduleAsync(Guid scheduleId)
+    public async Task<BackupSchedule?> GetScheduleAsync(Guid scheduleId, CancellationToken cancellationToken = default)
     {
         return await _repository.GetScheduleAsync(scheduleId);
     }
@@ -102,6 +102,27 @@ public class ScheduleService : IScheduleService
     public async Task<IEnumerable<BackupSchedule>> GetActiveSchedulesAsync()
     {
         return await _repository.GetActiveSchedulesAsync();
+    }
+
+    /// <summary>
+    /// Gets all schedules.
+    /// </summary>
+    public async Task<IEnumerable<BackupSchedule>> GetAllSchedulesAsync(CancellationToken cancellationToken = default)
+    {
+        return await _repository.GetAllSchedulesAsync();
+    }
+
+    /// <summary>
+    /// Creates a new backup schedule from name and database path.
+    /// </summary>
+    public Task<BackupSchedule> CreateScheduleAsync(string name, string databasePath, CancellationToken cancellationToken = default)
+    {
+        var schedule = new BackupSchedule
+        {
+            Name = name,
+            DatabasePath = databasePath
+        };
+        return CreateScheduleAsync(schedule);
     }
 
     /// <summary>
@@ -142,7 +163,7 @@ public class ScheduleService : IScheduleService
     /// <summary>
     /// Deactivates a schedule.
     /// </summary>
-    public async Task DeactivateScheduleAsync(Guid scheduleId)
+    public async Task DeactivateScheduleAsync(Guid scheduleId, CancellationToken cancellationToken = default)
     {
         var schedule = await _repository.GetScheduleAsync(scheduleId);
         if (schedule != null)

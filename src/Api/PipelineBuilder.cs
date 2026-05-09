@@ -51,7 +51,8 @@ public class PipelineBuilder
         {
             var index = 0;
 
-            Func<Task> next = async () =>
+            Func<Task>? next = null;
+            next = async () =>
             {
                 if (index >= _middlewares.Count)
                     return;

@@ -3,6 +3,8 @@
 // CTO & Software Architect
 // =============================================================================
 
+using Microsoft.Extensions.Http;
+
 namespace DockerSqliteBackup.Integration;
 
 /// <summary>
