@@ -19,6 +19,7 @@ An enterprise-grade automated SQLite backup tool for .NET — providing schedule
 - [Backup Strategies](#backup-strategies)
 - [Troubleshooting](#troubleshooting)
 - [Performance](#performance)
+- [Testing](#testing)
 - [Related Projects](#related-projects)
 - [Contributing](#contributing)
 - [License](#license)
@@ -971,6 +972,31 @@ Key characteristics:
 - **Concurrency**: up to 8 parallel backup operations before I/O contention becomes measurable
 - **Memory footprint**: ~30 MB baseline; grows proportionally with `MaxConcurrentBackups` (~15 MB per active job)
 - **Scheduling**: cron tick evaluation adds negligible overhead (<1 ms per schedule) regardless of schedule count
+
+## Testing
+
+The test suite covers domain models, schedule logic, and utility functions using xUnit and FluentAssertions.
+
+```bash
+# Run all tests
+dotnet test
+
+# Run with detailed output
+dotnet test --verbosity normal
+
+# Run with code coverage
+dotnet test --collect:"XPlat Code Coverage"
+```
+
+Test files are located under `tests/docker-sqlite-backup.Tests/`:
+
+| Test File | Coverage Area |
+|-----------|--------------|
+| `Domain/DomainModelTests.cs` | `BackupJob`, `BackupResult`, `RotationPolicy`, `RestoreVerification` domain objects |
+| `Services/ScheduleServiceTests.cs` | Cron expression parsing, next-run calculation, enable/disable logic |
+| `Utilities/StringUtilityTests.cs` | String sanitization, path normalization, truncation helpers |
+
+To add new tests, follow the existing xUnit patterns and place them under the appropriate subdirectory inside `tests/docker-sqlite-backup.Tests/`.
 
 ## Related Projects
 

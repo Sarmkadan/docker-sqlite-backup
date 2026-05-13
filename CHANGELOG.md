@@ -5,183 +5,189 @@ All notable changes to Docker SQLite Backup are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0] - 2026-05-04
+## [1.0.0] - 2025-12-15
 
 ### Added
-- **Kubernetes Support**: Official Kubernetes manifests with StatefulSet, RBAC, and persistent volumes
-- **S3 Transfer Acceleration**: Optional transfer acceleration for faster uploads to S3
-- **Webhook Retry Logic**: Automatic retry with exponential backoff for failed webhook deliveries
-- **Detailed Health Checks**: New `/health/detailed` endpoint with component-level status
-- **Backup Compression**: Optional gzip compression for reduced storage footprint
-- **Multi-format Output**: Support for JSON, CSV, and XML output in CLI and API responses
-- **Event Listener Framework**: Pluggable event system for custom integrations
-- **Metrics Endpoint**: Prometheus-compatible `/metrics` endpoint for monitoring
-- **Compliance Audit Tooling**: Audit scripts for regulatory compliance verification
+- **NuGet Package**: Published as `Zaiets.docker.sqlite.backup` on NuGet.org
+- **XML Documentation**: Full XML doc comments on all public APIs for IntelliSense support
+- **Connection Pool**: `SqliteConnectionPool` for reuse of database connections across backup jobs
+- **Compliance Audit Scripts**: Example scripts for regulatory audit trail generation
+- **Docker Compose**: Reference `docker-compose.yml` for local and staging deployments
+- **Kubernetes Manifests**: Ready-to-apply YAML for StatefulSet, RBAC, and PersistentVolumeClaims
+- **Integration Tests**: End-to-end test scenarios covering backup → verify → rotate lifecycle
 
 ### Changed
-- **Improved CLI**: Enhanced command-line interface with better help and error messages
-- **Performance**: Optimized backup streaming for large databases (>5GB)
-- **Logging**: More structured logging with request IDs for tracing
-- **Configuration**: Hierarchical configuration from multiple sources (JSON, env vars, CLI args)
-- **Error Handling**: Comprehensive error codes and detailed error messages
+- **API Stability**: All public interfaces and API contracts frozen for v1.0.0
+- **Default Retention**: Increased default `RetentionDays` from 14 to 30
+- **Logging**: Enriched structured log messages with schedule ID and job ID fields
 
 ### Fixed
-- **Race Condition**: Fixed concurrent backup scheduling race condition
-- **Memory Leak**: Resolved event listener memory leak in long-running deployments
-- **S3 Timeout**: Increased default S3 timeout for large database uploads
-- **Verification**: Fixed verification failing on databases with custom collations
-
-### Deprecated
-- Direct credential configuration in appsettings.json (use environment variables instead)
-
-## [1.1.0] - 2026-02-15
-
-### Added
-- **AWS S3 Storage**: Full support for storing backups on AWS S3 with encryption
-- **Restore API**: New endpoints to restore backups programmatically
-- **Schedule Management**: API endpoints to enable/disable schedules at runtime
-- **Rate Limiting**: Built-in rate limiting middleware for API protection
-- **Audit Logging**: Comprehensive audit trail of all backup operations
-- **Health Checks**: Liveness and readiness probes for orchestration systems
-- **Docker Support**: Official Dockerfile with multi-stage builds
-
-### Changed
-- **Database Schema**: Updated backup metadata schema to support more attributes
-- **API Response**: Standardized response envelope for all API endpoints
-- **Default Retention**: Changed default retention from 7 days to 30 days
-
-### Fixed
-- **Notification**: Fixed webhook notification payload serialization
-- **Rotation**: Fixed rotation policy not cleaning up all expired backups
-- **CLI**: Fixed command-line argument parsing for complex values
+- **Rotation Race**: Fixed edge case where concurrent rotation jobs could delete overlapping backups
+- **Path Normalization**: Corrected path handling on Windows when `LocalStoragePath` contained trailing slash
 
 ### Security
-- **HTTPS**: All S3 communications now use SSL/TLS encryption
-- **Credentials**: AWS credentials no longer logged or exposed in errors
-- **Validation**: Strict input validation on all API endpoints
+- **Credentials**: AWS credentials are now redacted from all log output and exception messages
+- **Input Validation**: Hardened `RequestValidator` against path traversal in backup IDs
 
-## [1.0.0] - 2025-12-01
+---
+
+## [0.9.0] - 2025-11-12
 
 ### Added
-- **Core Backup Engine**: SQLite database backup with snapshot isolation
-- **Scheduled Backups**: Full cron-based scheduling with timezone support
-- **Local Storage**: Store backups on local filesystem with compression
-- **Backup Rotation**: Automatic cleanup by age or count-based policies
-- **Verification**: Automated backup integrity verification and testing
-- **REST API**: Full HTTP API for backup management and monitoring
-- **CLI Interface**: Command-line tools for scripts and automation
-- **Configuration**: JSON-based configuration with environment variable overrides
-- **Logging**: Structured logging with configurable levels
-- **Exception Handling**: Global exception handling with user-friendly errors
-- **Tests**: Comprehensive unit and integration test suite
+- **Audit Logger**: `AuditLogger` service writes tamper-evident operation records for every backup event
+- **In-Memory Cache**: `MemoryCacheService` caches schedule state to reduce repeated configuration reads
+- **Health Check Service**: `HealthCheckService` aggregates storage, schedule, and last-backup status
+- **`/health` Endpoint**: HTTP endpoint suitable for Kubernetes liveness/readiness probes
+- **`/metrics` Endpoint**: Prometheus-compatible counters for backup count, duration, and size
 
-### Features
-- Automatic backup verification with record counting
-- Checksum validation (SHA-256) for backup integrity
-- Concurrent backup limiting to prevent resource exhaustion
-- Configurable timeout protection for long-running operations
-- Request context tracking for debugging
-- Event-driven architecture for extensibility
-- Dependency injection for testability
-- Multiple storage backends (local, S3)
-- Backup metadata persistence
-- Human-readable error messages
+### Changed
+- **Exception Hierarchy**: Introduced `BackupException`, `StorageException`, `VerificationException`, `ScheduleException` as typed exception classes
+- **Error Responses**: API now returns structured error envelopes with `code`, `message`, and `details`
+
+### Fixed
+- **S3 Region**: Fixed incorrect default region when `Region` was omitted from S3 config
+- **Health Endpoint**: Fixed health endpoint returning 200 when last backup had failed status
 
 ---
 
-## Version History Details
+## [0.8.0] - 2025-10-01
 
-### [1.2.0] Release Highlights
+### Added
+- **Rate Limiting Middleware**: Configurable per-minute request cap to prevent runaway backup requests
+- **Exception Handling Middleware**: Global handler converts unhandled exceptions to RFC 7807 problem responses
+- **Request Context Middleware**: Assigns a `X-Request-Id` header and propagates it through logs
+- **`CacheKeyBuilder`**: Centralized key builder for consistent cache key construction
 
-**Kubernetes-First Architecture**: Full Kubernetes support with provided manifests, RBAC configuration, and persistent volume management. Deploy with confidence on any Kubernetes cluster.
+### Changed
+- **Middleware Pipeline**: Moved to explicit `PipelineBuilder` registration order (context → rate-limit → exception)
+- **API Controllers**: Refactored to return `ApiResponse<T>` wrapper for all endpoints
 
-**Production-Grade Monitoring**: Prometheus metrics endpoint, detailed health checks, and webhook retry logic for reliable notifications.
-
-**Performance Improvements**: Optimized streaming for large databases, compression support to reduce storage costs, and transfer acceleration for cloud uploads.
-
-**Better Developer Experience**: Enhanced CLI with multiple output formats, pluggable event listeners for custom integrations, and comprehensive compliance audit tooling.
-
-### [1.1.0] Release Highlights
-
-**Cloud Storage Ready**: AWS S3 support with full encryption, versioning, and lifecycle policy integration for enterprise-grade backup management.
-
-**API Expansion**: Restore backups through API, manage schedules at runtime, monitor health with standardized endpoints.
-
-**Enterprise Security**: Audit logging tracks every operation, rate limiting prevents abuse, credentials secured with environment variables.
-
-### [1.0.0] Release Highlights
-
-**Production Ready**: Comprehensive backup solution with scheduling, verification, rotation, and REST API in a single package.
+### Fixed
+- **Concurrent Backup Limit**: `SemaphoreSlim` was not being released on verification failure; fixed with `finally` block
 
 ---
 
-## Upgrade Guides
+## [0.7.0] - 2025-09-09
 
-### Upgrading from 1.0.0 to 1.1.0
+### Added
+- **Event System**: `BackupEventPublisher` and `IBackupEventListener` interface for decoupled event handling
+- **Metrics Listener**: `MetricsEventListener` records duration and size counters on each backup event
+- **Notification Listener**: `NotificationEventListener` posts to webhook URL on backup completion or failure
+- **Webhook Client**: `WebhookClient` with configurable timeout and JSON payload serialization
+- **Notification Client**: `NotificationClient` wraps `HttpClientFactory` for typed HTTP calls
 
-**Breaking Changes**: None
+### Changed
+- **Backup Service**: Replaced direct webhook call with event publish; listeners now handle side effects
+- **DI Registration**: Listeners registered as `IEnumerable<IBackupEventListener>` for multi-listener support
 
-**Migration Steps**:
-1. Update configuration to use environment variables for S3 credentials
-2. No database migration required
-3. Existing backups remain compatible
-
-```bash
-# Update Docker image
-docker pull docker.io/username/sqlite-backup:1.1.0
-
-# Restart service
-docker-compose up -d
-```
-
-### Upgrading from 1.1.0 to 1.2.0
-
-**Breaking Changes**: None
-
-**New Features**:
-- Kubernetes deployment recommended over Docker Swarm for production
-- New webhook retry logic (automatically enabled)
-- Prometheus metrics available at `/metrics`
-
-**Migration Steps**:
-1. No database migration required
-2. Optional: Update webhook configuration for retry logic
-3. Optional: Add Prometheus scrape config for metrics
-
-```bash
-# Update Docker image
-docker pull docker.io/username/sqlite-backup:1.2.0
-
-# If using Kubernetes, apply new manifests
-kubectl apply -f kubernetes/deployment.yaml
-
-# Restart deployment
-kubectl rollout restart deployment/sqlite-backup
-```
+### Fixed
+- **Webhook Timeout**: Fixed webhook call blocking indefinitely when remote endpoint was unreachable
 
 ---
 
-## Future Roadmap
+## [0.6.0] - 2025-08-19
 
-### Planned for 1.3.0
-- [ ] Incremental backup support
-- [ ] Backup encryption at-rest
-- [ ] Database replication/failover
-- [ ] Web UI dashboard
-- [ ] Performance benchmarking tools
+### Added
+- **AWS S3 Storage**: `StorageService` gained full S3 backend using `AWSSDK.S3`
+- **S3 Configuration**: `S3Configuration` domain object with bucket, region, encryption, and versioning options
+- **Multi-Part Upload**: Large database files use S3 multi-part upload to avoid single-request size limits
+- **Storage Type Enum**: `StorageType` constant (`Local`, `S3`) used by schedule and storage service
+- **`StorageConfiguration` Base Class**: Shared base for `LocalStorageConfiguration` and `S3Configuration`
 
-### Under Consideration
-- [ ] MySQL/PostgreSQL support
-- [ ] Google Cloud Storage backend
-- [ ] Azure Blob Storage backend
-- [ ] Backup branching/snapshots
-- [ ] Cost optimization reports
+### Changed
+- **`IStorageService`**: Extended interface with `UploadAsync` / `DownloadAsync` / `ListAsync` / `DeleteAsync`
+- **Configuration**: Schedule now carries `StorageType` and optional `S3Config` section
+
+### Fixed
+- **Local Storage**: Fixed `FileSystemUtility` not creating nested backup directories on first run
 
 ---
 
-## Support
+## [0.5.0] - 2025-07-29
 
-For issues, questions, or contributions, visit:
-- GitHub: https://github.com/Sarmkadan/docker-sqlite-backup
-- Issues: https://github.com/Sarmkadan/docker-sqlite-backup/issues
-- Discussions: https://github.com/Sarmkadan/docker-sqlite-backup/discussions
+### Added
+- **CLI Interface**: `CliCommandHandler` and `CliCommandParser` for command-line backup operations
+- **CLI Commands**: `list-schedules`, `trigger-backup`, `get-history`, `last-backup`, `verify-backup`, `restore`, `cleanup`
+- **Output Formatters**: `JsonOutputFormatter`, `CsvOutputFormatter`, `XmlOutputFormatter` with shared `IOutputFormatter`
+- **`OutputFormatterFactory`**: Selects formatter based on `--format` flag value
+
+### Changed
+- **`Program.cs`**: Detects CLI args at startup and routes to `CliCommandHandler` instead of hosted service
+- **`CliOptions`**: Typed options record for all command-line arguments
+
+### Fixed
+- **Restore Command**: Fixed `--output` path not being respected when restoring to a custom location
+
+---
+
+## [0.4.0] - 2025-07-03
+
+### Added
+- **REST API**: ASP.NET Core minimal API with `BackupController`, `HealthController`, `ScheduleController`
+- **Backup Endpoints**: `POST /api/backup/trigger`, `GET /api/backup/list`, `POST /api/backup/verify/{scheduleId}`
+- **Schedule Endpoints**: `GET /api/schedule/list`, `GET /api/schedule/{id}`, enable/disable endpoints
+- **`ApiResponse<T>`**: Unified response envelope with `success`, `data`, `message`, and `timestamp` fields
+- **`BackupRepository`**: `IBackupRepository` and in-memory implementation for backup job persistence
+
+### Changed
+- **`Program.cs`**: Switched from console app to `WebApplication` host with API routing
+- **`AppSettings`**: Added `MaxConcurrentBackups` and `BackupTimeoutSeconds` fields
+
+### Fixed
+- **Schedule Endpoint**: Fixed `/api/schedule/list` returning empty array when schedules were defined in config
+
+---
+
+## [0.3.0] - 2025-06-11
+
+### Added
+- **Rotation Service**: `RotationService` implementing `IRotationService` with three strategies
+- **Rotation Strategies**: `Age` (delete older than N days), `Count` (keep last N), `AgeAndCount` (both)
+- **`RotationPolicy` Domain Object**: Encapsulates strategy, retention days, and max count
+- **`RotationStrategy` Enum**: Typed constant for strategy selection in configuration
+- **`BackupConstants`**: Shared constant values for default retention and count limits
+
+### Changed
+- **`BackupService`**: Calls `RotationService.ApplyPolicyAsync` after each successful backup
+- **`BackupSchedule`**: Added `RotationStrategy`, `RetentionDays`, and `MaxBackupCount` fields
+
+### Fixed
+- **Age Calculation**: Fixed off-by-one in retention age check (was using `>=` instead of `>`)
+
+---
+
+## [0.2.0] - 2025-05-22
+
+### Added
+- **Verification Service**: `VerificationService` implementing `IVerificationService`
+- **Restore Testing**: Each backup is restored to a temporary file and validated before the temp file is deleted
+- **Record Counting**: Source and restored database row counts compared across all tables
+- **Checksum Utility**: `ChecksumUtility` computes SHA-256 hashes for backup file integrity
+- **`RestoreVerification` Domain Object**: Carries `IsValid`, `RecordCount`, `ChecksumMatch`, and error detail
+- **`BackupStatus` Constants**: `Pending`, `Running`, `Success`, `Failed`, `Verified` status values
+
+### Changed
+- **`BackupResult`**: Extended with `VerificationResult` and `ChecksumHash` fields
+- **`BackupService`**: Calls verification after local copy completes when `EnableVerificationByDefault` is true
+
+### Fixed
+- **Temp File Cleanup**: Temporary restore file was not deleted when verification threw an exception
+
+---
+
+## [0.1.0] - 2025-04-28
+
+### Added
+- **Core Backup Engine**: `BackupService` copies SQLite database using `VACUUM INTO` for a clean, unlocked snapshot
+- **Scheduled Backups**: `ScheduleService` evaluates cron expressions via `Cronos` library on a configurable interval
+- **Local Storage**: `StorageService` writes backup files to a configurable local directory with timestamped filenames
+- **Domain Models**: `BackupJob`, `BackupResult`, `BackupSchedule`, `LocalStorageConfiguration`
+- **Configuration**: `AppSettings` bound from `appsettings.json` with environment variable override support
+- **Dependency Injection**: All services registered via `ServiceCollectionExtensions`
+- **Background Worker**: `BackupWorker` hosted service drives the schedule check loop
+- **Structured Logging**: Microsoft.Extensions.Logging throughout; log level configurable per namespace
+- **`DateTimeUtility`**: UTC-safe date helpers used by schedule and rotation logic
+- **`PathUtility`**: Cross-platform path construction for backup file names
+- **`StringUtility`**: Sanitization helpers for schedule IDs and file name components
+- **`EnumerableExtensions`**: `Batch` and `ChunkBy` extensions used in rotation logic
+- **Unit Tests**: Initial test suite for domain models, schedule parsing, and string utilities
