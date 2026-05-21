@@ -68,7 +68,7 @@ public class LocalStorageConfiguration : StorageConfiguration
 
             // Check write access by creating a temporary file
             var testFile = Path.Combine(BaseDirectory, $".test_{Guid.NewGuid()}");
-            await File.WriteAllTextAsync(testFile, "test");
+            await File.WriteAllTextAsync(testFile, "test").ConfigureAwait(false);
             File.Delete(testFile);
 
             // Check free space

@@ -151,8 +151,8 @@ public class MemoryCacheService : ICacheService
         if (cached  is not null)
             return cached;
 
-        var value = await factory(cancellationToken);
-        await SetAsync(key, value, expiration, cancellationToken);
+        var value = await factory(cancellationToken).ConfigureAwait(false);
+        await SetAsync(key, value, expiration, cancellationToken).ConfigureAwait(false);
         return value;
     }
 

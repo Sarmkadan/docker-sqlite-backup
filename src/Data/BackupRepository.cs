@@ -31,7 +31,7 @@ public class BackupRepository : IBackupRepository
     public async Task InitializeAsync()
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         var commands = new[]
         {
@@ -46,7 +46,7 @@ public class BackupRepository : IBackupRepository
         {
             using var command = connection.CreateCommand();
             command.CommandText = commandText;
-            await command.ExecuteNonQueryAsync();
+            await command.ExecuteNonQueryAsync().ConfigureAwait(false);
         }
 
         _logger.LogInformation("Database schema initialized successfully");
@@ -60,10 +60,10 @@ public class BackupRepository : IBackupRepository
         try
         {
             using var connection = new SqliteConnection(_connectionString);
-            await connection.OpenAsync();
+            await connection.OpenAsync().ConfigureAwait(false);
             using var command = connection.CreateCommand();
             command.CommandText = "SELECT 1";
-            await command.ExecuteScalarAsync();
+            await command.ExecuteScalarAsync().ConfigureAwait(false);
             return true;
         }
         catch (Exception ex)
@@ -78,7 +78,7 @@ public class BackupRepository : IBackupRepository
     public async Task<BackupSchedule> CreateScheduleAsync(BackupSchedule schedule)
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
@@ -89,14 +89,14 @@ public class BackupRepository : IBackupRepository
                     @retention, @maxCount, @emails, @verify, @storageType)";
 
         AddParameters(command, schedule);
-        await command.ExecuteNonQueryAsync();
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
         return schedule;
     }
 
     public async Task<BackupSchedule> UpdateScheduleAsync(BackupSchedule schedule)
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
@@ -108,44 +108,44 @@ public class BackupRepository : IBackupRepository
             WHERE Id=@id";
 
         AddParameters(command, schedule);
-        await command.ExecuteNonQueryAsync();
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
         return schedule;
     }
 
     public async Task DeleteScheduleAsync(Guid scheduleId)
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = connection.CreateCommand();
         command.CommandText = "DELETE FROM BackupSchedules WHERE Id=@id";
         command.Parameters.AddWithValue("@id", scheduleId.ToString());
-        await command.ExecuteNonQueryAsync();
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
     }
 
     public async Task<BackupSchedule?> GetScheduleAsync(Guid scheduleId)
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = connection.CreateCommand();
         command.CommandText = "SELECT * FROM BackupSchedules WHERE Id=@id";
         command.Parameters.AddWithValue("@id", scheduleId.ToString());
 
-        using var reader = await command.ExecuteReaderAsync();
+        using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
         return reader.HasRows && await reader.ReadAsync() ? ReadSchedule(reader) : null;
     }
 
     public async Task<IEnumerable<BackupSchedule>> GetAllSchedulesAsync()
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = connection.CreateCommand();
         command.CommandText = "SELECT * FROM BackupSchedules ORDER BY CreatedAt DESC";
 
         var schedules = new List<BackupSchedule>();
-        using var reader = await command.ExecuteReaderAsync();
+        using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
         while (await reader.ReadAsync())
         {
             schedules.Add(ReadSchedule(reader));
@@ -157,13 +157,13 @@ public class BackupRepository : IBackupRepository
     public async Task<IEnumerable<BackupSchedule>> GetActiveSchedulesAsync()
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = connection.CreateCommand();
         command.CommandText = "SELECT * FROM BackupSchedules WHERE IsActive=1 ORDER BY Name";
 
         var schedules = new List<BackupSchedule>();
-        using var reader = await command.ExecuteReaderAsync();
+        using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
         while (await reader.ReadAsync())
         {
             schedules.Add(ReadSchedule(reader));
@@ -179,7 +179,7 @@ public class BackupRepository : IBackupRepository
     public async Task<BackupResult> CreateBackupResultAsync(BackupResult result)
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
@@ -192,14 +192,14 @@ public class BackupRepository : IBackupRepository
                     @verifiedAt, @notes, @s3Stored, @localStored, @s3Key)";
 
         AddParameters(command, result);
-        await command.ExecuteNonQueryAsync();
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
         return result;
     }
 
     public async Task<BackupResult> UpdateBackupResultAsync(BackupResult result)
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
@@ -211,38 +211,38 @@ public class BackupRepository : IBackupRepository
             WHERE Id=@id";
 
         AddParameters(command, result);
-        await command.ExecuteNonQueryAsync();
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
         return result;
     }
 
     public async Task DeleteBackupResultAsync(Guid resultId)
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = connection.CreateCommand();
         command.CommandText = "DELETE FROM BackupResults WHERE Id=@id";
         command.Parameters.AddWithValue("@id", resultId.ToString());
-        await command.ExecuteNonQueryAsync();
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
     }
 
     public async Task<BackupResult?> GetBackupResultAsync(Guid resultId)
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = connection.CreateCommand();
         command.CommandText = "SELECT * FROM BackupResults WHERE Id=@id";
         command.Parameters.AddWithValue("@id", resultId.ToString());
 
-        using var reader = await command.ExecuteReaderAsync();
+        using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
         return reader.HasRows && await reader.ReadAsync() ? ReadBackupResult(reader) : null;
     }
 
     public async Task<IEnumerable<BackupResult>> GetBackupHistoryAsync(Guid scheduleId, int limit)
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
@@ -254,7 +254,7 @@ public class BackupRepository : IBackupRepository
         command.Parameters.AddWithValue("@limit", limit);
 
         var results = new List<BackupResult>();
-        using var reader = await command.ExecuteReaderAsync();
+        using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
         while (await reader.ReadAsync())
         {
             results.Add(ReadBackupResult(reader));
@@ -270,28 +270,28 @@ public class BackupRepository : IBackupRepository
     public async Task<RotationPolicy?> GetRotationPolicyAsync(Guid scheduleId)
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = connection.CreateCommand();
         command.CommandText = "SELECT * FROM RotationPolicies WHERE ScheduleId=@scheduleId";
         command.Parameters.AddWithValue("@scheduleId", scheduleId.ToString());
 
-        using var reader = await command.ExecuteReaderAsync();
+        using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
         return reader.HasRows && await reader.ReadAsync() ? ReadRotationPolicy(reader) : null;
     }
 
     public async Task<RotationPolicy> SaveRotationPolicyAsync(RotationPolicy policy)
     {
-        var existing = await GetRotationPolicyAsync(policy.ScheduleId);
+        var existing = await GetRotationPolicyAsync(policy.ScheduleId).ConfigureAwait(false);
         
         if (existing  is not null)
         {
             policy.Id = existing.Id;
-            await UpdateRotationPolicyAsync(policy);
+            await UpdateRotationPolicyAsync(policy).ConfigureAwait(false);
         }
         else
         {
-            await CreateRotationPolicyAsync(policy);
+            await CreateRotationPolicyAsync(policy).ConfigureAwait(false);
         }
 
         return policy;
@@ -300,7 +300,7 @@ public class BackupRepository : IBackupRepository
     private async Task CreateRotationPolicyAsync(RotationPolicy policy)
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
@@ -311,13 +311,13 @@ public class BackupRepository : IBackupRepository
                     @minCount, @deleteFailed, @created, @modified, @lastRotated)";
 
         AddParameters(command, policy);
-        await command.ExecuteNonQueryAsync();
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
     }
 
     private async Task UpdateRotationPolicyAsync(RotationPolicy policy)
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
@@ -327,7 +327,7 @@ public class BackupRepository : IBackupRepository
             WHERE Id=@id";
 
         AddParameters(command, policy);
-        await command.ExecuteNonQueryAsync();
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
     }
 
     #endregion
@@ -337,7 +337,7 @@ public class BackupRepository : IBackupRepository
     public async Task<RestoreVerification> SaveRestoreVerificationAsync(RestoreVerification verification)
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
@@ -348,21 +348,21 @@ public class BackupRepository : IBackupRepository
                     @recordCount, @dbSize, @integrityPassed, @integrityErrors, @tempDir, @error)";
 
         AddParameters(command, verification);
-        await command.ExecuteNonQueryAsync();
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
         return verification;
     }
 
     public async Task<IEnumerable<RestoreVerification>> GetVerificationHistoryAsync(Guid backupResultId)
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = connection.CreateCommand();
         command.CommandText = "SELECT * FROM RestoreVerifications WHERE BackupResultId=@backupId ORDER BY StartedAt DESC";
         command.Parameters.AddWithValue("@backupId", backupResultId.ToString());
 
         var verifications = new List<RestoreVerification>();
-        using var reader = await command.ExecuteReaderAsync();
+        using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
         while (await reader.ReadAsync())
         {
             verifications.Add(ReadRestoreVerification(reader));
@@ -378,7 +378,7 @@ public class BackupRepository : IBackupRepository
     public async Task<BackupJob> CreateBackupJobAsync(BackupJob job)
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
@@ -387,14 +387,14 @@ public class BackupRepository : IBackupRepository
             VALUES (@id, @scheduleId, @status, @created, @started, @completed, @retryCount, @maxRetries, @processing)";
 
         AddParameters(command, job);
-        await command.ExecuteNonQueryAsync();
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
         return job;
     }
 
     public async Task<BackupJob> UpdateBackupJobAsync(BackupJob job)
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
@@ -403,20 +403,20 @@ public class BackupRepository : IBackupRepository
             WHERE Id=@id";
 
         AddParameters(command, job);
-        await command.ExecuteNonQueryAsync();
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
         return job;
     }
 
     public async Task<BackupJob?> GetBackupJobAsync(Guid jobId)
     {
         using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         using var command = connection.CreateCommand();
         command.CommandText = "SELECT * FROM BackupJobs WHERE Id=@id";
         command.Parameters.AddWithValue("@id", jobId.ToString());
 
-        using var reader = await command.ExecuteReaderAsync();
+        using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
         return reader.HasRows && await reader.ReadAsync() ? ReadBackupJob(reader) : null;
     }
 

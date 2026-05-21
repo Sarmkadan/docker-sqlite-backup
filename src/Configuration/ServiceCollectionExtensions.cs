@@ -50,7 +50,7 @@ public static class ServiceCollectionExtensions
         this IServiceProvider serviceProvider)
     {
         var repository = serviceProvider.GetRequiredService<IBackupRepository>();
-        await repository.InitializeAsync();
+        await repository.InitializeAsync().ConfigureAwait(false);
         return repository;
     }
 }

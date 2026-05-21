@@ -28,7 +28,7 @@ public class PipelineBuilder
     /// </summary>
     public PipelineBuilder Terminal(Func<Task> handler)
     {
-        _middlewares.Add(async () => await handler());
+        _middlewares.Add(async () => await handler()).ConfigureAwait(false);
         return this;
     }
 
@@ -63,14 +63,14 @@ public class PipelineBuilder
 
                 // Support async and sync delegates
                 if (middleware is Func<Task> asyncFunc)
-                    await asyncFunc();
+                    await asyncFunc().ConfigureAwait(false);
                 else if (middleware is Func<Func<Task>, Task> asyncWith)
-                    await asyncWith(() => next());
+                    await asyncWith(() => next()).ConfigureAwait(false);
                 else if (middleware is Action syncAction)
                     syncAction();
             };
 
-            await next();
+            await next().ConfigureAwait(false);
         };
     }
 
