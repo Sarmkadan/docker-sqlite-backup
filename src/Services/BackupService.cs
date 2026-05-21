@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using DockerSqliteBackup.Data;
 using DockerSqliteBackup.Domain;
 using DockerSqliteBackup.Exceptions;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 
 namespace DockerSqliteBackup.Services;
@@ -67,7 +68,7 @@ public class BackupService : IBackupService
                 Directory.CreateDirectory(backupDir!);
             }
 
-            File.Copy(schedule.DatabasePath, backupPath, overwrite: true);
+            await SafeCopyDatabaseAsync(schedule.DatabasePath, backupPath);
             _logger.LogInformation("Backup file created at {BackupPath}", backupPath);
 
             result.BackupFilePath = backupPath;
@@ -140,6 +141,29 @@ public class BackupService : IBackupService
     public async Task<BackupResult?> GetBackupResultAsync(Guid backupResultId)
     {
         return await _repository.GetBackupResultAsync(backupResultId);
+    }
+
+    /// <summary>
+    /// Copies a SQLite database using the Online Backup API, which guarantees a consistent
+    /// snapshot even when the source database has active writers in WAL mode.
+    /// Falls back to File.Copy only if the backup API call fails (e.g., non-SQLite file).
+    /// </summary>
+    private async Task SafeCopyDatabaseAsync(string sourcePath, string destinationPath)
+    {
+        try
+        {
+            using var source = new SqliteConnection($"Data Source={sourcePath};Mode=ReadOnly");
+            using var destination = new SqliteConnection($"Data Source={destinationPath}");
+            await source.OpenAsync();
+            await destination.OpenAsync();
+            source.BackupDatabase(destination);
+            _logger.LogDebug("Database backed up using SQLite Online Backup API");
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogWarning(ex, "SQLite backup API failed, falling back to file copy");
+            File.Copy(sourcePath, destinationPath, overwrite: true);
+        }
     }
 
     private static string GenerateBackupPath(BackupSchedule schedule, DateTime timestamp)
