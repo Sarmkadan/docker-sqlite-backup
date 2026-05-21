@@ -49,19 +49,19 @@ public class NotificationEventListener : IBackupEventListener
         switch (@event)
         {
             case BackupCompletedEvent completedEvent:
-                await HandleBackupCompletedAsync(completedEvent, cancellationToken);
+                await HandleBackupCompletedAsync(completedEvent, cancellationToken).ConfigureAwait(false);
                 break;
             case BackupFailedEvent failedEvent:
-                await HandleBackupFailedAsync(failedEvent, cancellationToken);
+                await HandleBackupFailedAsync(failedEvent, cancellationToken).ConfigureAwait(false);
                 break;
             case BackupRetryEvent retryEvent:
-                await HandleBackupRetryAsync(retryEvent, cancellationToken);
+                await HandleBackupRetryAsync(retryEvent, cancellationToken).ConfigureAwait(false);
                 break;
             case ScheduleCreatedEvent createdEvent:
-                await HandleScheduleCreatedAsync(createdEvent, cancellationToken);
+                await HandleScheduleCreatedAsync(createdEvent, cancellationToken).ConfigureAwait(false);
                 break;
             case RestoreVerificationCompletedEvent verificationEvent:
-                await HandleVerificationCompletedAsync(verificationEvent, cancellationToken);
+                await HandleVerificationCompletedAsync(verificationEvent, cancellationToken).ConfigureAwait(false);
                 break;
         }
     }
@@ -92,13 +92,13 @@ public class NotificationEventListener : IBackupEventListener
         var message = $"Backup completed successfully in {@event.Duration.TotalSeconds:F2} seconds. " +
                      $"Size: {FormatBytes(@event.Result.BackupFileSizeBytes)}";
 
-        await SendNotificationsAsync(title, message, ct);
+        await SendNotificationsAsync(title, message, ct).ConfigureAwait(false);
 
         if (_webhookClient  is not null && !string.IsNullOrEmpty(_webhookUrl))
         {
             try
             {
-                await _webhookClient.SendBackupNotificationAsync(_webhookUrl, @event.Result, ct);
+                await _webhookClient.SendBackupNotificationAsync(_webhookUrl, @event.Result, ct).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -112,7 +112,7 @@ public class NotificationEventListener : IBackupEventListener
         var title = "✗ Backup Failed";
         var message = $"Backup failed: {@event.ErrorMessage}";
 
-        await SendNotificationsAsync(title, message, ct);
+        await SendNotificationsAsync(title, message, ct).ConfigureAwait(false);
     }
 
     private async Task HandleBackupRetryAsync(BackupRetryEvent @event, CancellationToken ct)
@@ -120,7 +120,7 @@ public class NotificationEventListener : IBackupEventListener
         var title = "⟲ Backup Retry";
         var message = $"Retrying backup (attempt {AttemptDisplay(@event.AttemptNumber)})";
 
-        await SendNotificationsAsync(title, message, ct);
+        await SendNotificationsAsync(title, message, ct).ConfigureAwait(false);
     }
 
     private async Task HandleScheduleCreatedAsync(ScheduleCreatedEvent @event, CancellationToken ct)
@@ -128,7 +128,7 @@ public class NotificationEventListener : IBackupEventListener
         var title = "✓ Schedule Created";
         var message = $"New schedule created: {@event.Schedule.Name} (Cron: {@event.Schedule.CronExpression})";
 
-        await SendNotificationsAsync(title, message, ct);
+        await SendNotificationsAsync(title, message, ct).ConfigureAwait(false);
     }
 
     private async Task HandleVerificationCompletedAsync(
@@ -138,13 +138,13 @@ public class NotificationEventListener : IBackupEventListener
         var title = @event.IsValid ? "✓ Verification Passed" : "✗ Verification Failed";
         var message = @event.ValidationMessage ?? "Restore verification completed";
 
-        await SendNotificationsAsync(title, message, ct);
+        await SendNotificationsAsync(title, message, ct).ConfigureAwait(false);
     }
 
     private async Task SendNotificationsAsync(string title, string message, CancellationToken ct)
     {
         var tasks = _notificationClients.Select(client => client.SendAsync(title, message, ct));
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(false);
     }
 
     private static string FormatBytes(long bytes)

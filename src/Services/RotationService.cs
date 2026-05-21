@@ -31,14 +31,14 @@ public class RotationService : IRotationService
     /// </summary>
     public async Task<int> ExecuteRotationAsync(Guid scheduleId)
     {
-        var policy = await _repository.GetRotationPolicyAsync(scheduleId);
+        var policy = await _repository.GetRotationPolicyAsync(scheduleId).ConfigureAwait(false);
         if (policy  is null || policy.Strategy == (int)Constants.RotationStrategy.NoRotation)
         {
             _logger.LogInformation("No rotation policy or rotation disabled for schedule {ScheduleId}", scheduleId);
             return 0;
         }
 
-        var backups = await GetBackupsForRotationAsync(scheduleId);
+        var backups = await GetBackupsForRotationAsync(scheduleId).ConfigureAwait(false);
         var backupsToDelete = backups.ToList();
 
         int deletedCount = 0;
@@ -52,7 +52,7 @@ public class RotationService : IRotationService
                     _logger.LogInformation("Deleted backup file during rotation: {FilePath}", backup.BackupFilePath);
                 }
 
-                await _repository.DeleteBackupResultAsync(backup.Id);
+                await _repository.DeleteBackupResultAsync(backup.Id).ConfigureAwait(false);
                 deletedCount++;
             }
             catch (Exception ex)
@@ -62,7 +62,7 @@ public class RotationService : IRotationService
         }
 
         policy.LastRotatedAt = DateTime.UtcNow;
-        await _repository.SaveRotationPolicyAsync(policy);
+        await _repository.SaveRotationPolicyAsync(policy).ConfigureAwait(false);
 
         _logger.LogInformation("Rotation completed for schedule {ScheduleId}. Deleted {DeletedCount} backups",
             scheduleId, deletedCount);
@@ -75,7 +75,7 @@ public class RotationService : IRotationService
     /// </summary>
     public async Task<RotationPolicy?> GetRotationPolicyAsync(Guid scheduleId)
     {
-        return await _repository.GetRotationPolicyAsync(scheduleId);
+        return await _repository.GetRotationPolicyAsync(scheduleId).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -89,7 +89,7 @@ public class RotationService : IRotationService
         }
 
         policy.LastModifiedAt = DateTime.UtcNow;
-        var saved = await _repository.SaveRotationPolicyAsync(policy);
+        var saved = await _repository.SaveRotationPolicyAsync(policy).ConfigureAwait(false);
 
         _logger.LogInformation("Rotation policy saved for schedule {ScheduleId}", policy.ScheduleId);
         return saved;
@@ -100,8 +100,8 @@ public class RotationService : IRotationService
     /// </summary>
     public async Task<IEnumerable<BackupResult>> GetBackupsForRotationAsync(Guid scheduleId)
     {
-        var history = await _repository.GetBackupHistoryAsync(scheduleId, int.MaxValue);
-        var policy = await _repository.GetRotationPolicyAsync(scheduleId);
+        var history = await _repository.GetBackupHistoryAsync(scheduleId, int.MaxValue).ConfigureAwait(false);
+        var policy = await _repository.GetRotationPolicyAsync(scheduleId).ConfigureAwait(false);
 
         if (policy  is null)
         {
@@ -135,7 +135,7 @@ public class RotationService : IRotationService
     /// </summary>
     public async Task<long> CalculateDiskSpaceFreedAsync(Guid scheduleId)
     {
-        var backupsForRotation = await GetBackupsForRotationAsync(scheduleId);
+        var backupsForRotation = await GetBackupsForRotationAsync(scheduleId).ConfigureAwait(false);
         return backupsForRotation.Sum(b => b.BackupFileSizeBytes);
     }
 }

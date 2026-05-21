@@ -52,7 +52,7 @@ public class ScheduleService : IScheduleService
         schedule.CreatedAt = DateTime.UtcNow;
         schedule.LastModifiedAt = DateTime.UtcNow;
 
-        var created = await _repository.CreateScheduleAsync(schedule);
+        var created = await _repository.CreateScheduleAsync(schedule).ConfigureAwait(false);
         _logger.LogInformation("Schedule created: {ScheduleId} - {ScheduleName}", created.Id, created.Name);
 
         return created;
@@ -74,7 +74,7 @@ public class ScheduleService : IScheduleService
         }
 
         schedule.LastModifiedAt = DateTime.UtcNow;
-        var updated = await _repository.UpdateScheduleAsync(schedule);
+        var updated = await _repository.UpdateScheduleAsync(schedule).ConfigureAwait(false);
 
         _logger.LogInformation("Schedule updated: {ScheduleId} - {ScheduleName}", updated.Id, updated.Name);
         return updated;
@@ -85,7 +85,7 @@ public class ScheduleService : IScheduleService
     /// </summary>
     public async Task DeleteScheduleAsync(Guid scheduleId, CancellationToken cancellationToken = default)
     {
-        await _repository.DeleteScheduleAsync(scheduleId);
+        await _repository.DeleteScheduleAsync(scheduleId).ConfigureAwait(false);
         _logger.LogInformation("Schedule deleted: {ScheduleId}", scheduleId);
     }
 
@@ -94,7 +94,7 @@ public class ScheduleService : IScheduleService
     /// </summary>
     public async Task<BackupSchedule?> GetScheduleAsync(Guid scheduleId, CancellationToken cancellationToken = default)
     {
-        return await _repository.GetScheduleAsync(scheduleId);
+        return await _repository.GetScheduleAsync(scheduleId).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -102,7 +102,7 @@ public class ScheduleService : IScheduleService
     /// </summary>
     public async Task<IEnumerable<BackupSchedule>> GetActiveSchedulesAsync()
     {
-        return await _repository.GetActiveSchedulesAsync();
+        return await _repository.GetActiveSchedulesAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -110,7 +110,7 @@ public class ScheduleService : IScheduleService
     /// </summary>
     public async Task<IEnumerable<BackupSchedule>> GetAllSchedulesAsync(CancellationToken cancellationToken = default)
     {
-        return await _repository.GetAllSchedulesAsync();
+        return await _repository.GetAllSchedulesAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -166,12 +166,12 @@ public class ScheduleService : IScheduleService
     /// </summary>
     public async Task DeactivateScheduleAsync(Guid scheduleId, CancellationToken cancellationToken = default)
     {
-        var schedule = await _repository.GetScheduleAsync(scheduleId);
+        var schedule = await _repository.GetScheduleAsync(scheduleId).ConfigureAwait(false);
         if (schedule  is not null)
         {
             schedule.IsActive = false;
             schedule.LastModifiedAt = DateTime.UtcNow;
-            await _repository.UpdateScheduleAsync(schedule);
+            await _repository.UpdateScheduleAsync(schedule).ConfigureAwait(false);
             _logger.LogInformation("Schedule deactivated: {ScheduleId}", scheduleId);
         }
     }
@@ -181,12 +181,12 @@ public class ScheduleService : IScheduleService
     /// </summary>
     public async Task ActivateScheduleAsync(Guid scheduleId)
     {
-        var schedule = await _repository.GetScheduleAsync(scheduleId);
+        var schedule = await _repository.GetScheduleAsync(scheduleId).ConfigureAwait(false);
         if (schedule  is not null)
         {
             schedule.IsActive = true;
             schedule.LastModifiedAt = DateTime.UtcNow;
-            await _repository.UpdateScheduleAsync(schedule);
+            await _repository.UpdateScheduleAsync(schedule).ConfigureAwait(false);
             _logger.LogInformation("Schedule activated: {ScheduleId}", scheduleId);
         }
     }

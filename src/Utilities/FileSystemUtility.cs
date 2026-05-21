@@ -37,7 +37,7 @@ public static class FileSystemUtility
             {
                 lastException = ex;
                 if (attempt < maxRetries - 1)
-                    await Task.Delay(TimeSpan.FromMilliseconds(100 * (attempt + 1)));
+                    await Task.Delay(TimeSpan.FromMilliseconds(100 * (attempt + 1))).ConfigureAwait(false);
             }
         }
 
@@ -114,12 +114,12 @@ public static class FileSystemUtility
                 foreach (var file in Directory.GetFiles(directory))
                 {
                     File.Delete(file);
-                    await Task.Delay(10); // Small delay to avoid file lock issues
+                    await Task.Delay(10).ConfigureAwait(false); // Small delay to avoid file lock issues
                 }
 
                 foreach (var subdir in Directory.GetDirectories(directory))
                 {
-                    await DeleteDirectoryAsync(subdir, true);
+                    await DeleteDirectoryAsync(subdir, true).ConfigureAwait(false);
                 }
             }
 

@@ -60,7 +60,7 @@ public class BackupWorker : BackgroundService
             try
             {
                 // Load all active schedules
-                var schedules = await _scheduleService.GetActiveSchedulesAsync();
+                var schedules = await _scheduleService.GetActiveSchedulesAsync().ConfigureAwait(false);
 
                 foreach (var schedule in schedules)
                 {
@@ -84,7 +84,7 @@ public class BackupWorker : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in backup worker loop");
-                await Task.Delay(10000, stoppingToken);
+                await Task.Delay(10000, stoppingToken).ConfigureAwait(false);
             }
         }
 
@@ -152,7 +152,7 @@ public class BackupWorker : BackgroundService
             try
             {
                 // Execute backup
-                result = await _backupService.ExecuteBackupAsync(schedule, cts.Token);
+                result = await _backupService.ExecuteBackupAsync(schedule, cts.Token).ConfigureAwait(false);
                 job.Result = result;
 
                 if (result.IsSuccess)
@@ -165,7 +165,7 @@ public class BackupWorker : BackgroundService
                     {
                         _logger.LogInformation("Starting verification for backup {BackupId}",
                             result.Id);
-                        var verification = await _verificationService.VerifyBackupAsync(result, cts.Token);
+                        var verification = await _verificationService.VerifyBackupAsync(result, cts.Token).ConfigureAwait(false);
 
                         if (verification.IsSuccessful)
                         {
@@ -184,7 +184,7 @@ public class BackupWorker : BackgroundService
                     }
 
                     // Execute rotation
-                    var deletedCount = await _rotationService.ExecuteRotationAsync(schedule.Id);
+                    var deletedCount = await _rotationService.ExecuteRotationAsync(schedule.Id).ConfigureAwait(false);
                     if (deletedCount > 0)
                     {
                         _logger.LogInformation("Rotation deleted {DeletedCount} old backups for schedule {ScheduleId}",
@@ -193,7 +193,7 @@ public class BackupWorker : BackgroundService
 
                     // Update schedule's last backup time
                     schedule.LastBackupAt = DateTime.UtcNow;
-                    await _scheduleService.UpdateScheduleAsync(schedule);
+                    await _scheduleService.UpdateScheduleAsync(schedule).ConfigureAwait(false);
                     _scheduleLastRun[schedule.Id] = DateTime.UtcNow;
 
                     job.MarkCompleted((int)BackupStatus.Success);

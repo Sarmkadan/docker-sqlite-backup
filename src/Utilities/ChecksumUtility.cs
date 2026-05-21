@@ -25,7 +25,7 @@ public static class ChecksumUtility
 
         using var sha256 = SHA256.Create();
         using var stream = File.OpenRead(filePath);
-        var hash = await Task.Run(() => sha256.ComputeHash(stream));
+        var hash = await Task.Run(() => sha256.ComputeHash(stream)).ConfigureAwait(false);
         return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
     }
 
@@ -49,7 +49,7 @@ public static class ChecksumUtility
 
         using var md5 = MD5.Create();
         using var stream = File.OpenRead(filePath);
-        var hash = await Task.Run(() => md5.ComputeHash(stream));
+        var hash = await Task.Run(() => md5.ComputeHash(stream)).ConfigureAwait(false);
         return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
     }
 
@@ -58,7 +58,7 @@ public static class ChecksumUtility
     /// </summary>
     public static async Task<bool> VerifyFileSha256Async(string filePath, string expectedHash)
     {
-        var actualHash = await CalculateFileSha256Async(filePath);
+        var actualHash = await CalculateFileSha256Async(filePath).ConfigureAwait(false);
         return actualHash.Equals(expectedHash, StringComparison.OrdinalIgnoreCase);
     }
 

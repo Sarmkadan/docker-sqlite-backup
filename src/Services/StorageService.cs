@@ -37,7 +37,7 @@ public class StorageService : IStorageService
         switch (config)
         {
             case S3Configuration s3Config:
-                return await UploadToS3Async(filePath, s3Config);
+                return await UploadToS3Async(filePath, s3Config).ConfigureAwait(false);
             case LocalStorageConfiguration localConfig:
                 return UploadToLocal(filePath, localConfig);
             default:
@@ -55,7 +55,7 @@ public class StorageService : IStorageService
         switch (config)
         {
             case S3Configuration s3Config:
-                await DownloadFromS3Async(storagePath, tempFile, s3Config);
+                await DownloadFromS3Async(storagePath, tempFile, s3Config).ConfigureAwait(false);
                 break;
             case LocalStorageConfiguration:
                 File.Copy(storagePath, tempFile, overwrite: true);
@@ -75,7 +75,7 @@ public class StorageService : IStorageService
         switch (config)
         {
             case S3Configuration s3Config:
-                await DeleteFromS3Async(storagePath, s3Config);
+                await DeleteFromS3Async(storagePath, s3Config).ConfigureAwait(false);
                 break;
             case LocalStorageConfiguration:
                 if (File.Exists(storagePath))
@@ -96,7 +96,7 @@ public class StorageService : IStorageService
         switch (config)
         {
             case S3Configuration s3Config:
-                return await ListS3BackupsAsync(s3Config);
+                return await ListS3BackupsAsync(s3Config).ConfigureAwait(false);
             case LocalStorageConfiguration localConfig:
                 return ListLocalBackups(localConfig);
             default:
@@ -109,7 +109,7 @@ public class StorageService : IStorageService
     /// </summary>
     public async Task<bool> TestConnectionAsync(StorageConfiguration config)
     {
-        return await config.TestConnectionAsync();
+        return await config.TestConnectionAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -161,7 +161,7 @@ public class StorageService : IStorageService
                 StorageClass = (S3StorageClass)(object)(config.StorageClass ?? "STANDARD")
             };
 
-            await s3Client.PutObjectAsync(request);
+            await s3Client.PutObjectAsync(request).ConfigureAwait(false);
             _logger.LogInformation("Successfully uploaded backup to S3: {Key}", key);
 
             return key;
@@ -183,8 +183,8 @@ public class StorageService : IStorageService
                 Key = s3Key
             };
 
-            using var response = await s3Client.GetObjectAsync(request);
-            await response.WriteResponseStreamToFileAsync(localPath, false, CancellationToken.None);
+            using var response = await s3Client.GetObjectAsync(request).ConfigureAwait(false);
+            await response.WriteResponseStreamToFileAsync(localPath, false, CancellationToken.None).ConfigureAwait(false);
             _logger.LogInformation("Successfully downloaded backup from S3: {Key}", s3Key);
         }
         catch (Exception ex)
@@ -204,7 +204,7 @@ public class StorageService : IStorageService
                 Key = s3Key
             };
 
-            await s3Client.DeleteObjectAsync(request);
+            await s3Client.DeleteObjectAsync(request).ConfigureAwait(false);
             _logger.LogInformation("Successfully deleted backup from S3: {Key}", s3Key);
         }
         catch (Exception ex)
@@ -224,7 +224,7 @@ public class StorageService : IStorageService
                 Prefix = config.ObjectKeyPrefix
             };
 
-            var response = await s3Client.ListObjectsV2Async(request);
+            var response = await s3Client.ListObjectsV2Async(request).ConfigureAwait(false);
             return response.S3Objects.Select(obj =>
                 (obj.Key, obj.Size, obj.LastModified.ToUniversalTime())
             ).ToList();

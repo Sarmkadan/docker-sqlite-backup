@@ -53,11 +53,11 @@ public class VerificationService : IVerificationService
             }
 
             // Restore to temporary location
-            var tempPath = await RestoreToTemporaryAsync(backup);
+            var tempPath = await RestoreToTemporaryAsync(backup).ConfigureAwait(false);
             verification.TemporaryDirectory = tempPath;
 
             // Perform integrity check
-            var (isValid, errors) = await PerformIntegrityCheckAsync(tempPath);
+            var (isValid, errors) = await PerformIntegrityCheckAsync(tempPath).ConfigureAwait(false);
             verification.IntegrityCheckPassed = isValid;
             verification.IntegrityCheckErrors = errors;
 
@@ -72,7 +72,7 @@ public class VerificationService : IVerificationService
             // Get database statistics
             var fileInfo = new FileInfo(tempPath);
             verification.DatabaseSizeBytes = fileInfo.Length;
-            verification.RecordCount = await CountRecordsAsync(tempPath);
+            verification.RecordCount = await CountRecordsAsync(tempPath).ConfigureAwait(false);
 
             verification.MarkCompleted(true, "Backup verification successful");
             _logger.LogInformation("Backup verification completed successfully for {BackupId}", backup.Id);
@@ -90,7 +90,7 @@ public class VerificationService : IVerificationService
             {
                 if (!string.IsNullOrEmpty(verification.TemporaryDirectory) && Directory.Exists(verification.TemporaryDirectory))
                 {
-                    await CleanupTemporaryFilesAsync(verification.TemporaryDirectory);
+                    await CleanupTemporaryFilesAsync(verification.TemporaryDirectory).ConfigureAwait(false);
                 }
             }
             catch (Exception ex)
@@ -100,7 +100,7 @@ public class VerificationService : IVerificationService
             }
         }
 
-        await _repository.SaveRestoreVerificationAsync(verification);
+        await _repository.SaveRestoreVerificationAsync(verification).ConfigureAwait(false);
         return verification;
     }
 
@@ -109,7 +109,7 @@ public class VerificationService : IVerificationService
     /// </summary>
     public async Task<IEnumerable<RestoreVerification>> GetVerificationHistoryAsync(Guid backupResultId)
     {
-        return await _repository.GetVerificationHistoryAsync(backupResultId);
+        return await _repository.GetVerificationHistoryAsync(backupResultId).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -121,11 +121,11 @@ public class VerificationService : IVerificationService
         {
             var connectionString = $"Data Source={databasePath};Mode=ReadOnly;";
             using var connection = new SqliteConnection(connectionString);
-            await connection.OpenAsync();
+            await connection.OpenAsync().ConfigureAwait(false);
 
             using var command = connection.CreateCommand();
             command.CommandText = "PRAGMA integrity_check";
-            var result = (string?)await command.ExecuteScalarAsync();
+            var result = (string?)await command.ExecuteScalarAsync().ConfigureAwait(false);
 
             return result == "ok" ? (true, null) : (false, result);
         }
@@ -148,7 +148,7 @@ public class VerificationService : IVerificationService
 
         using var sha256 = SHA256.Create();
         using var stream = File.OpenRead(filePath);
-        var hash = await Task.Run(() => sha256.ComputeHash(stream));
+        var hash = await Task.Run(() => sha256.ComputeHash(stream)).ConfigureAwait(false);
         var calculatedChecksum = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
 
         return calculatedChecksum.Equals(expectedChecksum, StringComparison.OrdinalIgnoreCase);
@@ -163,7 +163,7 @@ public class VerificationService : IVerificationService
         Directory.CreateDirectory(tempDir);
 
         var tempDbPath = Path.Combine(tempDir, "restore-check.sqlite");
-        await Task.Run(() => File.Copy(backup.BackupFilePath, tempDbPath, overwrite: true));
+        await Task.Run(() => File.Copy(backup.BackupFilePath, tempDbPath, overwrite: true)).ConfigureAwait(false);
 
         return tempDbPath;
     }
@@ -191,13 +191,13 @@ public class VerificationService : IVerificationService
         {
             var connectionString = $"Data Source={databasePath};Mode=ReadOnly;";
             using var connection = new SqliteConnection(connectionString);
-            await connection.OpenAsync();
+            await connection.OpenAsync().ConfigureAwait(false);
 
             long totalRecords = 0;
 
             using var command = connection.CreateCommand();
             command.CommandText = "SELECT name FROM sqlite_master WHERE type='table'";
-            using var reader = await command.ExecuteReaderAsync();
+            using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
             
             var tableNames = new List<string>();
             while (await reader.ReadAsync())

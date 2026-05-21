@@ -77,7 +77,7 @@ public class CliCommandHandler
             return WriteError("Invalid schedule ID", 1);
         }
 
-        var schedule = await _scheduleService.GetScheduleAsync(parsedId, ct);
+        var schedule = await _scheduleService.GetScheduleAsync(parsedId, ct).ConfigureAwait(false);
         if (schedule  is null)
         {
             return WriteError($"Schedule not found: {scheduleId}", 1);
@@ -85,7 +85,7 @@ public class CliCommandHandler
 
         try
         {
-            var result = await _backupService.ExecuteBackupAsync(schedule, ct);
+            var result = await _backupService.ExecuteBackupAsync(schedule, ct).ConfigureAwait(false);
             WriteOutput($"Backup completed successfully. File: {result.BackupFilePath}");
             WriteOutput($"Size: {result.BackupFileSizeBytes} bytes | Checksum: {result.Checksum}");
             return 0;
@@ -121,7 +121,7 @@ public class CliCommandHandler
 
         try
         {
-            var schedule = await _scheduleService.CreateScheduleAsync(name, dbPath, ct);
+            var schedule = await _scheduleService.CreateScheduleAsync(name, dbPath, ct).ConfigureAwait(false);
             WriteOutput($"Schedule created: {schedule.Id}");
             return 0;
         }
@@ -139,7 +139,7 @@ public class CliCommandHandler
             return WriteError("Invalid schedule ID", 1);
         }
 
-        await _scheduleService.DeleteScheduleAsync(parsedId, ct);
+        await _scheduleService.DeleteScheduleAsync(parsedId, ct).ConfigureAwait(false);
         WriteOutput($"Schedule deleted: {scheduleId}");
         return 0;
     }
@@ -159,7 +159,7 @@ public class CliCommandHandler
 
     private async Task<int> HandleScheduleList(CancellationToken ct)
     {
-        var schedules = await _scheduleService.GetAllSchedulesAsync(ct);
+        var schedules = await _scheduleService.GetAllSchedulesAsync(ct).ConfigureAwait(false);
         if (!schedules.Any())
         {
             WriteOutput("No schedules found.");
@@ -197,7 +197,7 @@ public class CliCommandHandler
             return WriteError("Invalid schedule ID. Use --schedule <id>", 1);
         }
 
-        var backups = await _backupService.GetBackupHistoryAsync(parsedId, 10);
+        var backups = await _backupService.GetBackupHistoryAsync(parsedId, 10).ConfigureAwait(false);
         if (!backups.Any())
         {
             WriteOutput("No backups found.");

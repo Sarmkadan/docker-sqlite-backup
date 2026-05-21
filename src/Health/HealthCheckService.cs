@@ -49,7 +49,7 @@ public class HealthCheckService
         // Calculate overall status
         result.Status = result.Components.Values.All(c => c.IsHealthy) ? "healthy" : "degraded";
 
-        await PublishHealthCheckEventAsync(result, cancellationToken);
+        await PublishHealthCheckEventAsync(result, cancellationToken).ConfigureAwait(false);
 
         return result;
     }
@@ -159,7 +159,7 @@ public class HealthCheckService
                 Message = $"Health check: {result.Status}"
             };
 
-            await _eventPublisher.PublishAsync(@event, cancellationToken);
+            await _eventPublisher.PublishAsync(@event, cancellationToken).ConfigureAwait(false);
         }
     }
 }
