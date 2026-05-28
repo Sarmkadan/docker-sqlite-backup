@@ -1,7 +1,6 @@
 #nullable enable
 // =============================================================================
 // Author: Vladyslav Zaiets | https://sarmkadan.com
-// CTO & Software Architect
 // =============================================================================
 
 using System.Text;
@@ -12,28 +11,25 @@ using Microsoft.Extensions.Logging;
 namespace DockerSqliteBackup.Integration;
 
 /// <summary>
-/// Client for sending webhook notifications about backup events.
-/// Supports retries and custom headers for webhook validation.
+/// Sends webhook notifications about backup events with exponential-backoff retry.
 /// </summary>
 public class WebhookClient
 {
-    private readonly HttpClientFactory _httpClientFactory;
+    private static readonly HttpClient _http = new()
+    {
+        Timeout = TimeSpan.FromSeconds(30),
+        DefaultRequestHeaders = { { "User-Agent", "docker-sqlite-backup/2.0" } }
+    };
+
     private readonly ILogger<WebhookClient> _logger;
     private readonly int _maxRetries;
 
-    public WebhookClient(
-        HttpClientFactory httpClientFactory,
-        ILogger<WebhookClient> logger,
-        int maxRetries = 3)
+    public WebhookClient(ILogger<WebhookClient> logger, int maxRetries = 3)
     {
-        _httpClientFactory = httpClientFactory;
         _logger = logger;
         _maxRetries = maxRetries;
     }
 
-    /// <summary>
-    /// Sends a webhook notification about a backup result.
-    /// </summary>
     public async Task SendBackupNotificationAsync(
         string webhookUrl,
         BackupResult result,
@@ -66,9 +62,6 @@ public class WebhookClient
         await SendWithRetryAsync(webhookUrl, payload, cancellationToken);
     }
 
-    /// <summary>
-    /// Sends a webhook notification about a schedule event.
-    /// </summary>
     public async Task SendScheduleNotificationAsync(
         string webhookUrl,
         BackupSchedule schedule,
@@ -92,9 +85,6 @@ public class WebhookClient
         await SendWithRetryAsync(webhookUrl, payload, cancellationToken);
     }
 
-    /// <summary>
-    /// Sends a webhook with automatic retry logic.
-    /// </summary>
     private async Task SendWithRetryAsync(
         string url,
         object payload,
@@ -105,32 +95,21 @@ public class WebhookClient
         {
             var json = JsonSerializer.Serialize(payload);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            var client = _httpClientFactory.GetClient("webhooks");
-            var response = await client.PostAsync(url, content, cancellationToken);
+            var response = await _http.PostAsync(url, content, cancellationToken);
 
             if (response.IsSuccessStatusCode)
             {
                 _logger.LogInformation("Webhook sent successfully to {Url}", url);
             }
-            else if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable ||
-                     response.StatusCode == System.Net.HttpStatusCode.RequestTimeout)
+            else if ((response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable ||
+                      response.StatusCode == System.Net.HttpStatusCode.RequestTimeout) &&
+                     attempt < _maxRetries)
             {
-                if (attempt < _maxRetries)
-                {
-                    var delay = TimeSpan.FromMilliseconds(Math.Pow(2, attempt) * 100);
-                    _logger.LogWarning(
-                        "Webhook request failed with {StatusCode}, retrying in {Delay}ms",
-                        response.StatusCode,
-                        delay.TotalMilliseconds);
-
-                    await Task.Delay(delay, cancellationToken);
-                    await SendWithRetryAsync(url, payload, cancellationToken, attempt + 1);
-                }
-                else
-                {
-                    _logger.LogError("Webhook request failed after {Attempts} attempts", _maxRetries);
-                }
+                var delay = TimeSpan.FromMilliseconds(Math.Pow(2, attempt) * 100);
+                _logger.LogWarning("Webhook failed with {Status}, retrying in {Delay}ms",
+                    response.StatusCode, delay.TotalMilliseconds);
+                await Task.Delay(delay, cancellationToken);
+                await SendWithRetryAsync(url, payload, cancellationToken, attempt + 1);
             }
             else
             {
