@@ -13,7 +13,9 @@ using Microsoft.Extensions.Logging;
 namespace DockerSqliteBackup.Services;
 
 /// <summary>
-/// Service for executing and managing backup operations.
+/// Service responsible for executing and managing SQLite backup operations, including
+/// scheduling, snapshot creation via the Online Backup API, incremental support,
+/// encryption, and storage integration.
 /// </summary>
 public class BackupService : IBackupService
 {
@@ -22,6 +24,13 @@ public class BackupService : IBackupService
     private readonly AppSettings _appSettings;
     private readonly ILogger<BackupService> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BackupService"/> class.
+    /// </summary>
+    /// <param name="repository">The backup repository for metadata persistence.</param>
+    /// <param name="storageService">The storage service for remote file operations.</param>
+    /// <param name="appSettings">Global application settings.</param>
+    /// <param name="logger">The logger instance.</param>
     public BackupService(
         IBackupRepository repository,
         IStorageService storageService,
@@ -35,8 +44,13 @@ public class BackupService : IBackupService
     }
 
     /// <summary>
-    /// Executes a backup for the specified schedule.
+    /// Creates and executes a backup for the specified schedule.
     /// </summary>
+    /// <param name="schedule">The backup schedule to execute.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A <see cref="BackupResult"/> describing the outcome of the backup.</returns>
+    /// <exception cref="InvalidScheduleException">Thrown when the provided schedule is invalid.</exception>
+    /// <exception cref="DatabaseAccessException">Thrown when the database cannot be accessed.</exception>
     public async Task<BackupResult> ExecuteBackupAsync(BackupSchedule schedule, CancellationToken cancellationToken = default)
     {
         if (!schedule.IsValid())
@@ -157,6 +171,8 @@ public class BackupService : IBackupService
     /// <summary>
     /// Calculates the SHA256 checksum of a backup file.
     /// </summary>
+    /// <param name="filePath">The path to the backup file.</param>
+    /// <returns>A hex-encoded SHA256 hash string.</returns>
     public async Task<string> CalculateBackupChecksumAsync(string filePath)
     {
         using var sha256 = SHA256.Create();
@@ -168,6 +184,9 @@ public class BackupService : IBackupService
     /// <summary>
     /// Retrieves backup history for a schedule.
     /// </summary>
+    /// <param name="scheduleId">The ID of the schedule.</param>
+    /// <param name="limit">The maximum number of results to return.</param>
+    /// <returns>An enumerable of <see cref="BackupResult"/> objects.</returns>
     public async Task<IEnumerable<BackupResult>> GetBackupHistoryAsync(Guid scheduleId, int limit = 10)
     {
         return await _repository.GetBackupHistoryAsync(scheduleId, limit);
@@ -176,6 +195,8 @@ public class BackupService : IBackupService
     /// <summary>
     /// Deletes a backup file and removes it from storage.
     /// </summary>
+    /// <param name="backupResultId">The ID of the backup result to delete.</param>
+    /// <exception cref="BackupException">Thrown when the backup result is not found.</exception>
     public async Task DeleteBackupAsync(Guid backupResultId)
     {
         var backup = await _repository.GetBackupResultAsync(backupResultId);
@@ -196,6 +217,8 @@ public class BackupService : IBackupService
     /// <summary>
     /// Gets a specific backup result by ID.
     /// </summary>
+    /// <param name="backupResultId">The ID of the backup result.</param>
+    /// <returns>The <see cref="BackupResult"/> object, or null if not found.</returns>
     public async Task<BackupResult?> GetBackupResultAsync(Guid backupResultId)
     {
         return await _repository.GetBackupResultAsync(backupResultId);
