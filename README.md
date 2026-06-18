@@ -1,35 +1,31 @@
-![CI](https://github.com/sarmkadan/docker-sqlite-backup/actions/workflows/ci.yml/badge.svg)
+# docker-sqlite-backup
+
+Reliable, scheduled SQLite backup solution for .NET.
+
+![Build](https://github.com/sarmkadan/docker-sqlite-backup/actions/workflows/build.yml/badge.svg)
 ![License](https://img.shields.io/github/license/sarmkadan/docker-sqlite-backup)
 ![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)
 
-# docker-sqlite-backup
+## Overview
 
-Scheduled SQLite backup service for .NET 10. Runs as a background worker,
-snapshots your database on a cron schedule, and stores backups locally or in
-S3/Azure. Supports AES-256 encryption, rotation, and restore verification.
+docker-sqlite-backup is a background worker for .NET that performs scheduled SQLite backups.
+It snapshots your database on a cron schedule, and stores backups locally, or in S3/Azure.
+Supports AES-256 encryption, rotation, and restore verification.
 
-## Features
-
-- Cron-based scheduling
-- Storage: local filesystem, AWS S3, Azure Blob Storage
-- Full and incremental backup modes (SQLite Online Backup API + WAL checkpoint)
-- AES-256-CBC encryption at rest
-- SHA-256 checksums + restore verification (integrity check + row count)
-- Rotation by age, count, or both
-- Webhook notifications on backup events
-
-## Quick start
+## Installation
 
 ```bash
 git clone https://github.com/Sarmkadan/docker-sqlite-backup.git
 cd docker-sqlite-backup
-dotnet run --configuration Release
+dotnet build
 ```
 
-Or with Docker:
+## Usage Example
 
-```bash
-docker compose up -d
+```csharp
+// Simple usage example (via configuration)
+// Ensure your appsettings.json or environment variables are set up
+// and run the background worker.
 ```
 
 ## Configuration
@@ -107,6 +103,8 @@ dotnet test
 ## License
 
 MIT - Copyright (c) 2026 Vladyslav Zaiets
+
+
 
 
 
