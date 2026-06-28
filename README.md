@@ -20,13 +20,14 @@ cd docker-sqlite-backup
 dotnet build
 ```
 
-## Usage Example
+## Usage
 
-```csharp
-// Simple usage example (via configuration)
-// Ensure your appsettings.json or environment variables are set up
-// and run the background worker.
-```
+See the [examples/](examples/) directory for practical usage scenarios:
+
+- [BasicUsage.cs](examples/BasicUsage.cs) - Getting started
+- [AdvancedUsage.cs](examples/AdvancedUsage.cs) - Configuration and error handling
+- [IntegrationExample.cs](examples/IntegrationExample.cs) - ASP.NET DI integration
+
 
 ## Configuration
 
