@@ -16,10 +16,10 @@ services:
     container_name: sqlite-backup
     restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "8080:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_URLS: "http://0.0.0.0:5000"
+      ASPNETCORE_URLS: "http://0.0.0.0:8080"
       AppSettings__DatabasePath: /data/app.db
       AppSettings__LocalStoragePath: /backups
       AppSettings__MaxConcurrentBackups: "3"
@@ -33,7 +33,7 @@ services:
       - ./backups:/backups
       - ./appsettings.json:/app/appsettings.json:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
