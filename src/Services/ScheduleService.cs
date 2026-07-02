@@ -28,8 +28,18 @@ public class ScheduleService : IScheduleService
     /// <summary>
     /// Creates a new backup schedule.
     /// </summary>
+    /// <param name="schedule">The schedule to create.</param>
+    /// <returns>The created schedule.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when schedule is null.</exception>
+    /// <exception cref="InvalidScheduleException">Thrown when schedule configuration is invalid.</exception>
+    /// <exception cref="InvalidCronExpressionException">Thrown when cron expression is invalid.</exception>
     public async Task<BackupSchedule> CreateScheduleAsync(BackupSchedule schedule)
     {
+        if (schedule == null)
+        {
+            throw new ArgumentNullException(nameof(schedule));
+        }
+
         if (!schedule.IsValid())
         {
             throw new InvalidScheduleException("Schedule configuration is invalid", schedule.Id);
@@ -49,17 +59,34 @@ public class ScheduleService : IScheduleService
         schedule.CreatedAt = DateTime.UtcNow;
         schedule.LastModifiedAt = DateTime.UtcNow;
 
-        var created = await _repository.CreateScheduleAsync(schedule);
-        _logger.LogInformation("Schedule created: {ScheduleId} - {ScheduleName}", created.Id, created.Name);
-
-        return created;
+        try
+        {
+            var created = await _repository.CreateScheduleAsync(schedule);
+            _logger.LogInformation("Schedule created: {ScheduleId} - {ScheduleName}", created.Id, created.Name);
+            return created;
+        }
+        catch (Exception ex)
+        {
+            throw new ScheduleException("Failed to create schedule in repository", ex);
+        }
     }
 
     /// <summary>
     /// Updates an existing backup schedule.
     /// </summary>
+    /// <param name="schedule">The schedule to update.</param>
+    /// <returns>The updated schedule.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when schedule is null.</exception>
+    /// <exception cref="InvalidScheduleException">Thrown when schedule configuration is invalid.</exception>
+    /// <exception cref="InvalidCronExpressionException">Thrown when cron expression is invalid.</exception>
+    /// <exception cref="ScheduleException">Thrown when update fails.</exception>
     public async Task<BackupSchedule> UpdateScheduleAsync(BackupSchedule schedule)
     {
+        if (schedule == null)
+        {
+            throw new ArgumentNullException(nameof(schedule));
+        }
+
         if (!schedule.IsValid())
         {
             throw new InvalidScheduleException("Schedule configuration is invalid", schedule.Id);
@@ -67,14 +94,21 @@ public class ScheduleService : IScheduleService
 
         if (!ValidateCronExpression(schedule.CronExpression))
         {
-            throw new InvalidCronExpressionException(schedule.CronExpression);
+            throw new InvalidCronException(schedule.CronExpression);
         }
 
         schedule.LastModifiedAt = DateTime.UtcNow;
-        var updated = await _repository.UpdateScheduleAsync(schedule);
 
-        _logger.LogInformation("Schedule updated: {ScheduleId} - {ScheduleName}", updated.Id, updated.Name);
-        return updated;
+        try
+        {
+            var updated = await _repository.UpdateScheduleAsync(schedule);
+            _logger.LogInformation("Schedule updated: {ScheduleId} - {ScheduleName}", updated.Id, updated.Name);
+            return updated;
+        }
+        catch (Exception ex)
+        {
+            throw new ScheduleException("Failed to update schedule in repository", ex);
+        }
     }
 
     /// <summary>

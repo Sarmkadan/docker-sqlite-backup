@@ -1,5 +1,4 @@
 #nullable enable
-// Author: Vladyslav Zaiets
 
 namespace DockerSqliteBackup.Configuration;
 
@@ -8,16 +7,105 @@ namespace DockerSqliteBackup.Configuration;
 /// </summary>
 public class AppSettings
 {
-    public string DatabasePath { get; set; } = "backups.sqlite";
-    public int MaxConcurrentBackups { get; set; } = 3;
-    public int BackupTimeoutSeconds { get; set; } = 3600; // 1 hour
-    public int ScheduleCheckIntervalSeconds { get; set; } = 60;
+    private string _databasePath = "backups.sqlite";
+    private int _maxConcurrentBackups = 3;
+    private int _backupTimeoutSeconds = 3600;
+    private int _scheduleCheckIntervalSeconds = 60;
+    private string _logLevel = "Information";
+    private int _retentionDays = 30;
+    private int _maxBackupCount = 10;
+    private string _localStoragePath = "backups";
+
+    /// <summary>
+    /// Gets or sets the database path. Validates that it's not null or whitespace.
+    /// </summary>
+    public string DatabasePath
+    {
+        get => _databasePath;
+        set => _databasePath = !string.IsNullOrWhiteSpace(value)
+            ? value
+            : throw new ConfigurationException(nameof(DatabasePath), "Database path cannot be null or whitespace.");
+    }
+
+    /// <summary>
+    /// Gets or sets the maximum number of concurrent backups. Must be positive.
+    /// </summary>
+    public int MaxConcurrentBackups
+    {
+        get => _maxConcurrentBackups;
+        set => _maxConcurrentBackups = value > 0
+            ? value
+            : throw new ConfigurationException(nameof(MaxConcurrentBackups), "Max concurrent backups must be a positive number.");
+    }
+
+    /// <summary>
+    /// Gets or sets the backup timeout in seconds. Must be positive.
+    /// </summary>
+    public int BackupTimeoutSeconds
+    {
+        get => _backupTimeoutSeconds;
+        set => _backupTimeoutSeconds = value > 0
+            ? value
+            : throw new ConfigurationException(nameof(BackupTimeoutSeconds), "Backup timeout must be a positive number.");
+    }
+
+    /// <summary>
+    /// Gets or sets the schedule check interval in seconds. Must be positive.
+    /// </summary>
+    public int ScheduleCheckIntervalSeconds
+    {
+        get => _scheduleCheckIntervalSeconds;
+        set => _scheduleCheckIntervalSeconds = value > 0
+            ? value
+            : throw new ConfigurationException(nameof(ScheduleCheckIntervalSeconds), "Schedule check interval must be a positive number.");
+    }
+
+    /// <summary>
+    /// Gets or sets the log level.
+    /// </summary>
+    public string LogLevel
+    {
+        get => _logLevel;
+        set => _logLevel = !string.IsNullOrWhiteSpace(value)
+            ? value
+            : throw new ConfigurationException(nameof(LogLevel), "Log level cannot be null or whitespace.");
+    }
+
+    /// <summary>
+    /// Gets or sets the retention days. Must be non-negative.
+    /// </summary>
+    public int RetentionDays
+    {
+        get => _retentionDays;
+        set => _retentionDays = value >= 0
+            ? value
+            : throw new ConfigurationException(nameof(RetentionDays), "Retention days cannot be negative.");
+    }
+
+    /// <summary>
+    /// Gets or sets the maximum backup count. Must be positive.
+    /// </summary>
+    public int MaxBackupCount
+    {
+        get => _maxBackupCount;
+        set => _maxBackupCount = value > 0
+            ? value
+            : throw new ConfigurationException(nameof(MaxBackupCount), "Max backup count must be a positive number.");
+    }
+
+    /// <summary>
+    /// Gets or sets the local storage path. Validates that it's not null or whitespace.
+    /// </summary>
+    public string LocalStoragePath
+    {
+        get => _localStoragePath;
+        set => _localStoragePath = !string.IsNullOrWhiteSpace(value)
+            ? value
+            : throw new ConfigurationException(nameof(LocalStoragePath), "Local storage path cannot be null or whitespace.");
+    }
+
     public bool EnableVerificationByDefault { get; set; } = true;
     public bool EnableS3StorageByDefault { get; set; } = false;
-    public string LogLevel { get; set; } = "Information";
-    public int RetentionDays { get; set; } = 30;
-    public int MaxBackupCount { get; set; } = 10;
-    public string LocalStoragePath { get; set; } = "backups";
     public bool CompressBackups { get; set; } = false;
     public string[] NotificationEmails { get; set; } = [];
 

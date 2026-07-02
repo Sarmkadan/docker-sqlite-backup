@@ -78,18 +78,35 @@ public class RotationService : IRotationService
     /// <summary>
     /// Creates or updates the rotation policy for a schedule.
     /// </summary>
+    /// <param name="policy">The rotation policy to save.</param>
+    /// <returns>The saved rotation policy.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when policy is null.</exception>
+    /// <exception cref="ValidationException">Thrown when policy configuration is invalid.</exception>
+    /// <exception cref="RotationException">Thrown when save fails.</exception>
     public async Task<RotationPolicy> SaveRotationPolicyAsync(RotationPolicy policy)
     {
+        if (policy == null)
+        {
+            throw new ArgumentNullException(nameof(policy));
+        }
+
         if (!policy.IsValid())
         {
-            throw new ArgumentException("Rotation policy configuration is invalid");
+            throw new ValidationException(nameof(policy), "Rotation policy configuration is invalid");
         }
 
         policy.LastModifiedAt = DateTime.UtcNow;
-        var saved = await _repository.SaveRotationPolicyAsync(policy);
 
-        _logger.LogInformation("Rotation policy saved for schedule {ScheduleId}", policy.ScheduleId);
-        return saved;
+        try
+        {
+            var saved = await _repository.SaveRotationPolicyAsync(policy);
+            _logger.LogInformation("Rotation policy saved for schedule {ScheduleId}", policy.ScheduleId);
+            return saved;
+        }
+        catch (Exception ex)
+        {
+            throw new RotationException("Failed to save rotation policy", ex);
+        }
     }
 
     /// <summary>
