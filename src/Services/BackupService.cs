@@ -31,16 +31,17 @@ public class BackupService : IBackupService
     /// <param name="storageService">The storage service for remote file operations.</param>
     /// <param name="appSettings">Global application settings.</param>
     /// <param name="logger">The logger instance.</param>
+    /// <exception cref="ArgumentNullException">Thrown when any parameter is null.</exception>
     public BackupService(
         IBackupRepository repository,
         IStorageService storageService,
         AppSettings appSettings,
         ILogger<BackupService> logger)
     {
-        _repository = repository;
-        _storageService = storageService;
-        _appSettings = appSettings;
-        _logger = logger;
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _storageService = storageService ?? throw new ArgumentNullException(nameof(storageService));
+        _appSettings = appSettings ?? throw new ArgumentNullException(nameof(appSettings));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
@@ -49,10 +50,17 @@ public class BackupService : IBackupService
     /// <param name="schedule">The backup schedule to execute.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A <see cref="BackupResult"/> describing the outcome of the backup.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when schedule is null.</exception>
     /// <exception cref="InvalidScheduleException">Thrown when the provided schedule is invalid.</exception>
     /// <exception cref="DatabaseAccessException">Thrown when the database cannot be accessed.</exception>
+    /// <exception cref="ConfigurationException">Thrown when configuration is invalid.</exception>
     public async Task<BackupResult> ExecuteBackupAsync(BackupSchedule schedule, CancellationToken cancellationToken = default)
     {
+        if (schedule == null)
+        {
+            throw new ArgumentNullException(nameof(schedule));
+        }
+
         if (!schedule.IsValid())
         {
             throw new InvalidScheduleException("Schedule is not valid", schedule.Id);
@@ -60,7 +68,7 @@ public class BackupService : IBackupService
 
         if (!schedule.ValidateDatabasePath())
         {
-            throw new DatabaseAccessException(schedule.DatabasePath, 
+            throw new DatabaseAccessException(schedule.DatabasePath,
                 new FileNotFoundException($"Database file not found: {schedule.DatabasePath}"));
         }
 
@@ -81,7 +89,14 @@ public class BackupService : IBackupService
             var backupDir = Path.GetDirectoryName(backupPath);
             if (!Directory.Exists(backupDir))
             {
-                Directory.CreateDirectory(backupDir!);
+                try
+                {
+                    Directory.CreateDirectory(backupDir!);
+                }
+                catch (Exception dirEx) when (dirEx is not IOException and not UnauthorizedAccessException)
+                {
+                    throw new BackupException($"Failed to create backup directory: {backupDir}", dirEx);
+                }
             }
 
             // Choose full vs incremental snapshot strategy.
@@ -119,16 +134,30 @@ public class BackupService : IBackupService
             var encryptionKey = ResolveEncryptionKey();
             if (encryptionKey is not null)
             {
-                var encryptedPath = backupPath + ".enc";
-                await EncryptionUtility.EncryptFileAsync(backupPath, encryptedPath, encryptionKey);
-                File.Delete(backupPath);
-                backupPath = encryptedPath;
-                _logger.LogInformation("Backup archive encrypted with AES-256: {EncryptedPath}", encryptedPath);
+                try
+                {
+                    var encryptedPath = backupPath + ".enc";
+                    await EncryptionUtility.EncryptFileAsync(backupPath, encryptedPath, encryptionKey);
+                    File.Delete(backupPath);
+                    backupPath = encryptedPath;
+                    _logger.LogInformation("Backup archive encrypted with AES-256: {EncryptedPath}", encryptedPath);
+                }
+                catch (Exception ex) when (ex is not BackupException and not ArgumentException)
+                {
+                    throw new BackupException("Failed to encrypt backup file", ex);
+                }
             }
 
             result.BackupFilePath = backupPath;
-            result.BackupFileSizeBytes = new FileInfo(backupPath).Length;
-            result.Checksum = await CalculateBackupChecksumAsync(backupPath);
+            try
+            {
+                result.BackupFileSizeBytes = new FileInfo(backupPath).Length;
+                result.Checksum = await CalculateBackupChecksumAsync(backupPath);
+            }
+            catch (Exception ex) when (ex is not FileNotFoundException and not IOException and not UnauthorizedAccessException)
+            {
+                throw new BackupException("Failed to read backup file metadata or calculate checksum", ex);
+            }
             result.Status = (int)Constants.BackupStatus.Success;
 
             // Upload to the configured remote storage backend, if one is configured.
@@ -173,12 +202,31 @@ public class BackupService : IBackupService
     /// </summary>
     /// <param name="filePath">The path to the backup file.</param>
     /// <returns>A hex-encoded SHA256 hash string.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when filePath is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when filePath is empty or invalid.</exception>
     public async Task<string> CalculateBackupChecksumAsync(string filePath)
     {
-        using var sha256 = SHA256.Create();
-        using var stream = File.OpenRead(filePath);
-        var hash = await Task.Run(() => sha256.ComputeHash(stream));
-        return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            throw new ArgumentException(nameof(filePath), "File path cannot be null or whitespace.");
+        }
+
+        if (!File.Exists(filePath))
+        {
+            throw new FileNotFoundException("Backup file not found for checksum calculation", filePath);
+        }
+
+        try
+        {
+            using var sha256 = SHA256.Create();
+            using var stream = File.OpenRead(filePath);
+            var hash = await Task.Run(() => sha256.ComputeHash(stream));
+            return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+        }
+        catch (Exception ex) when (ex is not IOException and not UnauthorizedAccessException and not NotSupportedException)
+        {
+            throw new BackupException("Failed to calculate backup checksum", ex);
+        }
     }
 
     /// <summary>

@@ -6,7 +6,7 @@ namespace DockerSqliteBackup.Exceptions;
 /// <summary>
 /// Exception thrown for schedule-related errors.
 /// </summary>
-public class ScheduleException : Exception
+public class ScheduleException : DockerSqliteBackupException
 {
     /// <summary>Gets the schedule ID associated with the error.</summary>
     public Guid? ScheduleId { get; }

@@ -117,8 +117,27 @@ public class VerificationService : IVerificationService
     /// <summary>
     /// Performs an integrity check on a SQLite database file.
     /// </summary>
+    /// <param name="databasePath">The path to the database file to check.</param>
+    /// <returns>A tuple indicating if the database is valid and any error messages.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when databasePath is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when databasePath is empty or invalid.</exception>
     public async Task<(bool IsValid, string? Errors)> PerformIntegrityCheckAsync(string databasePath)
     {
+        if (databasePath == null)
+        {
+            throw new ArgumentNullException(nameof(databasePath));
+        }
+
+        if (string.IsNullOrWhiteSpace(databasePath))
+        {
+            throw new ArgumentException(nameof(databasePath), "Database path cannot be null or whitespace.");
+        }
+
+        if (!File.Exists(databasePath))
+        {
+            throw new FileNotFoundException("Database file not found for integrity check", databasePath);
+        }
+
         try
         {
             var connectionString = $"Data Source={databasePath};Mode=ReadOnly;";
@@ -131,9 +150,9 @@ public class VerificationService : IVerificationService
 
             return result == "ok" ? (true, null) : (false, result);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not SqliteException and not IOException and not UnauthorizedAccessException)
         {
-            return (false, ex.Message);
+            throw new VerificationException("Failed to perform database integrity check", ex);
         }
     }
 
