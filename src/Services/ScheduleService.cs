@@ -7,6 +7,8 @@ using DockerSqliteBackup.Domain;
 using DockerSqliteBackup.Exceptions;
 using Microsoft.Extensions.Logging;
 
+using ArgumentNullException = DockerSqliteBackup.Exceptions.ArgumentNullException;
+
 namespace DockerSqliteBackup.Services;
 
 /// <summary>
@@ -94,7 +96,7 @@ public class ScheduleService : IScheduleService
 
         if (!ValidateCronExpression(schedule.CronExpression))
         {
-            throw new InvalidCronException(schedule.CronExpression);
+            throw new InvalidCronExpressionException(schedule.CronExpression);
         }
 
         schedule.LastModifiedAt = DateTime.UtcNow;
