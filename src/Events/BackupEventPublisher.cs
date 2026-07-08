@@ -32,16 +32,23 @@ public class BackupEventPublisher : IBackupEventPublisher
             @event.EventId,
             @event.CorrelationId);
 
-        var applicableListeners = GetApplicableListeners(@event.EventType);
-
-        if (!applicableListeners.Any())
+        try
         {
-            _logger.LogDebug("No listeners registered for event type: {EventType}", @event.EventType);
-            return;
-        }
+            var applicableListeners = GetApplicableListeners(@event.EventType);
 
-        var tasks = applicableListeners.Select(listener => HandleListenerAsync(listener, @event, cancellationToken));
-        await Task.WhenAll(tasks);
+            if (!applicableListeners.Any())
+            {
+                _logger.LogDebug("No listeners registered for event type: {EventType}", @event.EventType);
+                return;
+            }
+
+            var tasks = applicableListeners.Select(listener => HandleListenerAsync(listener, @event, cancellationToken));
+            await Task.WhenAll(tasks);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to publish event: {EventType}", @event.EventType);
+        }
     }
 
     /// <summary>

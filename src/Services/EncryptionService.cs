@@ -40,17 +40,27 @@ public class EncryptionService : IEncryptionService
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
 
         if (!File.Exists(sourcePath))
+        {
+            _logger.LogWarning("Source file not found: {SourcePath}", sourcePath);
             throw new FileNotFoundException($"Source file not found: {sourcePath}", sourcePath);
+        }
 
         var key = ResolveKey() ?? throw new InvalidOperationException(
             "Encryption key is not configured. Set BACKUP_ENCRYPTION_KEY or AppSettings__EncryptionKey.");
 
         ct.ThrowIfCancellationRequested();
-        await EncryptionUtility.EncryptFileAsync(sourcePath, destinationPath, key);
-
-        _logger.LogInformation(
-            "File encrypted with AES-256-CBC. Source: {Source}, Destination: {Dest}",
-            sourcePath, destinationPath);
+        try
+        {
+            await EncryptionUtility.EncryptFileAsync(sourcePath, destinationPath, key);
+            _logger.LogInformation(
+                "File encrypted with AES-256-CBC. Source: {Source}, Destination: {Dest}",
+                sourcePath, destinationPath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to encrypt file: {SourcePath}", sourcePath);
+            throw;
+        }
 
         return destinationPath;
     }

@@ -54,11 +54,13 @@ public class StorageService : IStorageService
 
         if (!File.Exists(filePath))
         {
+            _logger.LogWarning("File not found: {FilePath}", filePath);
             throw new LocalStorageException($"File not found: {filePath}");
         }
 
         try
         {
+            _logger.LogInformation("Uploading backup to storage: {FilePath}", filePath);
             switch (config)
             {
                 case S3Configuration s3Config:
@@ -68,11 +70,13 @@ public class StorageService : IStorageService
                 case LocalStorageConfiguration localConfig:
                     return UploadToLocal(filePath, localConfig);
                 default:
+                    _logger.LogError("Unknown storage configuration type: {ConfigType}", config.GetType().Name);
                     throw new StorageException($"Unknown storage configuration type: {config.GetType().Name}");
             }
         }
         catch (Exception ex) when (ex is not StorageException)
         {
+            _logger.LogError(ex, "Failed to upload backup to storage: {FilePath}", filePath);
             throw new StorageException("Failed to upload backup to storage", ex);
         }
     }
