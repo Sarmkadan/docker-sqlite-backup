@@ -20,7 +20,7 @@ namespace DockerSqliteBackup.Services;
 /// scheduling, snapshot creation via the Online Backup API, incremental support,
 /// encryption, and storage integration.
 /// </summary>
-public class BackupService : IBackupService
+public sealed class BackupService : IBackupService
 {
     private readonly IBackupRepository _repository;
     private readonly IStorageService _storageService;
@@ -59,21 +59,7 @@ public class BackupService : IBackupService
     /// <exception cref="ConfigurationException">Thrown when configuration is invalid.</exception>
     public async Task<BackupResult> ExecuteBackupAsync(BackupSchedule schedule, CancellationToken cancellationToken = default)
     {
-        if (schedule == null)
-        {
-            throw new ArgumentNullException(nameof(schedule));
-        }
-
-        if (!schedule.IsValid())
-        {
-            throw new InvalidScheduleException("Schedule is not valid", schedule.Id);
-        }
-
-        if (!schedule.ValidateDatabasePath())
-        {
-            throw new DatabaseAccessException(schedule.DatabasePath,
-                new FileNotFoundException($"Database file not found: {schedule.DatabasePath}"));
-        }
+        ValidateSchedule(schedule);
 
         var result = new BackupResult
         {
@@ -89,18 +75,7 @@ public class BackupService : IBackupService
 
             var timestamp = DateTime.UtcNow;
             var backupPath = GenerateBackupPath(schedule, timestamp);
-            var backupDir = Path.GetDirectoryName(backupPath);
-            if (!Directory.Exists(backupDir))
-            {
-                try
-                {
-                    Directory.CreateDirectory(backupDir!);
-                }
-                catch (Exception dirEx) when (dirEx is not IOException and not UnauthorizedAccessException)
-                {
-                    throw new BackupException($"Failed to create backup directory: {backupDir}", dirEx);
-                }
-            }
+            PrepareBackupDirectory(backupPath);
 
             // Choose full vs incremental snapshot strategy.
             if ((Constants.BackupMode)schedule.BackupMode == Constants.BackupMode.Incremental)
@@ -133,23 +108,7 @@ public class BackupService : IBackupService
 
             _logger.LogInformation("Backup file created at {BackupPath}", backupPath);
 
-            // Optionally encrypt the backup archive before computing the checksum and uploading.
-            var encryptionKey = ResolveEncryptionKey();
-            if (encryptionKey is not null)
-            {
-                try
-                {
-                    var encryptedPath = backupPath + ".enc";
-                    await EncryptionUtility.EncryptFileAsync(backupPath, encryptedPath, encryptionKey);
-                    File.Delete(backupPath);
-                    backupPath = encryptedPath;
-                    _logger.LogInformation("Backup archive encrypted with AES-256: {EncryptedPath}", encryptedPath);
-                }
-                catch (Exception ex) when (ex is not BackupException and not ArgumentException)
-                {
-                    throw new BackupException("Failed to encrypt backup file", ex);
-                }
-            }
+            backupPath = await EncryptBackupIfNeededAsync(backupPath);
 
             result.BackupFilePath = backupPath;
             try
@@ -349,6 +308,61 @@ public class BackupService : IBackupService
         {
             // Non-WAL databases silently ignore the checkpoint — this is acceptable.
             _logger.LogDebug(ex, "WAL checkpoint skipped for {SourcePath} (database may not be in WAL mode)", sourcePath);
+        }
+    }
+
+    private void ValidateSchedule(BackupSchedule? schedule)
+    {
+        if (schedule == null)
+        {
+            throw new ArgumentNullException(nameof(schedule));
+        }
+
+        if (!schedule.IsValid())
+        {
+            throw new InvalidScheduleException("Schedule is not valid", schedule.Id);
+        }
+
+        if (!schedule.ValidateDatabasePath())
+        {
+            throw new DatabaseAccessException(schedule.DatabasePath,
+                new FileNotFoundException($"Database file not found: {schedule.DatabasePath}"));
+        }
+    }
+
+    private async Task<string> EncryptBackupIfNeededAsync(string backupPath)
+    {
+        var encryptionKey = ResolveEncryptionKey();
+        if (encryptionKey is null)
+            return backupPath;
+
+        try
+        {
+            var encryptedPath = backupPath + ".enc";
+            await EncryptionUtility.EncryptFileAsync(backupPath, encryptedPath, encryptionKey);
+            File.Delete(backupPath);
+            _logger.LogInformation("Backup archive encrypted with AES-256: {EncryptedPath}", encryptedPath);
+            return encryptedPath;
+        }
+        catch (Exception ex) when (ex is not BackupException and not ArgumentException)
+        {
+            throw new BackupException("Failed to encrypt backup file", ex);
+        }
+    }
+
+    private void PrepareBackupDirectory(string backupPath)
+    {
+        var backupDir = Path.GetDirectoryName(backupPath);
+        if (string.IsNullOrEmpty(backupDir) || Directory.Exists(backupDir))
+            return;
+
+        try
+        {
+            Directory.CreateDirectory(backupDir);
+        }
+        catch (Exception dirEx) when (dirEx is not IOException and not UnauthorizedAccessException)
+        {
+            throw new BackupException($"Failed to create backup directory: {backupDir}", dirEx);
         }
     }
 
