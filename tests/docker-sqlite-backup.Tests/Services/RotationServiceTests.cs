@@ -209,7 +209,7 @@ public class RotationServiceTests
     }
 
     [Fact]
-    public async Task SaveRotationPolicyAsync_InvalidPolicy_ThrowsArgumentException()
+    public async Task SaveRotationPolicyAsync_InvalidPolicy_ThrowsValidationException()
     {
         var policy = new RotationPolicy
         {
@@ -218,7 +218,7 @@ public class RotationServiceTests
         };
 
         await _sut.Invoking(s => s.SaveRotationPolicyAsync(policy))
-            .Should().ThrowAsync<ArgumentException>();
+            .Should().ThrowAsync<DockerSqliteBackup.Exceptions.ValidationException>();
     }
 
     [Fact]
