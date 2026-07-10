@@ -4,22 +4,32 @@ using DockerSqliteBackup.Caching;
 using FluentAssertions;
 using Xunit;
 
-namespace DockerSqliteBackup.Tests.Caching;
-
+/// <summary>
+/// Tests for the MemoryCacheService class.
+/// </summary>
 public class MemoryCacheServiceTests : IDisposable
 {
     private readonly MemoryCacheService _sut;
 
+    /// <summary>
+    /// Initializes a new instance of the MemoryCacheServiceTests class.
+    /// </summary>
     public MemoryCacheServiceTests()
     {
         _sut = new MemoryCacheService(cleanupInterval: TimeSpan.FromHours(1));
     }
 
+    /// <summary>
+    /// Releases all resources used by the MemoryCacheServiceTests class.
+    /// </summary>
     public void Dispose()
     {
         _sut.Clear();
     }
 
+    /// <summary>
+    /// Verifies that the Get method returns the default value when the key does not exist.
+    /// </summary>
     [Fact]
     public void Get_NonExistentKey_ReturnsDefault()
     {
@@ -28,6 +38,9 @@ public class MemoryCacheServiceTests : IDisposable
         result.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the Set method and the Get method return the stored value.
+    /// </summary>
     [Fact]
     public void Set_ThenGet_ReturnsStoredValue()
     {
@@ -38,6 +51,9 @@ public class MemoryCacheServiceTests : IDisposable
         result.Should().Be("my-value");
     }
 
+    /// <summary>
+    /// Verifies that the Set method can store and retrieve complex types.
+    /// </summary>
     [Fact]
     public void Set_ComplexType_RoundTripsCorrectly()
     {
@@ -49,6 +65,9 @@ public class MemoryCacheServiceTests : IDisposable
         result.Should().NotBeNull();
     }
 
+    /// <summary>
+    /// Verifies that the Set method with expiration times out after the specified interval.
+    /// </summary>
     [Fact]
     public void Set_WithExpiration_ValueExpires()
     {
@@ -60,6 +79,9 @@ public class MemoryCacheServiceTests : IDisposable
         result.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the Set method without expiration persists indefinitely.
+    /// </summary>
     [Fact]
     public void Set_WithoutExpiration_ValuePersists()
     {
@@ -71,6 +93,9 @@ public class MemoryCacheServiceTests : IDisposable
         result.Should().Be("persistent-value");
     }
 
+    /// <summary>
+    /// Verifies that the Remove method removes the specified key from the cache.
+    /// </summary>
     [Fact]
     public void Remove_ExistingKey_RemovesEntry()
     {
@@ -81,6 +106,9 @@ public class MemoryCacheServiceTests : IDisposable
         _sut.Get<string>("to-remove").Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the Remove method does not throw an exception when the key does not exist.
+    /// </summary>
     [Fact]
     public void Remove_NonExistentKey_DoesNotThrow()
     {
@@ -89,6 +117,9 @@ public class MemoryCacheServiceTests : IDisposable
         act.Should().NotThrow();
     }
 
+    /// <summary>
+    /// Verifies that the Exists method returns true for existing keys.
+    /// </summary>
     [Fact]
     public void Exists_ExistingKey_ReturnsTrue()
     {
@@ -97,12 +128,18 @@ public class MemoryCacheServiceTests : IDisposable
         _sut.Exists("exists-key").Should().BeTrue();
     }
 
+    /// <summary>
+    /// Verifies that the Exists method returns false for non-existent keys.
+    /// </summary>
     [Fact]
     public void Exists_NonExistentKey_ReturnsFalse()
     {
         _sut.Exists("missing-key").Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that the Exists method returns false for expired keys.
+    /// </summary>
     [Fact]
     public void Exists_ExpiredKey_ReturnsFalse()
     {
@@ -112,6 +149,9 @@ public class MemoryCacheServiceTests : IDisposable
         _sut.Exists("expired-key").Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that the Clear method removes all entries from the cache.
+    /// </summary>
     [Fact]
     public void Clear_RemovesAllEntries()
     {
@@ -126,6 +166,9 @@ public class MemoryCacheServiceTests : IDisposable
         _sut.Get<string>("key3").Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the GetOrSet method calls the factory when the key does not exist.
+    /// </summary>
     [Fact]
     public void GetOrSet_CacheMiss_CallsFactory()
     {
@@ -141,6 +184,9 @@ public class MemoryCacheServiceTests : IDisposable
         result.Should().Be("factory-value");
     }
 
+    /// <summary>
+    /// Verifies that the GetOrSet method does not call the factory when the key exists.
+    /// </summary>
     [Fact]
     public void GetOrSet_CacheHit_DoesNotCallFactory()
     {
@@ -157,6 +203,9 @@ public class MemoryCacheServiceTests : IDisposable
         result.Should().Be("cached-value");
     }
 
+    /// <summary>
+    /// Verifies that the GetOrSetAsync method calls the async factory when the key does not exist.
+    /// </summary>
     [Fact]
     public async Task GetOrSetAsync_CacheMiss_CallsAsyncFactory()
     {
@@ -175,6 +224,9 @@ public class MemoryCacheServiceTests : IDisposable
         result.Should().Be("async-value");
     }
 
+    /// <summary>
+    /// Verifies that the GetOrSetAsync method does not call the async factory when the key exists.
+    /// </summary>
     [Fact]
     public async Task GetOrSetAsync_CacheHit_DoesNotCallFactory()
     {
@@ -194,6 +246,9 @@ public class MemoryCacheServiceTests : IDisposable
         result.Should().Be("cached-value");
     }
 
+    /// <summary>
+    /// Verifies that the SetAsync method and the GetAsync method return the stored value.
+    /// </summary>
     [Fact]
     public async Task SetAsync_ThenGetAsync_ReturnsStoredValue()
     {
@@ -204,6 +259,9 @@ public class MemoryCacheServiceTests : IDisposable
         result.Should().Be(42);
     }
 
+    /// <summary>
+    /// Verifies that the RemoveAsync method removes the specified key from the cache.
+    /// </summary>
     [Fact]
     public async Task RemoveAsync_ExistingKey_RemovesEntry()
     {
@@ -214,6 +272,9 @@ public class MemoryCacheServiceTests : IDisposable
         _sut.Get<string>("async-remove-key").Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the Set method overwrites existing entries.
+    /// </summary>
     [Fact]
     public void Set_OverwritesExistingEntry()
     {
