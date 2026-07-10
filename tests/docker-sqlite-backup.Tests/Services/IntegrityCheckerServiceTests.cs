@@ -9,11 +9,18 @@ using Xunit;
 
 namespace DockerSqliteBackup.Tests.Services;
 
+/// <summary>
+/// Tests for the IntegrityCheckerService class.
+/// </summary>
 public class IntegrityCheckerServiceTests : IAsyncLifetime
 {
     private string _tempDir = string.Empty;
     private IntegrityCheckerService _sut = null!;
 
+    /// <summary>
+    /// Initializes the test environment.
+    /// </summary>
+    /// <returns>A task representing the initialization operation.</returns>
     public Task InitializeAsync()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), $"integrity-tests-{Guid.NewGuid()}");
@@ -22,6 +29,10 @@ public class IntegrityCheckerServiceTests : IAsyncLifetime
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Disposes of the test environment.
+    /// </summary>
+    /// <returns>A task representing the disposal operation.</returns>
     public Task DisposeAsync()
     {
         if (Directory.Exists(_tempDir))
@@ -29,6 +40,11 @@ public class IntegrityCheckerServiceTests : IAsyncLifetime
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Creates a valid SQLite database with the specified table name.
+    /// </summary>
+    /// <param name="tableName">The name of the table to create.</param>
+    /// <returns>The path to the created database file.</returns>
     private string CreateValidSqliteDb(string? tableName = null)
     {
         var path = Path.Combine(_tempDir, $"{Guid.NewGuid()}.sqlite");
@@ -47,6 +63,9 @@ public class IntegrityCheckerServiceTests : IAsyncLifetime
 
     // ── CheckDatabaseAsync ────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests the CheckDatabaseAsync method with a valid database.
+    /// </summary>
     [Fact]
     public async Task CheckDatabaseAsync_ValidDatabase_ReturnsHealthyReport()
     {
@@ -63,6 +82,9 @@ public class IntegrityCheckerServiceTests : IAsyncLifetime
         report.Duration.Should().BeGreaterThan(TimeSpan.Zero);
     }
 
+    /// <summary>
+    /// Tests the CheckDatabaseAsync method with a valid database and metadata population.
+    /// </summary>
     [Fact]
     public async Task CheckDatabaseAsync_ValidDatabase_PopulatesMetadata()
     {
@@ -76,6 +98,9 @@ public class IntegrityCheckerServiceTests : IAsyncLifetime
         report.JournalMode.Should().NotBeNullOrEmpty();
     }
 
+    /// <summary>
+    /// Tests the CheckDatabaseAsync method with a non-existent file.
+    /// </summary>
     [Fact]
     public async Task CheckDatabaseAsync_NonExistentFile_ThrowsFileNotFoundException()
     {
@@ -86,6 +111,9 @@ public class IntegrityCheckerServiceTests : IAsyncLifetime
         await act.Should().ThrowAsync<FileNotFoundException>();
     }
 
+    /// <summary>
+    /// Tests the CheckDatabaseAsync method with quick check only.
+    /// </summary>
     [Fact]
     public async Task CheckDatabaseAsync_QuickCheckOnly_SkipsFullAndFkChecks()
     {
@@ -99,6 +127,9 @@ public class IntegrityCheckerServiceTests : IAsyncLifetime
         report.PassedForeignKeyCheck.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests the CheckDatabaseAsync method with multiple tables and data.
+    /// </summary>
     [Fact]
     public async Task CheckDatabaseAsync_MultipleTablesWithData_CountsTablesCorrectly()
     {
@@ -120,6 +151,9 @@ public class IntegrityCheckerServiceTests : IAsyncLifetime
 
     // ── QuickCheckAsync ───────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests the QuickCheckAsync method with a valid database.
+    /// </summary>
     [Fact]
     public async Task QuickCheckAsync_ValidDatabase_ReturnsTrue()
     {
@@ -130,6 +164,9 @@ public class IntegrityCheckerServiceTests : IAsyncLifetime
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests the QuickCheckAsync method with a non-existent file.
+    /// </summary>
     [Fact]
     public async Task QuickCheckAsync_NonExistentFile_ThrowsFileNotFoundException()
     {
@@ -142,6 +179,9 @@ public class IntegrityCheckerServiceTests : IAsyncLifetime
 
     // ── CheckBackupFileAsync ──────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests the CheckBackupFileAsync method with a valid database.
+    /// </summary>
     [Fact]
     public async Task CheckBackupFileAsync_ValidDatabase_ReturnsHealthyReport()
     {
@@ -155,6 +195,9 @@ public class IntegrityCheckerServiceTests : IAsyncLifetime
 
     // ── IntegrityReport ───────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Tests the IntegrityReport class with a healthy report.
+    /// </summary>
     [Fact]
     public void IntegrityReport_IsHealthy_RequiresAllThreeChecksPassed()
     {
@@ -168,6 +211,9 @@ public class IntegrityCheckerServiceTests : IAsyncLifetime
         report.IsHealthy.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests the IntegrityReport class with a summary containing a healthy message.
+    /// </summary>
     [Fact]
     public void IntegrityReport_Summary_ContainsHealthyMessageWhenAllPassed()
     {
