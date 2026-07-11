@@ -1,8 +1,10 @@
 #nullable enable
 // Author: Vladyslav Zaiets
 
+using DockerSqliteBackup.Configuration;
 using DockerSqliteBackup.Events;
 using DockerSqliteBackup.Utilities;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 
 namespace DockerSqliteBackup.Health;
@@ -15,13 +17,16 @@ public class HealthCheckService
 {
     private readonly IBackupEventPublisher? _eventPublisher;
     private readonly ILogger<HealthCheckService> _logger;
+    private readonly AppSettings? _appSettings;
 
     public HealthCheckService(
         ILogger<HealthCheckService> logger,
-        IBackupEventPublisher? eventPublisher = null)
+        IBackupEventPublisher? eventPublisher = null,
+        AppSettings? appSettings = null)
     {
         _logger = logger;
         _eventPublisher = eventPublisher;
+        _appSettings = appSettings;
     }
 
     /// <summary>
@@ -147,18 +152,44 @@ public class HealthCheckService
     }
 
     /// <summary>
-    /// Checks if database file is accessible.
+    /// Checks if the backup metadata database is accessible by opening a read-only
+    /// connection and running a fast structural scan (<c>PRAGMA quick_check</c>).
     /// </summary>
     private ComponentHealth CheckDatabaseHealth()
     {
         try
         {
-            // This is a stub - would check actual database connectivity
+            var databasePath = _appSettings?.DatabasePath ?? "backups.sqlite";
+            if (!Path.IsPathRooted(databasePath))
+            {
+                databasePath = Path.Combine(AppContext.BaseDirectory, databasePath);
+            }
+
+            if (!File.Exists(databasePath))
+            {
+                return new ComponentHealth
+                {
+                    Name = "database",
+                    IsHealthy = false,
+                    Message = $"Database file not found: {databasePath}"
+                };
+            }
+
+            using var connection = new SqliteConnection($"Data Source={databasePath};Mode=ReadOnly;");
+            connection.Open();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = "PRAGMA quick_check";
+            var result = command.ExecuteScalar() as string;
+
+            var isHealthy = string.Equals(result, "ok", StringComparison.OrdinalIgnoreCase);
             return new ComponentHealth
             {
                 Name = "database",
-                IsHealthy = true,
-                Message = "Database is accessible"
+                IsHealthy = isHealthy,
+                Message = isHealthy
+                    ? "Database is accessible"
+                    : $"Database quick_check reported: {result}"
             };
         }
         catch (Exception ex)
