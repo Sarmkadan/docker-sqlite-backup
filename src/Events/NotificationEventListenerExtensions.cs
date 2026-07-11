@@ -22,14 +22,13 @@ public static class NotificationEventListenerExtensions
     /// <param name="listener">The event listener instance</param>
     /// <param name="clients">Collection of notification clients to add</param>
     /// <returns>The listener instance for method chaining</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="listener"/> or <paramref name="clients"/> is <see langword="null"/></exception>
     public static NotificationEventListener AddNotificationClients(
         this NotificationEventListener listener,
         IEnumerable<INotificationClient> clients)
     {
-        if (clients == null)
-        {
-            throw new ArgumentNullException(nameof(clients));
-        }
+        ArgumentNullException.ThrowIfNull(listener);
+        ArgumentNullException.ThrowIfNull(clients);
 
         foreach (var client in clients)
         {
@@ -45,14 +44,13 @@ public static class NotificationEventListenerExtensions
     /// <param name="listener">The event listener instance</param>
     /// <param name="clientFactory">Factory method that creates notification clients</param>
     /// <returns>The listener instance for method chaining</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="listener"/> or <paramref name="clientFactory"/> is <see langword="null"/></exception>
     public static NotificationEventListener AddNotificationClients(
         this NotificationEventListener listener,
         Func<IEnumerable<INotificationClient>> clientFactory)
     {
-        if (clientFactory == null)
-        {
-            throw new ArgumentNullException(nameof(clientFactory));
-        }
+        ArgumentNullException.ThrowIfNull(listener);
+        ArgumentNullException.ThrowIfNull(clientFactory);
 
         var clients = clientFactory();
         return listener.AddNotificationClients(clients);
@@ -65,21 +63,16 @@ public static class NotificationEventListenerExtensions
     /// <param name="eventType">The type of event to handle</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Task representing the asynchronous operation</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="listener"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentException"><paramref name="eventType"/> is <see langword="null"/>, empty, or whitespace</exception>
     /// <exception cref="InvalidOperationException">Thrown when the event type is not supported</exception>
     public static Task HandleAsync(
         this NotificationEventListener listener,
         string eventType,
         CancellationToken cancellationToken = default)
     {
-        if (listener == null)
-        {
-            throw new ArgumentNullException(nameof(listener));
-        }
-
-        if (string.IsNullOrWhiteSpace(eventType))
-        {
-            throw new ArgumentException("Event type cannot be null or empty", nameof(eventType));
-        }
+        ArgumentNullException.ThrowIfNull(listener);
+        ArgumentException.ThrowIfNullOrWhiteSpace(eventType, nameof(eventType));
 
         if (!listener.CanHandle(eventType))
         {
@@ -105,12 +98,10 @@ public static class NotificationEventListenerExtensions
     /// </summary>
     /// <param name="listener">The event listener instance</param>
     /// <returns>HashSet containing all supported event types</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="listener"/> is <see langword="null"/></exception>
     public static HashSet<string> GetSupportedEventTypesSet(this NotificationEventListener listener)
     {
-        if (listener == null)
-        {
-            throw new ArgumentNullException(nameof(listener));
-        }
+        ArgumentNullException.ThrowIfNull(listener);
 
         return new HashSet<string>(listener.GetSupportedEventTypes());
     }
@@ -121,19 +112,13 @@ public static class NotificationEventListenerExtensions
     /// <param name="listener">The event listener instance</param>
     /// <param name="eventTypes">Collection of event types to check</param>
     /// <returns>True if any of the event types are supported</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="listener"/> or <paramref name="eventTypes"/> is <see langword="null"/></exception>
     public static bool CanHandleAny(
         this NotificationEventListener listener,
         IEnumerable<string> eventTypes)
     {
-        if (listener == null)
-        {
-            throw new ArgumentNullException(nameof(listener));
-        }
-
-        if (eventTypes == null)
-        {
-            throw new ArgumentNullException(nameof(eventTypes));
-        }
+        ArgumentNullException.ThrowIfNull(listener);
+        ArgumentNullException.ThrowIfNull(eventTypes);
 
         var supportedTypes = listener.GetSupportedEventTypesSet();
         return eventTypes.Any(supportedTypes.Contains);
