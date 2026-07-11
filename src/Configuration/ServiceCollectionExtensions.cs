@@ -18,9 +18,11 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Registers all application services in the DI container.
     /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="appSettings">The application settings.</param>
-    /// <exception cref="ArgumentNullException">Thrown when services or appSettings is null.</exception>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add services to.</param>
+    /// <param name="appSettings">The application settings containing database path and other configuration.</param>
+    /// <returns>The <see cref="IServiceCollection"/> for method chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="services"/> or <paramref name="appSettings"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ConfigurationException">Thrown when service registration fails.</exception>
     public static IServiceCollection AddBackupServices(
         this IServiceCollection services,
         AppSettings appSettings)
@@ -48,14 +50,14 @@ public static class ServiceCollectionExtensions
                 return new BackupRepository(connectionString, logger);
             });
 
-        // Register services
-        services.AddScoped<IBackupService, BackupService>();
-        services.AddScoped<IScheduleService, ScheduleService>();
-        services.AddScoped<IStorageService, StorageService>();
-        services.AddScoped<IRotationService, RotationService>();
-        services.AddScoped<IVerificationService, VerificationService>();
-        services.AddScoped<IEncryptionService, EncryptionService>();
-        services.AddScoped<IIntegrityCheckerService, IntegrityCheckerService>();
+            // Register services
+            services.AddScoped<IBackupService, BackupService>();
+            services.AddScoped<IScheduleService, ScheduleService>();
+            services.AddScoped<IStorageService, StorageService>();
+            services.AddScoped<IRotationService, RotationService>();
+            services.AddScoped<IVerificationService, VerificationService>();
+            services.AddScoped<IEncryptionService, EncryptionService>();
+            services.AddScoped<IIntegrityCheckerService, IntegrityCheckerService>();
 
             return services;
         }
@@ -68,8 +70,9 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Initializes the database schema and returns the repository.
     /// </summary>
-    /// <param name="serviceProvider">The service provider.</param>
-    /// <exception cref="ArgumentNullException">Thrown when serviceProvider is null.</exception>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider"/> used to resolve required services.</param>
+    /// <returns>The initialized <see cref="IBackupRepository"/> instance.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="serviceProvider"/> is <see langword="null"/>.</exception>
     /// <exception cref="ConfigurationException">Thrown when database initialization fails.</exception>
     public static async Task<IBackupRepository> InitializeDatabaseAsync(
         this IServiceProvider serviceProvider)
@@ -81,7 +84,8 @@ public static class ServiceCollectionExtensions
 
         try
         {
-            var repository = serviceProvider.GetRequiredService<IBackupRepository>();
+            var repository = serviceProvider.GetRequiredService<IBackupRepository>()
+                ?? throw new ConfigurationException("Database initialization", "Failed to resolve IBackupRepository from service provider.");
             await repository.InitializeAsync();
             return repository;
         }
