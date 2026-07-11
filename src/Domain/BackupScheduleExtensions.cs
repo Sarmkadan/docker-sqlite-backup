@@ -14,13 +14,11 @@ public static class BackupScheduleExtensions
     /// Gets the next backup run time based on the schedule's cron expression.
     /// </summary>
     /// <param name="schedule">The backup schedule.</param>
-    /// <returns>The next scheduled run time, or null if the schedule is not active.</returns>
+    /// <returns>The next scheduled run time, or null if the schedule is not active or has an invalid cron expression.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="schedule"/> is null.</exception>
     public static DateTime? GetNextRunTime(this BackupSchedule schedule)
     {
-        if (schedule is null)
-        {
-            throw new ArgumentNullException(nameof(schedule));
-        }
+        ArgumentNullException.ThrowIfNull(schedule);
 
         if (!schedule.IsActive || string.IsNullOrWhiteSpace(schedule.CronExpression))
         {
@@ -30,8 +28,7 @@ public static class BackupScheduleExtensions
         try
         {
             var cron = CronExpression.Parse(schedule.CronExpression, CronFormat.Standard);
-            var next = cron.GetNextOccurrence(DateTime.UtcNow);
-            return next;
+            return cron.GetNextOccurrence(DateTime.UtcNow);
         }
         catch (CronFormatException)
         {
@@ -44,12 +41,10 @@ public static class BackupScheduleExtensions
     /// </summary>
     /// <param name="schedule">The backup schedule.</param>
     /// <returns>True if a backup should be performed; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="schedule"/> is null.</exception>
     public static bool ShouldPerformBackup(this BackupSchedule schedule)
     {
-        if (schedule is null)
-        {
-            throw new ArgumentNullException(nameof(schedule));
-        }
+        ArgumentNullException.ThrowIfNull(schedule);
 
         if (!schedule.IsActive || !schedule.IsValid())
         {
@@ -61,14 +56,10 @@ public static class BackupScheduleExtensions
             return false;
         }
 
-        // If we have a last backup time, check if enough time has passed
-        if (schedule.LastBackupAt.HasValue)
+        // If we have a last backup time, check if the scheduled time has passed
+        if (schedule.LastBackupAt.HasValue && schedule.GetNextRunTime() is { } nextRun)
         {
-            var nextRun = schedule.GetNextRunTime();
-            if (nextRun.HasValue && DateTime.UtcNow < nextRun.Value)
-            {
-                return false;
-            }
+            return DateTime.UtcNow >= nextRun;
         }
 
         return true;
@@ -80,12 +71,10 @@ public static class BackupScheduleExtensions
     /// <param name="schedule">The backup schedule.</param>
     /// <param name="timestamp">Optional timestamp for the backup; defaults to current UTC time.</param>
     /// <returns>A formatted backup name including schedule name and timestamp.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="schedule"/> is null.</exception>
     public static string GetBackupName(this BackupSchedule schedule, DateTime? timestamp = null)
     {
-        if (schedule is null)
-        {
-            throw new ArgumentNullException(nameof(schedule));
-        }
+        ArgumentNullException.ThrowIfNull(schedule);
 
         var time = timestamp ?? DateTime.UtcNow;
         var safeName = string.IsNullOrWhiteSpace(schedule.Name)
@@ -100,12 +89,10 @@ public static class BackupScheduleExtensions
     /// </summary>
     /// <param name="schedule">The backup schedule.</param>
     /// <returns>The appropriate file extension for the backup type.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="schedule"/> is null.</exception>
     public static string GetBackupFileExtension(this BackupSchedule schedule)
     {
-        if (schedule is null)
-        {
-            throw new ArgumentNullException(nameof(schedule));
-        }
+        ArgumentNullException.ThrowIfNull(schedule);
 
         return schedule.BackupMode switch
         {
