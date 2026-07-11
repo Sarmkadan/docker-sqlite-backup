@@ -15,10 +15,19 @@ namespace DockerSqliteBackup.Exceptions
         /// <param name="ex">The validation exception.</param>
         /// <param name="key">The error key to look for.</param>
         /// <returns><c>true</c> if an error with the given key exists; otherwise, <c>false</c>.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="ex"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentException"><paramref name="key"/> is <c>null</c> or empty.</exception>
         public static bool HasError(this ValidationException ex, string key)
         {
-            if (ex == null) throw new ArgumentNullException(nameof(ex));
-            if (string.IsNullOrEmpty(key)) throw new ArgumentException("Key cannot be null or empty.", nameof(key));
+            if (ex == null)
+            {
+                throw new ArgumentNullException(nameof(ex));
+            }
+
+            if (string.IsNullOrEmpty(key))
+            {
+                throw new ArgumentException("Key cannot be null or empty.", nameof(key));
+            }
 
             return ex.Errors?.ContainsKey(key) ?? false;
         }
@@ -29,17 +38,21 @@ namespace DockerSqliteBackup.Exceptions
         /// <param name="ex">The validation exception.</param>
         /// <param name="key">The error key.</param>
         /// <returns>The error message, or <c>null</c> if the key is not present.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="ex"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentException"><paramref name="key"/> is <c>null</c> or empty.</exception>
         public static string? GetError(this ValidationException ex, string key)
         {
-            if (ex == null) throw new ArgumentNullException(nameof(ex));
-            if (string.IsNullOrEmpty(key)) throw new ArgumentException("Key cannot be null or empty.", nameof(key));
-
-            if (ex.Errors != null && ex.Errors.TryGetValue(key, out var value))
+            if (ex == null)
             {
-                return value;
+                throw new ArgumentNullException(nameof(ex));
             }
 
-            return null;
+            if (string.IsNullOrEmpty(key))
+            {
+                throw new ArgumentException("Key cannot be null or empty.", nameof(key));
+            }
+
+            return ex.Errors?.TryGetValue(key, out var value) is true ? value : null;
         }
 
         /// <summary>
@@ -48,9 +61,13 @@ namespace DockerSqliteBackup.Exceptions
         /// </summary>
         /// <param name="ex">The validation exception.</param>
         /// <returns>A formatted string with all available information.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="ex"/> is <c>null</c>.</exception>
         public static string ToDetailedString(this ValidationException ex)
         {
-            if (ex == null) throw new ArgumentNullException(nameof(ex));
+            if (ex == null)
+            {
+                throw new ArgumentNullException(nameof(ex));
+            }
 
             var sb = new StringBuilder();
             sb.AppendLine($"Validation failed: {ex.Message}");
@@ -60,7 +77,7 @@ namespace DockerSqliteBackup.Exceptions
                 sb.AppendLine($"Parameter: {ex.ParameterName}");
             }
 
-            if (ex.Errors != null && ex.Errors.Count > 0)
+            if (ex.Errors is { Count: > 0 })
             {
                 sb.AppendLine("Errors:");
                 foreach (KeyValuePair<string, string> kvp in ex.Errors)
