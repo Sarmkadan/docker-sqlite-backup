@@ -10,21 +10,16 @@ namespace DockerSqliteBackup.Tests.Utilities
     public static class StringUtilityTestsValidation
     {
         /// <summary>
-        /// Validates the <see cref="StringUtilityTests"/> instance and returns a list of human‑readable problems.
+        /// Validates the <see cref="StringUtilityTests"/> instance and returns a list of human-readable problems.
         /// </summary>
         /// <param name="value">The test class instance to validate.</param>
-        /// <returns>A read‑only list of validation problem messages. The list is empty when the instance is considered valid.</returns>
+        /// <returns>A read-only list of validation problem messages. The list is empty when the instance is considered valid.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="value"/> is <c>null</c>.</exception>
         public static IReadOnlyList<string> Validate(this StringUtilityTests value)
         {
-            var problems = new List<string>();
+            ArgumentNullException.ThrowIfNull(value);
 
-            // The instance itself must not be null.
-            if (value is null)
-            {
-                problems.Add("StringUtilityTests instance is null.");
-                // If the instance is null we cannot inspect its members further.
-                return problems;
-            }
+            var problems = new List<string>();
 
             // Using reflection we can ensure that the expected public test methods exist.
             // This guards against accidental renaming or removal of required test methods.
@@ -47,11 +42,11 @@ namespace DockerSqliteBackup.Tests.Utilities
             };
 
             var actualMethods = value.GetType()
-                                     .GetMethods(System.Reflection.BindingFlags.Instance |
-                                                 System.Reflection.BindingFlags.Public |
-                                                 System.Reflection.BindingFlags.DeclaredOnly)
-                                     .Select(m => m.Name)
-                                     .ToHashSet(StringComparer.Ordinal);
+                .GetMethods(System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.Public |
+                    System.Reflection.BindingFlags.DeclaredOnly)
+                .Select(m => m.Name)
+                .ToHashSet(StringComparer.Ordinal);
 
             foreach (var expected in expectedMethodNames)
             {
@@ -69,15 +64,14 @@ namespace DockerSqliteBackup.Tests.Utilities
         /// </summary>
         /// <param name="value">The test class instance to check.</param>
         /// <returns><c>true</c> if no validation problems are found; otherwise, <c>false</c>.</returns>
-        public static bool IsValid(this StringUtilityTests value)
-        {
-            return !value.Validate().Any();
-        }
+        /// <exception cref="ArgumentNullException"><paramref name="value"/> is <c>null</c>.</exception>
+        public static bool IsValid(this StringUtilityTests value) => !value.Validate().Any();
 
         /// <summary>
         /// Ensures that the <see cref="StringUtilityTests"/> instance is valid.
         /// </summary>
         /// <param name="value">The test class instance to validate.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="value"/> is <c>null</c>.</exception>
         /// <exception cref="ArgumentException">Thrown when validation problems are found.</exception>
         public static void EnsureValid(this StringUtilityTests value)
         {
