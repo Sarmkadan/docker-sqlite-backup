@@ -21,6 +21,7 @@ public static class StorageExceptionJsonExtensions
     /// <param name="value">The StorageException to serialize.</param>
     /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
     /// <returns>A JSON string representation of the StorageException.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
     public static string ToJson(this StorageException value, bool indented = false)
     {
         if (value is null)
@@ -29,10 +30,7 @@ public static class StorageExceptionJsonExtensions
         }
 
         var options = indented
-            ? new JsonSerializerOptions(_jsonOptions)
-            {
-                WriteIndented = true
-            }
+            ? new JsonSerializerOptions(_jsonOptions) { WriteIndented = true }
             : _jsonOptions;
 
         return JsonSerializer.Serialize(value, options);
@@ -40,11 +38,18 @@ public static class StorageExceptionJsonExtensions
 
     /// <summary>
     /// Deserializes a StorageException from a JSON string.
+    /// Attempts to deserialize as specific derived exception types first, then falls back to the base StorageException type.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>The deserialized StorageException, or null if the JSON is null or empty.</returns>
+    /// <returns>The deserialized StorageException if successful; otherwise, null.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="json"/> is null.</exception>
     public static StorageException? FromJson(string json)
     {
+        if (json is null)
+        {
+            throw new ArgumentNullException(nameof(json));
+        }
+
         if (string.IsNullOrEmpty(json))
         {
             return null;
@@ -53,12 +58,12 @@ public static class StorageExceptionJsonExtensions
         try
         {
             return JsonSerializer.Deserialize<S3StorageException>(json, _jsonOptions)
-                   ?? JsonSerializer.Deserialize<LocalStorageException>(json, _jsonOptions)
-                   ?? JsonSerializer.Deserialize<AzureStorageException>(json, _jsonOptions)
-                   ?? JsonSerializer.Deserialize<InsufficientStorageException>(json, _jsonOptions)
-                   ?? JsonSerializer.Deserialize<StorageException>(json, _jsonOptions);
+                ?? JsonSerializer.Deserialize<LocalStorageException>(json, _jsonOptions)
+                ?? JsonSerializer.Deserialize<AzureStorageException>(json, _jsonOptions)
+                ?? JsonSerializer.Deserialize<InsufficientStorageException>(json, _jsonOptions)
+                ?? JsonSerializer.Deserialize<StorageException>(json, _jsonOptions);
         }
-        catch (JsonException)
+        catch
         {
             return null;
         }
@@ -70,14 +75,20 @@ public static class StorageExceptionJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">The deserialized StorageException if successful; otherwise, null.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="json"/> is null.</exception>
     public static bool TryFromJson(string json, out StorageException? value)
     {
+        if (json is null)
+        {
+            throw new ArgumentNullException(nameof(json));
+        }
+
         try
         {
             value = FromJson(json);
             return true;
         }
-        catch (JsonException)
+        catch
         {
             value = null;
             return false;
