@@ -24,11 +24,12 @@ public static class DockerSqliteBackupExceptionJsonExtensions
     /// <param name="value">The exception to serialize.</param>
     /// <param name="indented">Whether to format the JSON with indentation.</param>
     /// <returns>A JSON string representation of the exception.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="value"/> is <see langword="null"/>.</exception>
     public static string ToJson(this DockerSqliteBackupException value, bool indented = false)
     {
         if (value is null)
         {
-            return "null";
+            throw new ArgumentNullException(nameof(value));
         }
 
         var options = indented
@@ -45,10 +46,16 @@ public static class DockerSqliteBackupExceptionJsonExtensions
     /// Deserializes a JSON string to a <see cref="DockerSqliteBackupException"/>.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>The deserialized exception, or null if the JSON is null or empty.</returns>
+    /// <returns>The deserialized exception, or <see langword="null"/> if the JSON is <see langword="null"/>, empty, or whitespace.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="json"/> is <see langword="null"/>.</exception>
     public static DockerSqliteBackupException? FromJson(string json)
     {
-        if (string.IsNullOrWhiteSpace(json) || json == "null")
+        if (json is null)
+        {
+            throw new ArgumentNullException(nameof(json));
+        }
+
+        if (string.IsNullOrWhiteSpace(json))
         {
             return null;
         }
@@ -60,13 +67,19 @@ public static class DockerSqliteBackupExceptionJsonExtensions
     /// Attempts to deserialize a JSON string to a <see cref="DockerSqliteBackupException"/>.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <param name="value">The deserialized exception, or null if deserialization fails.</param>
-    /// <returns>True if deserialization succeeds; otherwise, false.</returns>
+    /// <param name="value">When this method returns, contains the deserialized exception if successful, or <see langword="null"/> if deserialization fails.</param>
+    /// <returns><see langword="true"/> if deserialization succeeds; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="json"/> is <see langword="null"/>.</exception>
     public static bool TryFromJson(string json, out DockerSqliteBackupException? value)
     {
+        if (json is null)
+        {
+            throw new ArgumentNullException(nameof(json));
+        }
+
         value = null;
 
-        if (string.IsNullOrWhiteSpace(json) || json == "null")
+        if (string.IsNullOrWhiteSpace(json))
         {
             return true;
         }
