@@ -21,12 +21,10 @@ public static class BackupEventJsonExtensions
     /// <param name="value">The BackupEvent to serialize</param>
     /// <param name="indented">Whether to format the JSON with indentation</param>
     /// <returns>JSON string representation of the BackupEvent</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="value"/> is <see langword="null"/></exception>
     public static string ToJson(this BackupEvent value, bool indented = false)
     {
-        if (value is null)
-        {
-            throw new ArgumentNullException(nameof(value));
-        }
+        ArgumentNullException.ThrowIfNull(value);
 
         var options = new JsonSerializerOptions(_jsonOptions)
         {
@@ -41,8 +39,11 @@ public static class BackupEventJsonExtensions
     /// </summary>
     /// <param name="json">JSON string to deserialize</param>
     /// <returns>The deserialized BackupEvent, or null if JSON is null or empty</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="json"/> is <see langword="null"/></exception>
     public static BackupEvent? FromJson(string json)
     {
+        ArgumentNullException.ThrowIfNull(json);
+
         if (string.IsNullOrWhiteSpace(json))
         {
             return null;
@@ -64,8 +65,11 @@ public static class BackupEventJsonExtensions
     /// <param name="json">JSON string to deserialize</param>
     /// <param name="value">Output parameter for the deserialized BackupEvent</param>
     /// <returns>True if deserialization succeeded; otherwise, false</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="json"/> is <see langword="null"/></exception>
     public static bool TryFromJson(string json, out BackupEvent? value)
     {
+        ArgumentNullException.ThrowIfNull(json);
+
         value = null;
         if (string.IsNullOrWhiteSpace(json))
         {
