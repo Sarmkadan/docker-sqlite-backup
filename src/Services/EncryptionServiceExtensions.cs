@@ -1,15 +1,19 @@
 #nullable enable
 
-using System.Security.Cryptography;
-using DockerSqliteBackup.Services;
+using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace DockerSqliteBackup.Services;
 
 /// <summary>
-/// Extension methods for <see cref="EncryptionService"/> providing additional encryption utilities.
+/// Provides extension methods for <see cref="EncryptionService"/> to enable string and stream encryption/decryption operations.
 /// </summary>
 public static class EncryptionServiceExtensions
 {
+    private const string TempFilePrefix = "enc-";
+
     /// <summary>
     /// Encrypts the contents of a string and returns the encrypted Base64-encoded result.
     /// </summary>
@@ -17,7 +21,10 @@ public static class EncryptionServiceExtensions
     /// <param name="plainText">The plain text content to encrypt.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The Base64-encoded encrypted string.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="service"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="plainText"/> is <see langword="null"/>, empty, or consists only of white-space characters.</exception>
     /// <exception cref="InvalidOperationException">Thrown when encryption is not properly configured.</exception>
+    /// <exception cref="OperationCanceledException">The operation was canceled.</exception>
     public static async Task<string> EncryptStringAsync(
         this EncryptionService service,
         string plainText,
@@ -54,10 +61,24 @@ public static class EncryptionServiceExtensions
         finally
         {
             // Clean up temporary files
-            if (File.Exists(tempFile))
-                File.Delete(tempFile);
-            if (File.Exists(encryptedFile))
-                File.Delete(encryptedFile);
+            await Task.Run(() =>
+            {
+                try
+                {
+                    if (File.Exists(tempFile))
+                    {
+                        File.Delete(tempFile);
+                    }
+                    if (File.Exists(encryptedFile))
+                    {
+                        File.Delete(encryptedFile);
+                    }
+                }
+                catch (IOException)
+                {
+                    // Best effort cleanup - ignore failures during disposal
+                }
+            }, ct);
         }
     }
 
@@ -68,7 +89,10 @@ public static class EncryptionServiceExtensions
     /// <param name="encryptedBase64">The Base64-encoded encrypted string.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The decrypted plain text.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="service"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="encryptedBase64"/> is <see langword="null"/>, empty, or consists only of white-space characters.</exception>
     /// <exception cref="InvalidOperationException">Thrown when decryption fails or key is invalid.</exception>
+    /// <exception cref="OperationCanceledException">The operation was canceled.</exception>
     public static async Task<string> DecryptStringAsync(
         this EncryptionService service,
         string encryptedBase64,
@@ -105,10 +129,24 @@ public static class EncryptionServiceExtensions
         finally
         {
             // Clean up temporary files
-            if (File.Exists(tempEncryptedFile))
-                File.Delete(tempEncryptedFile);
-            if (File.Exists(decryptedFile))
-                File.Delete(decryptedFile);
+            await Task.Run(() =>
+            {
+                try
+                {
+                    if (File.Exists(tempEncryptedFile))
+                    {
+                        File.Delete(tempEncryptedFile);
+                    }
+                    if (File.Exists(decryptedFile))
+                    {
+                        File.Delete(decryptedFile);
+                    }
+                }
+                catch (IOException)
+                {
+                    // Best effort cleanup - ignore failures during disposal
+                }
+            }, ct);
         }
     }
 
@@ -119,7 +157,9 @@ public static class EncryptionServiceExtensions
     /// <param name="inputStream">The input stream containing plain text to encrypt.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The Base64-encoded encrypted string.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="service"/> or <paramref name="inputStream"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">Thrown when encryption is not properly configured.</exception>
+    /// <exception cref="OperationCanceledException">The operation was canceled.</exception>
     public static async Task<string> EncryptStreamAsync(
         this EncryptionService service,
         Stream inputStream,
@@ -159,10 +199,24 @@ public static class EncryptionServiceExtensions
         finally
         {
             // Clean up temporary files
-            if (File.Exists(tempFile))
-                File.Delete(tempFile);
-            if (File.Exists(encryptedFile))
-                File.Delete(encryptedFile);
+            await Task.Run(() =>
+            {
+                try
+                {
+                    if (File.Exists(tempFile))
+                    {
+                        File.Delete(tempFile);
+                    }
+                    if (File.Exists(encryptedFile))
+                    {
+                        File.Delete(encryptedFile);
+                    }
+                }
+                catch (IOException)
+                {
+                    // Best effort cleanup - ignore failures during disposal
+                }
+            }, ct);
         }
     }
 
@@ -173,7 +227,10 @@ public static class EncryptionServiceExtensions
     /// <param name="encryptedBase64">The Base64-encoded encrypted string.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A stream containing the decrypted content.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="service"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="encryptedBase64"/> is <see langword="null"/>, empty, or consists only of white-space characters.</exception>
     /// <exception cref="InvalidOperationException">Thrown when decryption fails or key is invalid.</exception>
+    /// <exception cref="OperationCanceledException">The operation was canceled.</exception>
     public static async Task<Stream> DecryptToStreamAsync(
         this EncryptionService service,
         string encryptedBase64,
@@ -210,10 +267,24 @@ public static class EncryptionServiceExtensions
         catch
         {
             // Ensure cleanup on failure
-            if (File.Exists(tempEncryptedFile))
-                File.Delete(tempEncryptedFile);
-            if (File.Exists(decryptedFile))
-                File.Delete(decryptedFile);
+            await Task.Run(() =>
+            {
+                try
+                {
+                    if (File.Exists(tempEncryptedFile))
+                    {
+                        File.Delete(tempEncryptedFile);
+                    }
+                    if (File.Exists(decryptedFile))
+                    {
+                        File.Delete(decryptedFile);
+                    }
+                }
+                catch (IOException)
+                {
+                    // Best effort cleanup - ignore failures during disposal
+                }
+            }, ct);
             throw;
         }
     }
