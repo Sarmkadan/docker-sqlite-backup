@@ -21,9 +21,9 @@ public static class ChecksumUtility
             throw new FileNotFoundException($"File not found: {filePath}");
 
         using var sha256 = SHA256.Create();
-        using var stream = File.OpenRead(filePath);
-        var hash = await Task.Run(() => sha256.ComputeHash(stream));
-        return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+        await using var stream = File.OpenRead(filePath);
+        var hash = await sha256.ComputeHashAsync(stream);
+        return Convert.ToHexStringLower(hash);
     }
 
     /// <summary>
@@ -45,9 +45,9 @@ public static class ChecksumUtility
             throw new FileNotFoundException($"File not found: {filePath}");
 
         using var md5 = MD5.Create();
-        using var stream = File.OpenRead(filePath);
-        var hash = await Task.Run(() => md5.ComputeHash(stream));
-        return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+        await using var stream = File.OpenRead(filePath);
+        var hash = await md5.ComputeHashAsync(stream);
+        return Convert.ToHexStringLower(hash);
     }
 
     /// <summary>
@@ -109,12 +109,14 @@ public static class ChecksumUtility
 
         using (var stream = File.OpenRead(filePath))
         {
-            _ = stream.Read(firstBytes, 0, Math.Min(16, (int)size));
+            // ReadExactly guards against short reads; a single Read call may return
+            // fewer bytes than requested even when more data is available.
+            stream.ReadExactly(firstBytes, 0, (int)Math.Min(16, size));
 
             if (size > 16)
             {
                 stream.Seek(-16, SeekOrigin.End);
-                _ = stream.Read(lastBytes, 0, 16);
+                stream.ReadExactly(lastBytes, 0, 16);
             }
         }
 

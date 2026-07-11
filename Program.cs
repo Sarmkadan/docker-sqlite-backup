@@ -28,7 +28,11 @@ var builder = Host.CreateDefaultBuilder(args)
         services.AddLogging(logging =>
         {
             logging.AddConsole();
-            logging.SetMinimumLevel(Enum.Parse<LogLevel>(appSettings.LogLevel ?? "Information"));
+            // Fall back to Information instead of crashing on a malformed LogLevel value.
+            var minimumLevel = Enum.TryParse<LogLevel>(appSettings.LogLevel, ignoreCase: true, out var parsed)
+                ? parsed
+                : LogLevel.Information;
+            logging.SetMinimumLevel(minimumLevel);
         });
     });
 

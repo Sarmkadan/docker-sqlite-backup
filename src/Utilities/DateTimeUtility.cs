@@ -1,6 +1,8 @@
 #nullable enable
 // Author: Vladyslav Zaiets
 
+using System.Globalization;
+
 namespace DockerSqliteBackup.Utilities;
 
 /// <summary>
@@ -19,10 +21,15 @@ public static class DateTimeUtility
 
     /// <summary>
     /// Parses an ISO 8601 formatted string to DateTime.
+    /// Parsing is culture-invariant and preserves the DateTimeKind encoded in the string.
     /// </summary>
     public static bool TryParseIso8601(string dateString, out DateTime result)
     {
-        return DateTime.TryParse(dateString, out result);
+        return DateTime.TryParse(
+            dateString,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.RoundtripKind,
+            out result);
     }
 
     /// <summary>

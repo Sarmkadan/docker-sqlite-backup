@@ -94,8 +94,8 @@ public class WebhookClient
         try
         {
             var json = JsonSerializer.Serialize(payload);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await _http.PostAsync(url, content, cancellationToken);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+            using var response = await _http.PostAsync(url, content, cancellationToken);
 
             if (response.IsSuccessStatusCode)
             {
@@ -115,6 +115,11 @@ public class WebhookClient
             {
                 _logger.LogError("Webhook request failed with status {StatusCode}", response.StatusCode);
             }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Shutdown or caller-initiated cancellation must not be swallowed.
+            throw;
         }
         catch (Exception ex)
         {
