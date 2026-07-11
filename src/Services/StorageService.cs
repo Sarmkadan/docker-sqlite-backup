@@ -221,7 +221,7 @@ public sealed class StorageService : IStorageService
     {
         try
         {
-            var s3Client = CreateS3Client(config);
+            using var s3Client = CreateS3Client(config);
             var fileName = Path.GetFileName(filePath);
             var key = Path.Combine(config.ObjectKeyPrefix, fileName).Replace("\\", "/");
 
@@ -231,7 +231,8 @@ public sealed class StorageService : IStorageService
                 Key = key,
                 FilePath = filePath,
                 ServerSideEncryptionMethod = config.EnableServerSideEncryption ? ServerSideEncryptionMethod.AES256 : null,
-                StorageClass = (S3StorageClass)(object)(config.StorageClass ?? "STANDARD")
+                StorageClass = S3StorageClass.FindValue(
+                    string.IsNullOrWhiteSpace(config.StorageClass) ? "STANDARD" : config.StorageClass)
             };
 
             await s3Client.PutObjectAsync(request);
@@ -249,7 +250,7 @@ public sealed class StorageService : IStorageService
     {
         try
         {
-            var s3Client = CreateS3Client(config);
+            using var s3Client = CreateS3Client(config);
             var request = new GetObjectRequest
             {
                 BucketName = config.BucketName,
@@ -270,7 +271,7 @@ public sealed class StorageService : IStorageService
     {
         try
         {
-            var s3Client = CreateS3Client(config);
+            using var s3Client = CreateS3Client(config);
             var request = new DeleteObjectRequest
             {
                 BucketName = config.BucketName,
@@ -290,7 +291,7 @@ public sealed class StorageService : IStorageService
     {
         try
         {
-            var s3Client = CreateS3Client(config);
+            using var s3Client = CreateS3Client(config);
             var request = new ListObjectsV2Request
             {
                 BucketName = config.BucketName,

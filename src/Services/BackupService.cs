@@ -80,7 +80,9 @@ public sealed class BackupService : IBackupService
             // Choose full vs incremental snapshot strategy.
             if ((Constants.BackupMode)schedule.BackupMode == Constants.BackupMode.Incremental)
             {
-                var baseBackup = (await _repository.GetBackupHistoryAsync(schedule.Id, 1))
+                // History is ordered newest-first; scan the whole history because the most
+                // recent entries are usually incrementals and the full baseline sits further back.
+                var baseBackup = (await _repository.GetBackupHistoryAsync(schedule.Id, int.MaxValue))
                     .FirstOrDefault(b => b.IsSuccess && b.BackupMode == (int)Constants.BackupMode.Full);
 
                 if (baseBackup is not null)
@@ -154,6 +156,20 @@ public sealed class BackupService : IBackupService
         {
             result.CompletedAt = DateTime.UtcNow;
             result.DurationMilliseconds = (long)(result.CompletedAt.Value - result.StartedAt).TotalMilliseconds;
+
+            // Persist the result so history, rotation, and incremental base lookup can see it.
+            // Persistence errors are logged rather than thrown so they never mask the
+            // original backup outcome.
+            try
+            {
+                await _repository.CreateBackupResultAsync(result);
+            }
+            catch (Exception persistEx)
+            {
+                _logger.LogError(persistEx,
+                    "Failed to persist backup result {ResultId} for schedule {ScheduleId}",
+                    result.Id, schedule.Id);
+            }
         }
 
         return result;
@@ -181,9 +197,9 @@ public sealed class BackupService : IBackupService
         try
         {
             using var sha256 = SHA256.Create();
-            using var stream = File.OpenRead(filePath);
-            var hash = await Task.Run(() => sha256.ComputeHash(stream));
-            return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+            await using var stream = File.OpenRead(filePath);
+            var hash = await sha256.ComputeHashAsync(stream);
+            return Convert.ToHexStringLower(hash);
         }
         catch (Exception ex) when (ex is not IOException and not UnauthorizedAccessException and not NotSupportedException)
         {

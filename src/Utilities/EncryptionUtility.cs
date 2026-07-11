@@ -30,7 +30,9 @@ public static class EncryptionUtility
         aes.Key = key;
         aes.GenerateIV();
 
-        await using var destStream = File.OpenWrite(destinationPath);
+        // File.Create truncates any pre-existing file; OpenWrite would leave stale
+        // trailing bytes when the new ciphertext is shorter than the old content.
+        await using var destStream = File.Create(destinationPath);
         // Prepend the IV so decryption can recover it without an out-of-band channel.
         await destStream.WriteAsync(aes.IV);
 
@@ -53,9 +55,16 @@ public static class EncryptionUtility
         await using var sourceStream = File.OpenRead(sourcePath);
 
         var iv = new byte[IvSizeBytes];
-        var bytesRead = await sourceStream.ReadAsync(iv);
-        if (bytesRead != IvSizeBytes)
-            throw new InvalidDataException($"Encrypted file is too short to contain a valid IV: {sourcePath}");
+        try
+        {
+            // ReadExactlyAsync guards against short reads; a single ReadAsync call may
+            // legally return fewer bytes than requested.
+            await sourceStream.ReadExactlyAsync(iv);
+        }
+        catch (EndOfStreamException ex)
+        {
+            throw new InvalidDataException($"Encrypted file is too short to contain a valid IV: {sourcePath}", ex);
+        }
 
         using var aes = Aes.Create();
         aes.KeySize = 256;
@@ -63,7 +72,7 @@ public static class EncryptionUtility
         aes.IV = iv;
 
         await using var cryptoStream = new CryptoStream(sourceStream, aes.CreateDecryptor(), CryptoStreamMode.Read);
-        await using var destStream = File.OpenWrite(destinationPath);
+        await using var destStream = File.Create(destinationPath);
         await cryptoStream.CopyToAsync(destStream);
     }
 
