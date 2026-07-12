@@ -46,4 +46,38 @@ bool compressBackups = AppSettingsExtensions.ShouldCompressBackups(config);
 bool configValid = AppSettingsExtensions.Validate(config);
 ```
 
-Make sure to include the appropriate namespace where `AppSettingsExtensions` is defined.
+## StorageServiceIntegrationTestsExtensions
+
+`StorageServiceIntegrationTestsExtensions` provides a collection of helper methods used in integration tests for storage services. The utilities simplify creating temporary files and directories, configuring local storage, obtaining a `StorageService` instance, and verifying backup files and their properties.
+
+### Usage Example
+
+```csharp
+using DockerSqliteBackup.Tests.Integration;
+
+// Assume we are inside a test class that inherits from StorageServiceIntegrationTests
+var tempDir = StorageServiceIntegrationTestsExtensions.GetTempDir(this);
+var tempFile = StorageServiceIntegrationTestsExtensions.CreateTempFile;
+var config = StorageServiceIntegrationTestsExtensions.MakeLocalConfig(tempDir);
+var storageService = StorageServiceIntegrationTestsExtensions.GetStorageService(config);
+
+// Create a random backup file for testing
+string backupPath = StorageServiceIntegrationTestsExtensions.CreateRandomBackupFile(storageService);
+
+// Verify that the backup file exists and is valid
+StorageServiceIntegrationTestsExtensions.VerifyBackupFile(storageService, backupPath);
+
+// Create multiple backup files and get their sizes
+var backupFiles = StorageServiceIntegrationTestsExtensions.CreateMultipleBackupFiles(storageService, count: 3);
+foreach (var file in backupFiles)
+{
+    long size = StorageServiceIntegrationTestsExtensions.GetFileSize(file);
+    Console.WriteLine($"Backup file: {file}, Size: {size} bytes");
+}
+
+// Create a backup tuple (path, size, modified date) for further assertions
+var (path, size, modified) = StorageServiceIntegrationTestsExtensions.CreateBackupTuple(storageService);
+
+// Use the extension method to assert the backup path matches expectations
+this.ShouldMatchBackupPath(storageService, path);
+```
