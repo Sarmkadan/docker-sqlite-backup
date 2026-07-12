@@ -5,6 +5,7 @@ namespace DockerSqliteBackup.Exceptions
 {
     /// <summary>
     /// Provides validation extension methods for <see cref="BackupException"/> instances.
+    /// Validates required properties and ensures proper state of exception objects.
     /// </summary>
     public static class BackupExceptionValidation
     {
@@ -12,8 +13,13 @@ namespace DockerSqliteBackup.Exceptions
         /// Validates the specified <see cref="BackupException"/> instance.
         /// </summary>
         /// <param name="value">The exception to validate. Cannot be null.</param>
-        /// <returns>A read-only list of validation error messages. Empty if validation succeeds.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="value"/> is null.</exception>
+        /// <returns>
+        /// A read-only list of validation error messages. 
+        /// Returns empty list if validation succeeds.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="value"/> is null.
+        /// </exception>
         public static IReadOnlyList<string> Validate(this BackupException value)
         {
             if (value == null)
@@ -45,8 +51,13 @@ namespace DockerSqliteBackup.Exceptions
         /// Determines whether the specified <see cref="BackupException"/> is valid.
         /// </summary>
         /// <param name="value">The exception to check. Cannot be null.</param>
-        /// <returns><see langword="true"/> if the exception is valid; otherwise, <see langword="false"/>.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="value"/> is null.</exception>
+        /// <returns>
+        /// <see langword="true"/> if the exception is valid (no validation errors);
+        /// otherwise, <see langword="false"/>.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="value"/> is null.
+        /// </exception>
         public static bool IsValid(this BackupException value)
         {
             if (value == null)
@@ -58,11 +69,17 @@ namespace DockerSqliteBackup.Exceptions
         }
 
         /// <summary>
-        /// Validates and throws an <see cref="ArgumentException"/> if the specified <see cref="BackupException"/> is invalid.
+        /// Validates and throws an <see cref="ArgumentException"/> if the specified 
+        /// <see cref="BackupException"/> is invalid.
         /// </summary>
         /// <param name="value">The exception to validate. Cannot be null.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="value"/> is null.</exception>
-        /// <exception cref="ArgumentException">The exception is invalid.</exception>
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="value"/> is null.
+        /// </exception>
+        /// <exception cref="ArgumentException">
+        /// The exception is invalid - contains validation errors.
+        /// The exception message contains all validation failure messages.
+        /// </exception>
         public static void EnsureValid(this BackupException value)
         {
             if (value == null)
