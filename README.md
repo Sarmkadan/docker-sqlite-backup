@@ -1,6 +1,3 @@
-// entire file content ...
-// ... goes in between
-
 ## BackupJobExtensions
 
 The `BackupJobExtensions` class provides extension methods for `BackupJob` that simplify status checks, duration formatting, retry progress tracking, and result retrieval. It includes convenience methods for determining job status, formatting durations, and assessing retry attempts.
@@ -80,4 +77,21 @@ var (path, size, modified) = StorageServiceIntegrationTestsExtensions.CreateBack
 
 // Use the extension method to assert the backup path matches expectations
 this.ShouldMatchBackupPath(storageService, path);
+```
+
+## ScheduleServiceTestsExtensions
+
+The `ScheduleServiceTestsExtensions` class provides helper methods for creating test `BackupSchedule` instances and asserting their properties in unit tests. It simplifies testing schedule validation logic by generating valid/invalid schedules and verifying expected state.
+
+### Usage Example
+
+```csharp
+public void TestValidSchedule()
+{
+    var schedule = ScheduleServiceTestsExtensions.CreateValidSchedule();
+    ScheduleServiceTestsExtensions.AssertScheduleIsActive(schedule);
+    ScheduleServiceTestsExtensions.AssertScheduleHasId(schedule);
+    ScheduleServiceTestsExtensions.AssertScheduleHasName(schedule);
+    ScheduleServiceTestsExtensions.AssertScheduleHasDatabasePath(schedule);
+}
 ```
