@@ -178,6 +178,69 @@ bool isNameValid = localStorage.ValidateName(); // true
 int ageInDays = localStorage.GetAgeInDays();
 ```
 
+## StorageException
+
+The `StorageException` class and its derived exceptions (`S3StorageException`, `LocalStorageException`, `AzureStorageException`, `InsufficientStorageException`) are thrown when storage-related operations fail. These exceptions provide detailed information about the type of storage that encountered issues, enabling better error handling and debugging.
+
+### Usage Examples
+
+```csharp
+// Basic StorageException usage
+try
+{
+    await storageService.BackupDatabaseAsync();
+}
+catch (StorageException ex) when (ex.StorageType != null)
+{
+    Console.WriteLine($"Storage operation failed for {ex.StorageType}: {ex.Message}");
+    // Handle storage-specific errors
+}
+
+// S3-specific exception
+try
+{
+    await s3Service.UploadBackupAsync(backupFile);
+}
+catch (S3StorageException ex)
+{
+    Console.WriteLine($"S3 upload failed: {ex.Message}");
+    // Handle S3-specific errors
+}
+
+// Local storage exception
+try
+{
+    await localStorage.SaveBackupAsync(backupFile);
+}
+catch (LocalStorageException ex)
+{
+    Console.WriteLine($"Local storage operation failed: {ex.Message}");
+    // Handle local storage errors
+}
+
+// Azure Blob Storage exception
+try
+{
+    await azureService.UploadBackupAsync(backupFile);
+}
+catch (AzureStorageException ex)
+{
+    Console.WriteLine($"Azure Blob Storage operation failed: {ex.Message}");
+    // Handle Azure-specific errors
+}
+
+// Insufficient storage exception
+try
+{
+    await localStorage.SaveBackupAsync(backupFile);
+}
+catch (InsufficientStorageException ex)
+{
+    Console.WriteLine($"Not enough disk space. Required: {ex.RequiredBytes} bytes, Available: {ex.AvailableBytes} bytes");
+    // Handle insufficient storage
+}
+```
+
 ## Benchmarks
 
 This project includes a BenchmarkDotNet suite to monitor performance of critical operations like encryption and checksum generation.
