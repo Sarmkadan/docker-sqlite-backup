@@ -117,6 +117,30 @@ export BACKUP_ENCRYPTION_KEY=<output>
 dotnet test
 ```
 
+## BackupEventPublisherExtensions
+
+The `BackupEventPublisherExtensions` class provides extension methods for `BackupEventPublisher` that simplify event publishing and subscription management. It includes convenience methods for publishing events with caller information, type-safe event publishing, and temporary subscription handling.
+
+### Usage Examples
+
+```csharp
+// Get an event publisher instance from DI
+var publisher = services.GetRequiredService<BackupEventPublisher>();
+
+// Publish an event with automatic caller information
+var backupStartedEvent = new BackupStartedEvent("production.db", DateTime.UtcNow);
+await publisher.PublishWithCallerInfoAsync(backupStartedEvent);
+
+// Publish a typed event
+var backupCompletedEvent = new BackupCompletedEvent("production.db", DateTime.UtcNow, 1024);
+await publisher.PublishAsync(backupCompletedEvent);
+
+// Create a temporary subscription that automatically unsubscribes when disposed
+using var subscription = publisher.SubscribeTemporarily(new MyEventListener());
+
+// The subscription will be automatically unsubscribed when exiting the using block
+```
+
 ## Benchmarks
 
 This project includes a BenchmarkDotNet suite to monitor performance of critical operations like encryption and checksum generation.
