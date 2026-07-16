@@ -72,6 +72,41 @@ bool isConnected = await config.TestConnectionAsync();
 Console.WriteLine($"S3 connection successful: {isConnected}");
 ```
 
+## AzureConfiguration
+
+The `AzureConfiguration` class provides configuration for uploading backup files to Azure Blob Storage. It supports both connection-string and SAS-URI authentication methods, allowing flexible deployment scenarios with different security requirements. The configuration includes container settings, access tier options, and immutability features for backup retention policies.
+
+```csharp
+using DockerSqliteBackup.Domain;
+using System;
+using System.Threading.Tasks;
+
+var config = new AzureConfiguration
+{
+  Name = "azure-backups",
+  ConnectionString = "DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=...;EndpointSuffix=core.windows.net",
+  ContainerName = "sqlite-backups",
+  BlobPrefix = "production/app1/",
+  AccessTier = "Cool",
+  EnableImmutability = true,
+  SoftDeleteRetentionDays = 7
+};
+
+if (!config.IsValid())
+{
+  throw new InvalidOperationException("Azure configuration is not valid.");
+}
+
+// Example: test the connection to Azure Blob Storage
+bool isConnected = await config.TestConnectionAsync();
+
+Console.WriteLine($"Azure connection successful: {isConnected}");
+
+// Example: create a blob container client
+var containerClient = config.CreateContainerClient();
+Console.WriteLine($"Container '{config.ContainerName}' created/accessed successfully");
+```
+
 ## BackupResult
 
 The `BackupResult` class represents the outcome of a backup operation, containing metadata about the backup process, file characteristics, verification status, and storage locations. It tracks the entire backup lifecycle from initiation to completion, including timing metrics, file integrity, and storage destinations.
