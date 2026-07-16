@@ -280,48 +280,62 @@ Console.WriteLine($"Available space: {availableSpace} bytes");
 await storageService.DeleteBackupAsync("backups/mydb-2024-01-01.db");
 ```
 
-## VerificationServiceIntegrationTests
+## BackupJobTests
 
-The `VerificationServiceIntegrationTests` class provides integration tests for the `VerificationService` class, validating backup integrity through comprehensive verification workflows. It tests database file validation, checksum verification, backup restoration to temporary locations, and verification history tracking to ensure backup reliability and recoverability.
+The `BackupJobTests` class contains unit tests for the `BackupJob` domain model, verifying backup job lifecycle operations including status transitions, retry logic, and timing calculations. It tests scenarios like marking jobs as started/completed, retry eligibility, elapsed time calculations, and retry counter management.
 
 ```csharp
-using DockerSqliteBackup.Services;
-using DockerSqliteBackup.Verification;
+using DockerSqliteBackup.Domain;
 
-// Create a verification service instance
-var verificationService = new VerificationServiceIntegrationTests();
-
-// Initialize async test context
-await verificationService.InitializeAsync();
-
-// Perform integrity check on a valid SQLite database
-var integrityResult = await verificationService.PerformIntegrityCheckAsync_ValidDatabase_ReturnsValidWithNoErrors();
-Console.WriteLine($"Integrity check result: {integrityResult.Status}");
-
-// Verify checksum matches expected value
-var isChecksumValid = await verificationService.VerifyChecksumAsync_CorrectChecksum_ReturnsTrue("path/to/backup.db", "expected_checksum");
-Console.WriteLine($"Checksum valid: {isChecksumValid}");
-
-// Restore backup to temporary directory
-var tempDir = await verificationService.RestoreToTemporaryAsync_UnencryptedBackup("path/to/backup.db");
-Console.WriteLine($"Restored to: {tempDir}");
-
-// Verify backup file integrity
-var verificationResult = await verificationService.VerifyBackupAsync_ValidSqliteFile_ReturnsSuccessfulVerification("path/to/backup.db");
-Console.WriteLine($"Verification result: {verificationResult.Status}");
-
-// Get verification history
-var history = await verificationService.GetVerificationHistoryAsync();
-foreach (var entry in history)
+// Create a backup job instance
+var job = new BackupJob
 {
-    Console.WriteLine($"Verified at: {entry.Timestamp}, Status: {entry.Status}");
-}
+    MaxRetries = 3,
+    RetentionDays = 7,
+    DatabasePath = "/data/mydb.db"
+};
 
-// Cleanup temporary files
-await verificationService.CleanupTemporaryFilesAsync_ExistingDirectory();
+// Mark a pending job as started - updates status to InProgress, sets processing flag, and records start time
+job.MarkStarted();
+Console.WriteLine($"Job status: {job.Status}"); // (int)BackupStatus.InProgress
+Console.WriteLine($"Is processing: {job.IsProcessing}"); // true
+Console.WriteLine($"Started at: {job.StartedAt}"); // not null
 
-// Dispose async test context
-await verificationService.DisposeAsync();
+// Mark an in-progress job as completed - updates status to Success and clears processing flag
+job.MarkCompleted((int)BackupStatus.Success);
+Console.WriteLine($"Job status: {job.Status}"); // (int)BackupStatus.Success
+Console.WriteLine($"Is processing: {job.IsProcessing}"); // false
+Console.WriteLine($"Completed at: {job.CompletedAt}"); // not null
+
+// Check if a failed job with remaining retries can be retried
+var failedJob = new BackupJob { MaxRetries = 3 };
+failedJob.MarkStarted();
+failedJob.MarkCompleted((int)BackupStatus.Failed);
+failedJob.IncrementRetry();
+Console.WriteLine($"Can retry: {failedJob.CanRetry}"); // true
+
+// Check if a failed job with exhausted retries cannot be retried
+var exhaustedJob = new BackupJob { MaxRetries = 2 };
+exhaustedJob.MarkStarted();
+exhaustedJob.MarkCompleted((int)BackupStatus.Failed);
+exhaustedJob.IncrementRetry();
+exhaustedJob.IncrementRetry();
+Console.WriteLine($"Can retry: {exhaustedJob.CanRetry}"); // false
+
+// Check elapsed time for a completed job
+var timedJob = new BackupJob();
+timedJob.MarkStarted();
+Thread.Sleep(10);
+timedJob.MarkCompleted((int)BackupStatus.Success);
+var elapsed = timedJob.GetElapsedTime();
+Console.WriteLine($"Elapsed time: {elapsed.TotalMilliseconds}ms"); // positive duration
+
+// Increment retry counter multiple times
+var retryJob = new BackupJob();
+retryJob.IncrementRetry();
+retryJob.IncrementRetry();
+retryJob.IncrementRetry();
+Console.WriteLine($"Retry count: {retryJob.RetryCount}"); // 3
 ```
 
 ## ChecksumBenchmarks
