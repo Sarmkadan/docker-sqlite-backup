@@ -64,5 +64,50 @@ var asyncCount = await cache.GetOrSetAsync(
 
 The service also provides `Exists`, `Clear`, and asynchronous `RemoveAsync` methods for full cache management.
 
+## FileSystemUtility
+
+`FileSystemUtility` provides a set of static helper methods for common file‑system tasks such as safe copying, deleting, enumerating files, calculating directory size, and recursive directory management. The methods handle errors internally and are suitable for backup, cleanup, and verification scenarios.
+
+```csharp
+using DockerSqliteBackup.Utilities;
+using System;
+using System.Threading.Tasks;
+
+public static class FileSystemUtilityExample
+{
+    public static async Task RunAsync()
+    {
+        // Safely copy a file
+        await FileSystemUtility.SafeCopyFileAsync("source.db", "backup/source.db");
+
+        // Delete a file if it exists
+        FileSystemUtility.SafeDeleteFile("temp.txt");
+
+        // Enumerate files matching a pattern
+        var logFiles = FileSystemUtility.GetFilesWithPattern("/var/logs", "*.log");
+        foreach (var file in logFiles)
+            Console.WriteLine(file);
+
+        // Calculate total size of a directory
+        long size = FileSystemUtility.CalculateDirectorySize("/var/backups");
+        Console.WriteLine($"Backup size: {size} bytes");
+
+        // Recursively delete a directory
+        await FileSystemUtility.DeleteDirectoryAsync("/tmp/old-backups");
+
+        // Get available disk space for a path
+        long freeSpace = FileSystemUtility.GetAvailableDiskSpace("/var/backups");
+        Console.WriteLine($"Free space: {freeSpace} bytes");
+
+        // Check if a file is currently in use
+        bool inUse = FileSystemUtility.IsFileInUse("backup/source.db");
+        Console.WriteLine($"File in use: {inUse}");
+
+        // Copy an entire directory
+        FileSystemUtility.CopyDirectory("/var/backups", "/mnt/backup-copy");
+    }
+}
+```
+
 ```
 // ... existing content ...
