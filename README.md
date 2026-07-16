@@ -123,6 +123,77 @@ var relative = DateTimeUtility.GetRelativeTime(DateTime.UtcNow.AddHours(-5));
 var duration = DateTimeUtility.FormatDuration(TimeSpan.FromMinutes(125));
 
 // Day and month boundaries
+var dayStart = DateTimeUtility.GetDayStart();
+var dayEnd = DateTimeUtility.GetDayEnd();
+var monthStart = DateTimeUtility.GetMonthStart();
+var monthEnd = DateTimeUtility.GetMonthEnd();
+
+// Time until a specific time of day (e.g., 02:30 UTC)
+var until = DateTimeUtility.GetTimeUntil(new TimeOnly(2, 30));
+
+// Rounding to the nearest 15‑minute interval
+var roundedDown = DateTimeUtility.RoundDown(DateTime.Now, TimeSpan.FromMinutes(15));
+var roundedUp = DateTimeUtility.RoundUp(DateTime.Now, TimeSpan.FromMinutes(15));
+```
+
+## HealthCheckService
+
+The `HealthCheckService` performs comprehensive health checks on the backup system, including storage accessibility, disk space availability, and database connectivity. It returns a detailed report of each component's status and an overall system health assessment.
+
+```csharp
+using DockerSqliteBackup.Health;
+using Microsoft.Extensions.Logging;
+
+// Create the health check service
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<HealthCheckService>();
+var healthCheckService = new HealthCheckService(logger);
+
+// Perform a health check
+var result = await healthCheckService.PerformHealthCheckAsync();
+
+// Check overall status
+Console.WriteLine($"Overall status: {result.Status}"); // "healthy" or "degraded"
+Console.WriteLine($"Checked at: {result.CheckedAt}");
+
+// Access individual component health
+if (result.Components.TryGetValue("storage", out var storageHealth))
+{
+    Console.WriteLine($"Storage health: {storageHealth.IsHealthy}");
+    Console.WriteLine($"Storage message: {storageHealth.Message}");
+}
+
+// Check database health
+if (result.Components.TryGetValue("database", out var dbHealth))
+{
+    Console.WriteLine($"Database health: {dbHealth.IsHealthy}");
+    Console.WriteLine($"Database message: {dbHealth.Message}");
+}
+
+// Use the ToString() method for a quick summary
+Console.WriteLine(result.ToString());
+```
+
+```csharp
+using DockerSqliteBackup.Utilities;
+
+// ISO‑8601 formatting and parsing
+var iso = DateTimeUtility.ToIso8601(DateTime.Now);
+if (DateTimeUtility.TryParseIso8601(iso, out var parsed))
+{
+    // parsed now holds the original DateTime value
+}
+
+// Human‑readable display
+var display = DateTimeUtility.FormatForDisplay(DateTime.Now, "MMM dd, yyyy HH:mm");
+
+// Relative time (e.g., "5h ago")
+var relative = DateTimeUtility.GetRelativeTime(DateTime.UtcNow.AddHours(-5));
+
+// Duration formatting (e.g., "2h 5m")
+var duration = DateTimeUtility.FormatDuration(TimeSpan.FromMinutes(125));
+
+// Day and month boundaries
 var dayStart   = DateTimeUtility.GetDayStart();
 var dayEnd     = DateTimeUtility.GetDayEnd();
 var monthStart = DateTimeUtility.GetMonthStart();
