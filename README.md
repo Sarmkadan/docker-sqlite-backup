@@ -32,6 +32,63 @@
 // }
 // ```
 
+// ## MemoryCacheServiceTests
+
+The `MemoryCacheServiceTests` class provides comprehensive unit tests for the `MemoryCacheService` class, verifying its behavior across various caching scenarios including basic operations, expiration, complex types, and asynchronous operations. These tests ensure the service properly handles cache misses, cache hits, expiration policies, and concurrent access patterns.
+
+
+
+
+```csharp
+using DockerSqliteBackup.Caching;
+using Microsoft.Extensions.Logging;
+
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<MemoryCacheService>();
+var cache = new MemoryCacheService(cleanupInterval: TimeSpan.FromHours(1));
+
+try
+{
+    // Basic operations
+    cache.Set("user-123", new { Name = "John Doe", Email = "john@example.com" });
+    var user = cache.Get<object>("user-123");
+    Console.WriteLine($"Retrieved user: {user}");
+    
+    // Check if key exists
+    var exists = cache.Exists("user-123");
+    Console.WriteLine($"Key exists: {exists}");
+    
+    // Get or set with factory method
+    var value = cache.GetOrSet("config-settings", () => 
+    {
+        Console.WriteLine("Factory called for cache miss");
+        return new { Timeout = 30, Retries = 3 };
+    });
+    Console.WriteLine($"Value from cache or factory: {value}");
+    
+    // Set with expiration
+    cache.Set("temp-data", "temporary value", TimeSpan.FromSeconds(5));
+    Console.WriteLine("Temporary value set with 5 second expiration");
+    
+    // Asynchronous operations
+    await cache.SetAsync("async-counter", 42);
+    var asyncValue = await cache.GetAsync<int>("async-counter");
+    Console.WriteLine($"Async value: {asyncValue}");
+    
+    // Remove key
+    cache.Remove("user-123");
+    Console.WriteLine("Removed user-123 from cache");
+    
+    // Clear all entries
+    cache.Clear();
+    Console.WriteLine("Cleared entire cache");
+}
+finally
+{
+    // Cleanup
+}
+```
+
 // ## ScheduleServiceTests
 // 
 // The `ScheduleServiceTests` class provides unit tests for the `ScheduleService` class, focusing on schedule validation,
