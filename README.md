@@ -1,5 +1,8 @@
-// entire file content ...
-// ... goes in between
+# README
+
+// ...
+// [Existing content]
+// ...
 
 ## RotationPolicy
 
@@ -83,18 +86,18 @@ using System.Threading.Tasks;
 
 var config = new AzureConfiguration
 {
-  Name = "azure-backups",
-  ConnectionString = "DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=...;EndpointSuffix=core.windows.net",
-  ContainerName = "sqlite-backups",
-  BlobPrefix = "production/app1/",
-  AccessTier = "Cool",
-  EnableImmutability = true,
-  SoftDeleteRetentionDays = 7
+    Name = "azure-backups",
+    ConnectionString = "DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=...;EndpointSuffix=core.windows.net",
+    ContainerName = "sqlite-backups",
+    BlobPrefix = "production/app1/",
+    AccessTier = "Cool",
+    EnableImmutability = true,
+    SoftDeleteRetentionDays = 7
 };
 
 if (!config.IsValid())
 {
-  throw new InvalidOperationException("Azure configuration is not valid.");
+    throw new InvalidOperationException("Azure configuration is not valid.");
 }
 
 // Example: test the connection to Azure Blob Storage
@@ -230,7 +233,7 @@ else
 
 ## BackupJob
 
-`BackupJob` represents a single backup job execution. It tracks the job’s lifecycle, status, timestamps, retry logic, processing flag, and the resulting `BackupResult`. The class provides helper methods to start, complete, retry, and calculate elapsed time for a job.
+`BackupJob` represents a single backup job execution. It tracks the job's lifecycle, status, timestamps, retry logic, processing flag, and the resulting `BackupResult`. The class provides helper methods to start, complete, retry, and calculate elapsed time for a job.
 
 ```csharp
 using System;
@@ -248,7 +251,7 @@ job.MarkStarted();
 Console.WriteLine($"Job {job.Id} started at {job.StartedAt:u}");
 
 // Simulate some work...
-System.Threading.Thread.Sleep(500); // 0.5 s
+System.Threading.Thread.Sleep(500); // 0.5 s
 
 // Complete the job with a successful status
 job.MarkCompleted((int)BackupStatus.Completed);
@@ -308,4 +311,61 @@ var entry = new AuditEntry
 
 auditLogger.LogEntry(entry);
 Console.WriteLine(entry.ToString());
+```
+
+## EncryptionService
+
+The `EncryptionService` provides AES-256-CBC encryption for backup files. It manages key resolution from either environment variables or application configuration, and provides functionality to encrypt and decrypt files, validate keys, and monitor the encryption status. The encrypted file format produced by `EncryptFileAsync` is a 16-byte IV followed by the ciphertext.
+
+```csharp
+using DockerSqliteBackup.Services;
+using DockerSqliteBackup.Configuration;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
+
+// Configure application settings
+var appSettings = new AppSettings
+{
+    EnableEncryption = true,
+    EncryptionKey = "YourBase64Encoded32ByteKeyHere..."
+};
+
+// Create logger and encryption service
+using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<EncryptionService>();
+var encryptionService = new EncryptionService(appSettings, logger);
+
+// Check encryption status
+var status = encryptionService.GetStatus();
+Console.WriteLine($"Encryption enabled: {status.IsEnabled}");
+Console.WriteLine($"Key source: {status.KeySource}");
+Console.WriteLine($"Valid key: {status.HasValidKey}");
+
+if (status.HasValidKey)
+{
+    // Generate a new encryption key
+    string newKey = encryptionService.GenerateKey();
+    Console.WriteLine($"Generated key: {newKey}");
+    
+    // Validate a key
+    bool isValid = encryptionService.ValidateKey(newKey);
+    Console.WriteLine($"Key is valid: {isValid}");
+    
+    // Encrypt a backup file
+    string encryptedPath = await encryptionService.EncryptFileAsync(
+        "backup.db", 
+        "backup.db.enc");
+    Console.WriteLine($"File encrypted to: {encryptedPath}");
+    
+    // Decrypt the backup file
+    string decryptedPath = await encryptionService.DecryptFileAsync(
+        "backup.db.enc", 
+        "backup_restored.db");
+    Console.WriteLine($"File decrypted to: {decryptedPath}");
+    
+    // Get the active encryption key
+    string? activeKey = encryptionService.GetActiveKey();
+    Console.WriteLine($"Active key: {activeKey?.Substring(0, 8)}...");
+}
 ```
