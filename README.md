@@ -469,6 +469,80 @@ var retrievedPolicy = await rotationService.GetRotationPolicyAsync(scheduleId);
 Console.WriteLine($"Retrieved policy with MaxBackupCount: {retrievedPolicy?.MaxBackupCount}");
 ```
 
+## IntegrityCheckerServiceTests
+
+The `IntegrityCheckerServiceTests` class provides comprehensive unit tests for the `IntegrityCheckerService` class, which performs integrity checks on SQLite database files. These tests verify database validation, metadata extraction, and various integrity check scenarios including quick checks, full database validation, foreign key validation, and backup file verification.
+
+```csharp
+using DockerSqliteBackup.Services;
+using DockerSqliteBackup.Domain;
+using FluentAssertions;
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
+using Moq;
+using Xunit;
+
+// Create mock logger
+var loggerMock = new Mock<ILogger<IntegrityCheckerService>>();
+
+// Create the integrity checker service instance
+var integrityChecker = new IntegrityCheckerService(loggerMock.Object);
+
+// Initialize the test environment
+await integrityChecker.InitializeAsync();
+
+try
+{
+    // Create a valid SQLite database for testing
+    var dbPath = Path.Combine(Path.GetTempPath(), $"test-db-{Guid.NewGuid()}.sqlite");
+    using var connection = new SqliteConnection($"Data Source={dbPath}");
+    connection.Open();
+    
+    using var cmd = connection.CreateCommand();
+    cmd.CommandText = "CREATE TABLE test_table (id INTEGER PRIMARY KEY, name TEXT)";
+    cmd.ExecuteNonQuery();
+    
+    using var insert = connection.CreateCommand();
+    insert.CommandText = "INSERT INTO test_table (name) VALUES ('test-row')";
+    insert.ExecuteNonQuery();
+
+    // Perform a full integrity check on the database
+    var fullReport = await integrityChecker.CheckDatabaseAsync(dbPath, fullCheck: true);
+    Console.WriteLine($"Full check - Healthy: {fullReport.IsHealthy}");
+    Console.WriteLine($"Quick check passed: {fullReport.PassedQuickCheck}");
+    Console.WriteLine($"Full check passed: {fullReport.PassedFullCheck}");
+    Console.WriteLine($"FK check passed: {fullReport.PassedForeignKeyCheck}");
+    Console.WriteLine($"Tables found: {fullReport.TableCount}");
+    
+    // Perform a quick integrity check only
+    var quickReport = await integrityChecker.CheckDatabaseAsync(dbPath, fullCheck: false);
+    Console.WriteLine($"Quick check only - Healthy: {quickReport.IsHealthy}");
+    
+    // Quick check method
+    var isValid = await integrityChecker.QuickCheckAsync(dbPath);
+    Console.WriteLine($"Quick check result: {isValid}");
+    
+    // Check backup file integrity
+    var backupReport = await integrityChecker.CheckBackupFileAsync(dbPath);
+    Console.WriteLine($"Backup check - Healthy: {backupReport.IsHealthy}");
+    
+    // Test IntegrityReport validation
+    var healthyReport = new IntegrityReport
+    {
+        PassedQuickCheck = true,
+        PassedFullCheck = true,
+        PassedForeignKeyCheck = true
+    };
+    Console.WriteLine($"Is healthy: {healthyReport.IsHealthy}"); // true
+    Console.WriteLine($"Summary: {healthyReport.Summary}");
+}
+finally
+{
+    // Clean up
+    await integrityChecker.DisposeAsync();
+}
+```
+
 ## ChecksumBenchmarks
 
 The `ChecksumBenchmarks` class provides benchmark methods for measuring the performance of checksum calculations on a temporary file. It includes `Setup` and `Cleanup` helpers to create and delete a test file, and async methods to compute SHA‑256, CRC32, and a quick checksum.
