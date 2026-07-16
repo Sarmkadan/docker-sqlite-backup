@@ -37,6 +37,135 @@ await backupService.DeleteBackupAsync(result.Id);
 var backupResult = await backupService.GetBackupResultAsync(result.Id);
 ```
 
+## BackupRepository
+
+The `BackupRepository` class provides data access and persistence operations for backup-related entities including schedules, backup results, rotation policies, restore verifications, and backup jobs. It serves as the data layer for the backup system, handling all database operations through Entity Framework Core.
+
+Here's an example usage of the `BackupRepository` class:
+
+```csharp
+using DockerSqliteBackup.Data;
+using DockerSqliteBackup.Domain;
+using Microsoft.Extensions.Logging;
+
+// Create a new instance of BackupRepository
+var loggerFactory = LoggerFactory.Create(builder => { });
+var logger = loggerFactory.CreateLogger<BackupRepository>();
+var repository = new BackupRepository(logger);
+
+// Initialize the repository
+await repository.InitializeAsync();
+
+// Health check
+var isHealthy = await repository.HealthCheckAsync();
+Console.WriteLine($"Repository health: {isHealthy}");
+
+// Create a backup schedule
+var schedule = new BackupSchedule
+{
+    Id = Guid.NewGuid(),
+    Name = "Daily Database Backup",
+    ScheduleType = BackupScheduleType.Daily,
+    ScheduleTime = "02:00",
+    DatabasePath = @"/data/app.db",
+    IsActive = true,
+    CreatedAt = DateTime.UtcNow
+};
+var createdSchedule = await repository.CreateScheduleAsync(schedule);
+Console.WriteLine($"Created schedule: {createdSchedule.Name} (ID: {createdSchedule.Id})");
+
+// Get a specific schedule
+var retrievedSchedule = await repository.GetScheduleAsync(createdSchedule.Id);
+if (retrievedSchedule != null)
+{
+    Console.WriteLine($"Retrieved schedule: {retrievedSchedule.Name}");
+}
+
+// Update a schedule
+createdSchedule.IsActive = false;
+var updatedSchedule = await repository.UpdateScheduleAsync(createdSchedule);
+Console.WriteLine($"Updated schedule active status to: {updatedSchedule.IsActive}");
+
+// Get all active schedules
+var activeSchedules = await repository.GetActiveSchedulesAsync();
+Console.WriteLine($"Active schedules count: {activeSchedules.Count()}");
+
+// Create a backup result
+var backupResult = new BackupResult
+{
+    Id = Guid.NewGuid(),
+    ScheduleId = createdSchedule.Id,
+    BackupFilePath = @"/backups/app-2024-01-15.sqlite",
+    BackupSize = 1024 * 1024,
+    Status = BackupStatus.Success,
+    StartedAt = DateTime.UtcNow.AddMinutes(-5),
+    CompletedAt = DateTime.UtcNow,
+    Checksum = "sha256-abc123..."
+};
+var createdResult = await repository.CreateBackupResultAsync(backupResult);
+Console.WriteLine($"Created backup result with status: {createdResult.Status}");
+
+// Get backup history for a schedule
+var backupHistory = await repository.GetBackupHistoryAsync(createdSchedule.Id);
+Console.WriteLine($"Backup history count: {backupHistory.Count()}");
+
+// Create a rotation policy
+var rotationPolicy = new RotationPolicy
+{
+    ScheduleId = createdSchedule.Id,
+    Strategy = (int)RotationStrategy.KeepLast,
+    MinimumBackupCount = 7,
+    MaximumBackupCount = 30,
+    DeleteFailedBackups = true,
+    RetentionDays = 90
+};
+var savedPolicy = await repository.SaveRotationPolicyAsync(rotationPolicy);
+Console.WriteLine($"Saved rotation policy with strategy: {(RotationStrategy)savedPolicy.Strategy}");
+
+// Get rotation policy
+var policy = await repository.GetRotationPolicyAsync(createdSchedule.Id);
+if (policy != null)
+{
+    Console.WriteLine($"Rotation policy: Min={policy.MinimumBackupCount}, Max={policy.MaximumBackupCount}");
+}
+
+// Create a restore verification
+var verification = new RestoreVerification
+{
+    Id = Guid.NewGuid(),
+    ScheduleId = createdSchedule.Id,
+    BackupResultId = createdResult.Id,
+    VerifiedAt = DateTime.UtcNow,
+    Success = true,
+    Logs = "Restore completed successfully"
+};
+var savedVerification = await repository.SaveRestoreVerificationAsync(verification);
+Console.WriteLine($"Restore verification saved: {savedVerification.Success}");
+
+// Get verification history
+var verifications = await repository.GetVerificationHistoryAsync(createdSchedule.Id);
+Console.WriteLine($"Verification history count: {verifications.Count()}");
+
+// Create a backup job
+var job = new BackupJob
+{
+    Id = Guid.NewGuid(),
+    ScheduleId = createdSchedule.Id,
+    DatabasePath = @"/data/app.db",
+    BackupPath = @"/backups/app-2024-01-15.sqlite",
+    JobType = BackupJobType.Full,
+    Status = JobStatus.Completed,
+    StartedAt = DateTime.UtcNow.AddMinutes(-10),
+    CompletedAt = DateTime.UtcNow
+};
+var createdJob = await repository.CreateBackupJobAsync(job);
+Console.WriteLine($"Created backup job: {createdJob.JobType}");
+
+// Delete entities when needed
+await repository.DeleteScheduleAsync(createdSchedule.Id);
+await repository.DeleteBackupResultAsync(createdResult.Id);
+```
+
 ## RotationService
 
 The `RotationService` class manages backup rotation and cleanup operations for SQLite backups. It handles the deletion of old backups according to rotation policies, tracks rotation history, and calculates disk space that would be freed by rotation operations. The service supports different rotation strategies and can optionally delete failed backups during rotation.
