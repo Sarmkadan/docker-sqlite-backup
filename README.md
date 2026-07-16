@@ -338,6 +338,56 @@ retryJob.IncrementRetry();
 Console.WriteLine($"Retry count: {retryJob.RetryCount}"); // 3
 ```
 
+## RotationServiceTests
+
+The `RotationServiceTests` class contains comprehensive unit tests for the `RotationService` class, which manages backup rotation policies and cleanup operations. These tests verify the service's behavior when executing rotation policies, calculating disk space that would be freed, and handling various rotation strategies including maximum file count, maximum age, and no rotation scenarios.
+
+```csharp
+using DockerSqliteBackup.Domain;
+using DockerSqliteBackup.Services;
+using DockerSqliteBackup.Data;
+using Microsoft.Extensions.Logging;
+using Moq;
+
+// Create mock dependencies
+var repositoryMock = new Mock<IBackupRepository>();
+var loggerMock = new Mock<ILogger<RotationService>>();
+
+// Create the rotation service instance
+var rotationService = new RotationService(repositoryMock.Object, loggerMock.Object);
+
+// Create a rotation policy with maximum file count strategy
+var scheduleId = Guid.NewGuid();
+var policy = new RotationPolicy
+{
+    ScheduleId = scheduleId,
+    Strategy = (int)RotationStrategy.MaxFileCount,
+    MaxBackupCount = 5,
+    MinimumBackupCount = 2,
+    MaxAgeDays = 30
+};
+
+// Save the rotation policy
+var savedPolicy = await rotationService.SaveRotationPolicyAsync(policy);
+Console.WriteLine($"Policy saved with LastModifiedAt: {savedPolicy.LastModifiedAt}");
+
+// Execute rotation - this will delete excess backups based on the policy
+var deletedCount = await rotationService.ExecuteRotationAsync(scheduleId);
+Console.WriteLine($"Deleted {deletedCount} backups during rotation");
+
+// Calculate disk space that would be freed by rotation
+var diskSpaceFreed = await rotationService.CalculateDiskSpaceFreedAsync(scheduleId);
+Console.WriteLine($"Disk space that would be freed: {diskSpaceFreed} bytes");
+
+// Get backups eligible for rotation
+var backupsForRotation = await rotationService.GetBackupsForRotationAsync(scheduleId);
+Console.WriteLine($"Found {backupsForRotation.Count} backups eligible for rotation");
+
+// Get the rotation policy
+var retrievedPolicy = await rotationService.GetRotationPolicyAsync(scheduleId);
+Console.WriteLine($"Retrieved policy with MaxBackupCount: {retrievedPolicy?.MaxBackupCount}");
+```
+
 ## ChecksumBenchmarks
 
 The `ChecksumBenchmarks` class provides benchmark methods for measuring the performance of checksum calculations on a temporary file. It includes `Setup` and `Cleanup` helpers to create and delete a test file, and async methods to compute SHA‑256, CRC32, and a quick checksum.
