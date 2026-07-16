@@ -141,6 +141,85 @@ finally
 // Console.WriteLine($"Schedule is active: {updatedSchedule?.IsActive}");
 // ```
 
+// ## DateTimeUtilityTests
+
+The `DateTimeUtilityTests` class provides comprehensive unit tests for the `DateTimeUtility` class, verifying its behavior across various date and time manipulation scenarios including ISO 8601 formatting and parsing, display formatting, relative time calculations, duration formatting, and date manipulation functions. These tests ensure the utility methods function correctly with different inputs and edge cases.
+
+```csharp
+using DockerSqliteBackup.Utilities;
+using Microsoft.Extensions.Logging;
+
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<DateTimeUtilityTests>();
+
+try
+{
+    // Test ISO 8601 formatting and parsing
+    var utcDate = DateTime.UtcNow;
+    var iso8601 = DateTimeUtility.ToIso8601(utcDate);
+    Console.WriteLine($"ISO 8601 format: {iso8601}");
+    
+    var parseSuccess = DateTimeUtility.TryParseIso8601(iso8601, out var parsedDate);
+    Console.WriteLine($"Parse successful: {parseSuccess}, Parsed date: {parsedDate}");
+    
+    // Test display formatting
+    var displayDate = new DateTime(2024, 3, 7, 14, 5, 9);
+    var formatted = DateTimeUtility.FormatForDisplay(displayDate);
+    Console.WriteLine($"Formatted display: {formatted}");
+    
+    var customFormatted = DateTimeUtility.FormatForDisplay(displayDate, "yyyy/MM/dd");
+    Console.WriteLine($"Custom formatted: {customFormatted}");
+    
+    // Test relative time
+    var oneHourAgo = DateTime.UtcNow.AddHours(-1);
+    var relativeTime = DateTimeUtility.GetRelativeTime(oneHourAgo);
+    Console.WriteLine($"Relative time: {relativeTime}");
+    
+    var oneMonthAgo = DateTime.UtcNow.AddDays(-40);
+    var monthRelative = DateTimeUtility.GetRelativeTime(oneMonthAgo);
+    Console.WriteLine($"Month relative time: {monthRelative}");
+    
+    var oneYearAgo = DateTime.UtcNow.AddDays(-400);
+    var yearRelative = DateTimeUtility.GetRelativeTime(oneYearAgo);
+    Console.WriteLine($"Year relative time: {yearRelative}");
+    
+    // Test duration formatting
+    var duration = TimeSpan.FromHours(3).Add(TimeSpan.FromMinutes(15));
+    var formattedDuration = DateTimeUtility.FormatDuration(duration);
+    Console.WriteLine($"Formatted duration: {formattedDuration}");
+    
+    var shortDuration = TimeSpan.FromSeconds(45);
+    var formattedShort = DateTimeUtility.FormatDuration(shortDuration);
+    Console.WriteLine($"Short duration: {formattedShort}");
+    
+    // Test date manipulation
+    var specificDate = new DateTime(2024, 5, 20, 15, 30, 0);
+    var dayStart = DateTimeUtility.GetDayStart(specificDate);
+    Console.WriteLine($"Day start: {dayStart}");
+    
+    var dayEnd = DateTimeUtility.GetDayEnd(specificDate);
+    Console.WriteLine($"Day end: {dayEnd}");
+    
+    var monthStart = DateTimeUtility.GetMonthStart(specificDate);
+    Console.WriteLine($"Month start: {monthStart}");
+    
+    var monthEnd = DateTimeUtility.GetMonthEnd(specificDate);
+    Console.WriteLine($"Month end: {monthEnd}");
+    
+    // Test rounding
+    var dateToRound = new DateTime(2024, 1, 1, 14, 37, 45);
+    var roundedDown = DateTimeUtility.RoundDown(dateToRound, TimeSpan.FromHours(1));
+    Console.WriteLine($"Rounded down: {roundedDown}");
+    
+    var roundedUp = DateTimeUtility.RoundUp(dateToRound, TimeSpan.FromHours(1));
+    Console.WriteLine($"Rounded up: {roundedUp}");
+}
+finally
+{
+    // Cleanup
+}
+```
+
 // ## StringUtilityTests
 
 The `StringUtilityTests` class provides comprehensive unit tests for the `StringUtility` class, verifying its behavior across various string manipulation scenarios including formatting, case conversion, truncation, masking, validation, and splitting operations. These tests ensure the utility methods function correctly with different inputs and edge cases.
