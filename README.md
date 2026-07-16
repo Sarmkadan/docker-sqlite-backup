@@ -206,3 +206,37 @@ var until = DateTimeUtility.GetTimeUntil(new TimeOnly(2, 30));
 var roundedDown = DateTimeUtility.RoundDown(DateTime.Now, TimeSpan.FromMinutes(15));
 var roundedUp   = DateTimeUtility.RoundUp(DateTime.Now, TimeSpan.FromMinutes(15));
 ```
+
+## ChecksumBenchmarks
+
+The `ChecksumBenchmarks` class provides benchmark methods for measuring the performance of checksum calculations on a temporary file. It includes `Setup` and `Cleanup` helpers to create and delete a test file, and async methods to compute SHA‑256, CRC32, and a quick checksum.
+
+```csharp
+using DockerSqliteBackup.Benchmarks; // namespace where ChecksumBenchmarks resides
+using DockerSqliteBackup.Utilities;
+
+// Create an instance of the benchmark class
+var benchmarks = new ChecksumBenchmarks();
+
+// Prepare the temporary file
+benchmarks.Setup();
+
+try
+{
+    // Run the benchmark methods
+    var sha256 = await benchmarks.CalculateSha256();
+    Console.WriteLine($"SHA‑256: {sha256}");
+
+    var crc32 = await benchmarks.CalculateCrc32();
+    Console.WriteLine($"CRC32: {crc32}");
+
+    var quick = await benchmarks.GenerateQuickChecksum();
+    Console.WriteLine($"Quick checksum: {quick}");
+}
+finally
+{
+    // Clean up the temporary file
+    benchmarks.Cleanup();
+}
+```
+
