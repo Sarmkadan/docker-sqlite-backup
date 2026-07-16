@@ -280,6 +280,50 @@ Console.WriteLine($"Available space: {availableSpace} bytes");
 await storageService.DeleteBackupAsync("backups/mydb-2024-01-01.db");
 ```
 
+## VerificationServiceIntegrationTests
+
+The `VerificationServiceIntegrationTests` class provides integration tests for the `VerificationService` class, validating backup integrity through comprehensive verification workflows. It tests database file validation, checksum verification, backup restoration to temporary locations, and verification history tracking to ensure backup reliability and recoverability.
+
+```csharp
+using DockerSqliteBackup.Services;
+using DockerSqliteBackup.Verification;
+
+// Create a verification service instance
+var verificationService = new VerificationServiceIntegrationTests();
+
+// Initialize async test context
+await verificationService.InitializeAsync();
+
+// Perform integrity check on a valid SQLite database
+var integrityResult = await verificationService.PerformIntegrityCheckAsync_ValidDatabase_ReturnsValidWithNoErrors();
+Console.WriteLine($"Integrity check result: {integrityResult.Status}");
+
+// Verify checksum matches expected value
+var isChecksumValid = await verificationService.VerifyChecksumAsync_CorrectChecksum_ReturnsTrue("path/to/backup.db", "expected_checksum");
+Console.WriteLine($"Checksum valid: {isChecksumValid}");
+
+// Restore backup to temporary directory
+var tempDir = await verificationService.RestoreToTemporaryAsync_UnencryptedBackup("path/to/backup.db");
+Console.WriteLine($"Restored to: {tempDir}");
+
+// Verify backup file integrity
+var verificationResult = await verificationService.VerifyBackupAsync_ValidSqliteFile_ReturnsSuccessfulVerification("path/to/backup.db");
+Console.WriteLine($"Verification result: {verificationResult.Status}");
+
+// Get verification history
+var history = await verificationService.GetVerificationHistoryAsync();
+foreach (var entry in history)
+{
+    Console.WriteLine($"Verified at: {entry.Timestamp}, Status: {entry.Status}");
+}
+
+// Cleanup temporary files
+await verificationService.CleanupTemporaryFilesAsync_ExistingDirectory();
+
+// Dispose async test context
+await verificationService.DisposeAsync();
+```
+
 ## ChecksumBenchmarks
 
 The `ChecksumBenchmarks` class provides benchmark methods for measuring the performance of checksum calculations on a temporary file. It includes `Setup` and `Cleanup` helpers to create and delete a test file, and async methods to compute SHA‑256, CRC32, and a quick checksum.
