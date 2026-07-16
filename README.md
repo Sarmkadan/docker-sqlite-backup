@@ -313,6 +313,70 @@ auditLogger.LogEntry(entry);
 Console.WriteLine(entry.ToString());
 ```
 
+## VerificationService
+
+The `VerificationService` provides comprehensive backup verification functionality, ensuring that backup files are intact and can be successfully restored. It performs checksum validation, database integrity checks, and maintains a history of verification attempts. The service handles both encrypted and unencrypted backup files, automatically decrypting encrypted backups before verification.
+
+```csharp
+using DockerSqliteBackup.Domain;
+using DockerSqliteBackup.Services;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
+
+// Create logger and verification service
+using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<VerificationService>();
+var verificationService = new VerificationService(
+    repository, 
+    appSettings, 
+    logger);
+
+// Example: Verify a backup file
+var backup = new BackupResult
+{
+    Id = Guid.NewGuid(),
+    BackupFilePath = "/backups/app_2026-07-15_14-30-00.db.backup",
+    Checksum = "a1b2c3d4e5f67890abcdef1234567890abcdef12",
+    ScheduleId = Guid.NewGuid(),
+    Status = (int)BackupStatus.Completed
+};
+
+var verification = await verificationService.VerifyBackupAsync(backup);
+
+Console.WriteLine($"Verification completed: {verification.IsSuccessful}");
+Console.WriteLine($"Duration: {verification.GetElapsedDuration().TotalSeconds} seconds");
+Console.WriteLine($"Database size: {verification.DatabaseSizeBytes / 1024 / 1024} MB");
+Console.WriteLine($"Record count: {verification.RecordCount}");
+Console.WriteLine($"Integrity check: {(verification.IntegrityCheckPassed ? "PASSED" : "FAILED")}");
+
+// Example: Get verification history for a backup
+var history = await verificationService.GetVerificationHistoryAsync(backup.Id);
+Console.WriteLine($"Found {history.Count()} previous verification attempts");
+
+// Example: Perform integrity check on a database file
+var (isValid, errors) = await verificationService.PerformIntegrityCheckAsync(
+    "/path/to/database.sqlite");
+Console.WriteLine($"Integrity check: {(isValid ? "VALID" : "INVALID")}");
+if (!isValid && errors != null)
+{
+    Console.WriteLine($"Errors: {errors}");
+}
+
+// Example: Verify checksum of a file
+bool checksumValid = await verificationService.VerifyChecksumAsync(
+    "/backups/backup.db", 
+    "a1b2c3d4e5f67890abcdef1234567890abcdef12");
+Console.WriteLine($"Checksum valid: {checksumValid}");
+
+// Example: Restore to temporary location for verification
+string tempPath = await verificationService.RestoreToTemporaryAsync(backup);
+Console.WriteLine($"Restored to temporary location: {tempPath}");
+
+// Clean up when done
+await verificationService.CleanupTemporaryFilesAsync(tempPath);
+```
+
 ## EncryptionService
 
 The `EncryptionService` provides AES-256-CBC encryption for backup files. It manages key resolution from either environment variables or application configuration, and provides functionality to encrypt and decrypt files, validate keys, and monitor the encryption status. The encrypted file format produced by `EncryptFileAsync` is a 16-byte IV followed by the ciphertext.
