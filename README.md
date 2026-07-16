@@ -278,3 +278,34 @@ job.Result = new BackupResult
 
 Console.WriteLine($"Job processing flag: {job.IsProcessing}");
 ```
+
+## AuditLogger
+
+The `AuditLogger` service enables structured auditing of key operations, providing a reliable record of backup activities, configuration changes, and system access. It simplifies compliance and troubleshooting by capturing detailed event metadata, such as timestamps, categories, and correlation IDs for every logged event.
+
+```csharp
+using DockerSqliteBackup.Audit;
+using System;
+using Microsoft.Extensions.Logging;
+
+// Create a logger and instantiate the AuditLogger service
+using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<AuditLogger>();
+var auditLogger = new AuditLogger(logger);
+
+// Example: Log a backup operation
+auditLogger.LogBackupOperation(Guid.NewGuid(), "FULL_BACKUP", true, "Weekly backup successful");
+
+// Example: Create and log a custom AuditEntry
+var entry = new AuditEntry
+{
+    Category = "AUTH",
+    Action = "LOGIN",
+    TargetId = "system-auth",
+    Success = true,
+    Details = "User 'admin' logged in"
+};
+
+auditLogger.LogEntry(entry);
+Console.WriteLine(entry.ToString());
+```
