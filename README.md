@@ -207,6 +207,41 @@ var roundedDown = DateTimeUtility.RoundDown(DateTime.Now, TimeSpan.FromMinutes(1
 var roundedUp   = DateTimeUtility.RoundUp(DateTime.Now, TimeSpan.FromMinutes(15));
 ```
 
+## BackupEventPublisherTests
+
+The `BackupEventPublisherTests` class contains comprehensive unit tests for the `BackupEventPublisher` class, verifying that event publishing correctly handles listener registration, event dispatch, and exception isolation. It tests scenarios including publishing with no listeners, matching and non-matching listeners, exception propagation, multiple listener invocation, duplicate subscription handling, and unsubscribe behavior.
+
+```csharp
+using DockerSqliteBackup.Domain;
+using DockerSqliteBackup.Events;
+using DockerSqliteBackup.Tests.Events;
+
+// Create a publisher instance
+var publisher = new BackupEventPublisherTests();
+
+// Test publishing with no listeners - should not throw
+await publisher.PublishAsync_NoListeners_DoesNotThrow();
+
+// Subscribe a listener and publish an event
+var listener = new Mock<IBackupEventListener>();
+listener.Setup(l => l.CanHandle("backup.started")).Returns(true);
+listener.Setup(l => l.GetSupportedEventTypes()).Returns(new[] { "backup.started" });
+publisher.Subscribe(listener.Object);
+
+var backupEvent = new BackupStartedEvent { Schedule = new BackupSchedule { Name = "Test" } };
+await publisher.PublishAsync(new BackupStartedEvent { Schedule = new BackupSchedule { Name = "Test" } });
+
+// Verify listener was invoked
+listener.Verify(l => l.HandleAsync(It.IsAny<BackupEvent>(), It.IsAny<CancellationToken>()), Times.Once);
+
+// Test unsubscribing
+publisher.Unsubscribe(listener.Object);
+await publisher.PublishAsync(backupEvent);
+
+// Verify listener no longer receives events
+listener.Verify(l => l.HandleAsync(It.IsAny<BackupEvent>(), It.IsAny<CancellationToken>()), Times.Once);
+```
+
 ## ChecksumBenchmarks
 
 The `ChecksumBenchmarks` class provides benchmark methods for measuring the performance of checksum calculations on a temporary file. It includes `Setup` and `Cleanup` helpers to create and delete a test file, and async methods to compute SHA‑256, CRC32, and a quick checksum.
