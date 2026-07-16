@@ -242,6 +242,44 @@ await publisher.PublishAsync(backupEvent);
 listener.Verify(l => l.HandleAsync(It.IsAny<BackupEvent>(), It.IsAny<CancellationToken>()), Times.Once);
 ```
 
+## StorageServiceIntegrationTests
+
+The StorageServiceIntegrationTests class contains integration tests for the StorageService class, verifying its behavior with different storage backends including local filesystem and S3.
+
+These tests cover upload, download, delete, list, and space availability operations to ensure reliable backup and restore functionality across storage types.
+
+```csharp
+using DockerSqliteBackup.Services;
+using DockerSqliteBackup.Storage;
+
+// Create a storage service instance for local storage
+var localStorage = new LocalStorage("/var/backups");
+var storageService = new StorageService(localStorage);
+
+// Upload a backup file to local storage
+var sourceFile = "/tmp/mydb-2024-01-01.db";
+var destinationPath = "backups/mydb-2024-01-01.db";
+await storageService.UploadBackupAsync(sourceFile, destinationPath);
+
+// List available backups in local storage
+var backups = await storageService.ListBackupsAsync("backups");
+foreach (var backup in backups)
+{
+    Console.WriteLine($"Backup: {backup.Name}, Size: {backup.Size}, Modified: {backup.LastModified}");
+}
+
+// Download a backup from local storage to a temporary location
+var tempFile = Path.GetTempFileName();
+await storageService.DownloadBackupAsync("backups/mydb-2024-01-01.db", tempFile);
+
+// Get available space in local storage
+var availableSpace = await storageService.GetAvailableSpaceAsync();
+Console.WriteLine($"Available space: {availableSpace} bytes");
+
+// Delete a backup from local storage
+await storageService.DeleteBackupAsync("backups/mydb-2024-01-01.db");
+```
+
 ## ChecksumBenchmarks
 
 The `ChecksumBenchmarks` class provides benchmark methods for measuring the performance of checksum calculations on a temporary file. It includes `Setup` and `Cleanup` helpers to create and delete a test file, and async methods to compute SHA‑256, CRC32, and a quick checksum.
