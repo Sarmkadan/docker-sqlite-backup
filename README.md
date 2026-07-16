@@ -98,3 +98,40 @@ var repeated = StringUtility.Repeat("abc", 3); // "abcabcabc"
 // Quote strings if needed
 var quoted = StringUtility.QuoteIfNeeded("value with spaces"); // "\"value with spaces\""
 ```
+
+## DateTimeUtility
+
+The `DateTimeUtility` class offers static helper methods for common date‑ and time‑related tasks, such as ISO‑8601 formatting and parsing, human‑readable display, relative‑time strings, duration formatting, day/month boundary calculations, time‑until calculations, and rounding to arbitrary intervals.
+
+```csharp
+using DockerSqliteBackup.Utilities;
+
+// ISO‑8601 formatting and parsing
+var iso = DateTimeUtility.ToIso8601(DateTime.Now);
+if (DateTimeUtility.TryParseIso8601(iso, out var parsed))
+{
+    // parsed now holds the original DateTime value
+}
+
+// Human‑readable display
+var display = DateTimeUtility.FormatForDisplay(DateTime.Now, "MMM dd, yyyy HH:mm");
+
+// Relative time (e.g., "5h ago")
+var relative = DateTimeUtility.GetRelativeTime(DateTime.UtcNow.AddHours(-5));
+
+// Duration formatting (e.g., "2h 5m")
+var duration = DateTimeUtility.FormatDuration(TimeSpan.FromMinutes(125));
+
+// Day and month boundaries
+var dayStart   = DateTimeUtility.GetDayStart();
+var dayEnd     = DateTimeUtility.GetDayEnd();
+var monthStart = DateTimeUtility.GetMonthStart();
+var monthEnd   = DateTimeUtility.GetMonthEnd();
+
+// Time until a specific time of day (e.g., 02:30 UTC)
+var until = DateTimeUtility.GetTimeUntil(new TimeOnly(2, 30));
+
+// Rounding to the nearest 15‑minute interval
+var roundedDown = DateTimeUtility.RoundDown(DateTime.Now, TimeSpan.FromMinutes(15));
+var roundedUp   = DateTimeUtility.RoundUp(DateTime.Now, TimeSpan.FromMinutes(15));
+```
