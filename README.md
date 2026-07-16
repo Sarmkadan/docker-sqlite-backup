@@ -40,7 +40,7 @@ Console.WriteLine($"Should rotate: {shouldRotate}");
 
 ## S3Configuration
 
-The `S3Configuration` class provides configuration for uploading backup files to S3-compatible storage. It includes properties for AWS credentials, bucket settings, region configuration, encryption options, and lifecycle management parameters like glacier transition settings.
+The `S3Configuration` class provides configuration for uploading backup files to S3‑compatible storage. It includes properties for AWS credentials, bucket settings, region configuration, encryption options, and lifecycle management parameters like glacier transition settings.
 
 ```csharp
 using DockerSqliteBackup.Domain;
@@ -74,7 +74,7 @@ Console.WriteLine($"S3 connection successful: {isConnected}");
 
 ## AzureConfiguration
 
-The `AzureConfiguration` class provides configuration for uploading backup files to Azure Blob Storage. It supports both connection-string and SAS-URI authentication methods, allowing flexible deployment scenarios with different security requirements. The configuration includes container settings, access tier options, and immutability features for backup retention policies.
+The `AzureConfiguration` class provides configuration for uploading backup files to Azure Blob Storage. It supports both connection‑string and SAS‑URI authentication methods, allowing flexible deployment scenarios with different security requirements. The configuration includes container settings, access tier options, and immutability features for backup retention policies.
 
 ```csharp
 using DockerSqliteBackup.Domain;
@@ -226,4 +226,55 @@ else
         Console.WriteLine($"Quick check errors: {report.QuickCheckErrors}");
     }
 }
+```
+
+## BackupJob
+
+`BackupJob` represents a single backup job execution. It tracks the job’s lifecycle, status, timestamps, retry logic, processing flag, and the resulting `BackupResult`. The class provides helper methods to start, complete, retry, and calculate elapsed time for a job.
+
+```csharp
+using System;
+using DockerSqliteBackup.Domain;
+using DockerSqliteBackup.Constants;
+
+var job = new BackupJob
+{
+    // The schedule that triggered this job
+    ScheduleId = Guid.NewGuid()
+};
+
+// Mark the job as started
+job.MarkStarted();
+Console.WriteLine($"Job {job.Id} started at {job.StartedAt:u}");
+
+// Simulate some work...
+System.Threading.Thread.Sleep(500); // 0.5 s
+
+// Complete the job with a successful status
+job.MarkCompleted((int)BackupStatus.Completed);
+Console.WriteLine($"Job completed at {job.CompletedAt:u}");
+
+// Access elapsed time
+TimeSpan elapsed = job.GetElapsedTime();
+Console.WriteLine($"Elapsed time: {elapsed.TotalSeconds:F2} seconds");
+
+// Example of handling a failure and retry
+if (job.Status == (int)BackupStatus.Failed && job.CanRetry)
+{
+    job.IncrementRetry();
+    Console.WriteLine($"Retry #{job.RetryCount} scheduled (max {job.MaxRetries})");
+}
+
+// Attach a result (optional)
+job.Result = new BackupResult
+{
+    Id = Guid.NewGuid(),
+    BackupJobId = job.Id,
+    Status = (int)BackupStatus.Completed,
+    StartedAt = job.StartedAt,
+    CompletedAt = job.CompletedAt,
+    DurationMilliseconds = (long)job.GetElapsedTime().TotalMilliseconds
+};
+
+Console.WriteLine($"Job processing flag: {job.IsProcessing}");
 ```
