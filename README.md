@@ -220,6 +220,77 @@ finally
 }
 ```
 
+// ## PathUtilityTests
+
+The `PathUtilityTests` class provides comprehensive unit tests for the `PathUtility` class, verifying its behavior across various path manipulation and file system utility scenarios. These tests ensure the utility methods function correctly with different inputs, edge cases, and file system operations.
+
+```csharp
+using DockerSqliteBackup.Utilities;
+using Microsoft.Extensions.Logging;
+
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<PathUtilityTests>();
+
+try
+{
+    // Test file name sanitization
+    var sanitizedName = PathUtility.SanitizeFileName("backup-2024#123.sqlite");
+    Console.WriteLine($"Sanitized filename: {sanitizedName}"); // Output: "backup-2024_123.sqlite"
+
+    // Test absolute path detection
+    var isAbsolute = PathUtility.IsAbsolute("/usr/local/data/backup.db");
+    Console.WriteLine($"Is absolute path: {isAbsolute}"); // Output: true
+
+    var isRelative = PathUtility.IsAbsolute("relative/path/backup.db");
+    Console.WriteLine($"Is relative path: {isRelative}"); // Output: false
+
+    // Test file size retrieval
+    var tempFile = Path.GetTempFileName();
+    File.WriteAllText(tempFile, "test content");
+    var fileSize = PathUtility.GetFileSize(tempFile);
+    Console.WriteLine($"File size: {fileSize} bytes"); // Output: 12
+
+    // Test file validation
+    var validFilePath = PathUtility.IsValidFilePath(tempFile);
+    Console.WriteLine($"Is valid file path: {validFilePath}"); // Output: true
+
+    var invalidFilePath = PathUtility.IsValidFilePath("/nonexistent/file.txt");
+    Console.WriteLine($"Is invalid file path: {invalidFilePath}"); // Output: false
+
+    // Test backup file name generation
+    var backupName = PathUtility.GenerateBackupFileName("myapp", new DateTime(2024, 6, 15, 14, 30, 0));
+    Console.WriteLine($"Generated backup name: {backupName}"); // Output: "myapp_backup_2024-06-15_14-30-00.sqlite"
+
+    var backupNameCurrentDate = PathUtility.GenerateBackupFileName("myapp");
+    Console.WriteLine($"Generated backup name with current date: {backupNameCurrentDate}");
+
+    // Test path combination
+    var combinedPath = PathUtility.CombinePath("/backups", "app-data", "2024");
+    Console.WriteLine($"Combined path: {combinedPath}"); // Output: "/backups/app-data/2024"
+
+    // Test directory existence ensuring
+    var newDir = Path.Combine(Path.GetTempPath(), "test-dir-" + Guid.NewGuid());
+    PathUtility.EnsureDirectoryExists(newDir);
+    Console.WriteLine($"Directory exists: {Directory.Exists(newDir)}"); // Output: true
+
+    // Test relative path calculation
+    var relativePath = PathUtility.GetRelativePath("/backups", "/backups/app-data/2024/backup.db");
+    Console.WriteLine($"Relative path: {relativePath}"); // Output: "app-data/2024/backup.db"
+}
+finally
+{
+    // Cleanup
+    if (Directory.Exists(newDir))
+    {
+        Directory.Delete(newDir, recursive: true);
+    }
+    if (File.Exists(tempFile))
+    {
+        File.Delete(tempFile);
+    }
+}
+```
+
 // ## StringUtilityTests
 
 The `StringUtilityTests` class provides comprehensive unit tests for the `StringUtility` class, verifying its behavior across various string manipulation scenarios including formatting, case conversion, truncation, masking, validation, and splitting operations. These tests ensure the utility methods function correctly with different inputs and edge cases.
