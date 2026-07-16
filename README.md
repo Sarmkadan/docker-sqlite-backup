@@ -2,7 +2,7 @@
 
 ## CacheKeyBuilder
 
-The `CacheKeyBuilder` class provides a fluent API for constructing consistent and collision-free cache keys. It ensures all keys follow a standardized naming convention with the `backup:` prefix and colon-separated parts. The builder supports adding string, Guid, integer, and long values, and includes a collection of predefined keys for common resources.
+The `CacheKeyBuilder` class provides a fluent API for constructing consistent and collision-free cache keys. It ensures all keys follow a standardized naming convention with the `backup:` prefix and colon‑separated parts. The builder supports adding string, Guid, integer, and long values, and includes a collection of predefined keys for common resources.
 
 
 Here's an example usage of the `CacheKeyBuilder` class:
@@ -24,28 +24,45 @@ var backupResultKey = CacheKeyBuilder.Keys.BackupResult(Guid.NewGuid());
 var healthStatusKey = CacheKeyBuilder.Keys.HealthStatus();
 ```
 
-## AppSettings
+## MemoryCacheService
 
-The `AppSettings` class represents the application settings configuration model. It provides a set of properties that can be used to customize the behavior of the backup service.
-
-Here's an example usage of the `AppSettings` class:
+`MemoryCacheService` is an in‑memory implementation of `ICacheService` that stores values in a thread‑safe `ConcurrentDictionary`. It supports synchronous and asynchronous get/set operations, automatic expiration handling, and helper methods for retrieving or creating cached values.
 
 ```csharp
-using DockerSqliteBackup.Configuration;
+using DockerSqliteBackup.Caching;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
-// Create a new instance of AppSettings
-var appSettings = new AppSettings
-{
-    EnableVerificationByDefault = true,
-    EnableS3StorageByDefault = false,
-    CompressBackups = false,
-    NotificationEmails = new[] { "user1@example.com", "user2@example.com" },
-    EnableEncryption = true,
-    EncryptionKey = "Base64-encoded 32-byte AES-256 key"
-};
+// Create the cache service (optional cleanup interval)
+var cache = new MemoryCacheService(TimeSpan.FromMinutes(10));
 
-// Use the settings to configure the backup service
-var backupService = new BackupService(appSettings);
+// Store a value for 5 minutes
+cache.Set("greeting", "Hello, world!", TimeSpan.FromMinutes(5));
+
+// Retrieve it synchronously
+var greeting = cache.Get<string>("greeting");
+
+// Asynchronously retrieve a value
+var asyncGreeting = await cache.GetAsync<string>("greeting");
+
+// Remove a key
+cache.Remove("greeting");
+
+// Use GetOrSet to lazily create a value if missing
+var count = cache.GetOrSet("requestCount", () => 0);
+
+// Asynchronously get or set a value
+var asyncCount = await cache.GetOrSetAsync(
+    "asyncRequestCount",
+    async ct => {
+        await Task.Delay(100, ct);
+        return 42;
+    },
+    expiration: TimeSpan.FromHours(1));
 ```
 
+The service also provides `Exists`, `Clear`, and asynchronous `RemoveAsync` methods for full cache management.
+
+```
 // ... existing content ...
