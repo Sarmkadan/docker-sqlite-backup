@@ -140,3 +140,75 @@ finally
 // var updatedSchedule = await scheduleService.GetScheduleAsync(createdSchedule.Id);
 // Console.WriteLine($"Schedule is active: {updatedSchedule?.IsActive}");
 // ```
+
+// ## StringUtilityTests
+
+The `StringUtilityTests` class provides comprehensive unit tests for the `StringUtility` class, verifying its behavior across various string manipulation scenarios including formatting, case conversion, truncation, masking, validation, and splitting operations. These tests ensure the utility methods function correctly with different inputs and edge cases.
+
+```csharp
+using DockerSqliteBackup.Utilities;
+using Microsoft.Extensions.Logging;
+
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<StringUtilityTests>();
+
+try
+{
+    // Test FormatBytes with different byte sizes
+    var formattedBytes = StringUtility.FormatBytes(1024 * 1024 * 5);
+    Console.WriteLine($"Formatted bytes: {formattedBytes}"); // Output: "5 MB"
+
+    // Test case conversion methods
+    var kebabCase = StringUtility.ToKebabCase("HelloWorld");
+    Console.WriteLine($"Kebab case: {kebabCase}"); // Output: "hello-world"
+
+    var snakeCase = StringUtility.ToSnakeCase("MyPropertyName");
+    Console.WriteLine($"Snake case: {snakeCase}"); // Output: "my_property_name"
+
+    var pascalCase = StringUtility.ToPascalCase("hello_world");
+    Console.WriteLine($"Pascal case: {pascalCase}"); // Output: "HelloWorld"
+
+    var camelCase = StringUtility.ToCamelCase("my-property-name");
+    Console.WriteLine($"Camel case: {camelCase}"); // Output: "myPropertyName"
+
+    // Test string truncation
+    var truncated = StringUtility.Truncate("Hello World", 8, true);
+    Console.WriteLine($"Truncated: {truncated}"); // Output: "Hello..."
+
+    // Test sensitive data masking
+    var masked = StringUtility.MaskSensitive("password123", 4);
+    Console.WriteLine($"Masked: {masked}"); // Output: "pass*******"
+
+    // Test email validation
+    var isValidEmail = StringUtility.IsValidEmail("test@example.com");
+    Console.WriteLine($"Is email valid? {isValidEmail}"); // Output: true
+
+    // Test GUID validation
+    var isValidGuid = StringUtility.IsValidGuid("550e8400-e29b-41d4-a716-446655440000");
+    Console.WriteLine($"Is GUID valid? {isValidGuid}"); // Output: true
+
+    // Test line splitting
+    var lines = StringUtility.SplitLines("line1\r\nline2\rline3\nline4");
+    Console.WriteLine($"Lines count: {lines.Length}"); // Output: 4
+
+    // Test readable joining
+    var joined = StringUtility.JoinReadable("apple", "banana", "cherry");
+    Console.WriteLine($"Joined: {joined}"); // Output: "apple, banana, and cherry"
+
+    // Test whitespace removal
+    var noWhitespace = StringUtility.RemoveWhitespace("a b c \t d\n e");
+    Console.WriteLine($"No whitespace: {noWhitespace}"); // Output: "abcde"
+
+    // Test conditional quoting
+    var quoted = StringUtility.QuoteIfNeeded("with space");
+    Console.WriteLine($"Quoted: {quoted}"); // Output: "\"with space\""
+
+    // Test string repetition
+    var repeated = StringUtility.Repeat("abc", 3);
+    Console.WriteLine($"Repeated: {repeated}"); // Output: "abcabcabc"
+}
+finally
+{
+    // Cleanup
+}
+```
