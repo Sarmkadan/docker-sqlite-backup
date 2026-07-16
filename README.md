@@ -336,6 +336,87 @@ retryJob.IncrementRetry();
 retryJob.IncrementRetry();
 retryJob.IncrementRetry();
 Console.WriteLine($"Retry count: {retryJob.RetryCount}"); // 3
+
+## StorageAdapterTests
+
+The `StorageAdapterTests` class provides comprehensive unit tests for the `StorageService` class, verifying storage adapter functionality for both local filesystem and Azure Blob Storage configurations. It implements `IAsyncLifetime` to manage temporary test directories that are created and cleaned up for each test run.
+
+
+
+
+The test suite validates upload, download, delete, list, and space availability operations across different storage backends, including configuration validation for Azure storage with connection strings, SAS URIs, and local filesystem storage.
+
+```csharp
+using DockerSqliteBackup.Domain;
+using DockerSqliteBackup.Services;
+using DockerSqliteBackup.Exceptions;
+using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using Moq;
+using Xunit;
+
+// Create a temporary directory for test operations
+var tempDir = Path.Combine(Path.GetTempPath(), $"storage-adapter-tests-{Guid.NewGuid()}");
+Directory.CreateDirectory(tempDir);
+
+try
+{
+    // Create the storage service instance
+    var loggerMock = new Mock<ILogger<StorageService>>();
+    var storageService = new StorageService(loggerMock.Object);
+    
+    // Initialize - creates temp directory
+    await storageService.InitializeAsync();
+    
+    // Test local storage upload - copies file to destination
+    var sourceFile = Path.Combine(tempDir, $"test-backup-{Guid.NewGuid()}.sqlite");
+    File.WriteAllText(sourceFile, "backup-content");
+    
+    var localConfig = new LocalStorageConfiguration
+    {
+        Name = "local-test",
+        BaseDirectory = Path.Combine(tempDir, "local-backups")
+    };
+    
+    var uploadedPath = await storageService.UploadBackupAsync(sourceFile, localConfig);
+    Console.WriteLine($"Uploaded to: {uploadedPath}");
+    
+    // Test local storage list - returns uploaded files
+    var backups = await storageService.ListBackupsAsync(localConfig);
+    Console.WriteLine($"Found {backups.Count()} backups");
+    
+    // Test local storage download - copies file to temp location
+    var tempDownload = await storageService.DownloadBackupAsync(uploadedPath, localConfig);
+    Console.WriteLine($"Downloaded to: {tempDownload}");
+    
+    // Test local storage delete - removes file
+    await storageService.DeleteBackupAsync(uploadedPath, localConfig);
+    Console.WriteLine("Backup deleted successfully");
+    
+    // Test Azure configuration validation
+    var azureConfig = new AzureConfiguration
+    {
+        Name = "azure-test",
+        ConnectionString = "DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;",
+        ContainerName = "backups"
+    };
+    
+    Console.WriteLine($"Azure config valid: {azureConfig.IsValid()}");
+    
+    // Test space availability
+    var localSpace = await storageService.GetAvailableSpaceAsync(localConfig);
+    Console.WriteLine($"Local storage available space: {localSpace} bytes");
+    
+    var azureSpace = await storageService.GetAvailableSpaceAsync(azureConfig);
+    Console.WriteLine($"Azure storage available space: {azureSpace} bytes");
+}
+finally
+{
+    // Clean up - deletes temp directory
+    if (Directory.Exists(tempDir))
+        Directory.Delete(tempDir, recursive: true);
+}
+```
 ```
 
 ## RotationServiceTests
