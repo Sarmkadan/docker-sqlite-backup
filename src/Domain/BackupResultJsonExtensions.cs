@@ -23,17 +23,18 @@ public static class BackupResultJsonExtensions
     /// </summary>
     /// <param name="value">The backup result to serialize.</param>
     /// <param name="indented">Whether to format the JSON with indentation.</param>
+    /// <param name="options">Optional serializer options to override defaults. If null, uses the configured defaults.</param>
     /// <returns>A JSON string representation of the backup result.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
-    public static string ToJson(this BackupResult value, bool indented = false)
+    public static string ToJson(this BackupResult value, bool indented = false, JsonSerializerOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(value);
 
-        var options = indented
+        var effectiveOptions = options ?? (indented
             ? new JsonSerializerOptions(_options) { WriteIndented = true }
-            : _options;
+            : _options);
 
-        return JsonSerializer.Serialize(value, options);
+        return JsonSerializer.Serialize(value, effectiveOptions);
     }
 
     /// <summary>
