@@ -46,12 +46,9 @@ public static class BackupEventPublisherTestsJsonExtensions
     {
         ArgumentNullException.ThrowIfNull(json);
 
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return null;
-        }
-
-        return JsonSerializer.Deserialize<BackupEventPublisherTests>(json, _jsonOptions);
+        return string.IsNullOrWhiteSpace(json)
+            ? null
+            : JsonSerializer.Deserialize<BackupEventPublisherTests>(json, _jsonOptions);
     }
 
     /// <summary>
@@ -65,10 +62,16 @@ public static class BackupEventPublisherTestsJsonExtensions
     {
         ArgumentNullException.ThrowIfNull(json);
 
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            value = null;
+            return false;
+        }
+
         try
         {
             value = JsonSerializer.Deserialize<BackupEventPublisherTests>(json, _jsonOptions);
-            return true;
+            return value is not null;
         }
         catch (JsonException)
         {
