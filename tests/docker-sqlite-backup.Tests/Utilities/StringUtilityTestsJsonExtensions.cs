@@ -1,11 +1,12 @@
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DockerSqliteBackup.Utilities;
 
 namespace DockerSqliteBackup.Tests.Utilities;
 
 /// <summary>
-/// Provides System.Text.Json serialization extensions for <see cref="StringUtilityTests"/>.
+/// Provides test utilities for <see cref="StringUtilityJsonExtensions"/> serialization methods.
 /// </summary>
 public static class StringUtilityTestsJsonExtensions
 {
@@ -24,46 +25,53 @@ public static class StringUtilityTestsJsonExtensions
     };
 
     /// <summary>
-    /// Serializes the <see cref="StringUtilityTests"/> instance to a JSON string.
+    /// Serializes the specified value to a JSON string using camelCase naming policy.
     /// </summary>
-    /// <param name="value">The instance to serialize.</param>
-    /// <param name="indented">Whether to indent the JSON for readability.</param>
-    /// <returns>A JSON string representation of the instance.</returns>
+    /// <typeparam name="T">The type of the value to serialize.</typeparam>
+    /// <param name="value">The value to serialize.</param>
+    /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
+    /// <returns>A JSON string representation of the value.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
-    public static string ToJson(this StringUtilityTests value, bool indented = false)
+    public static string ToJson<T>(this T value, bool indented = false)
     {
         ArgumentNullException.ThrowIfNull(value);
 
-        return JsonSerializer.Serialize(value, indented
+        var options = indented
             ? _jsonSerializerOptionsIndented
-            : _jsonSerializerOptions);
+            : _jsonSerializerOptions;
+
+        return JsonSerializer.Serialize(value, options);
     }
 
     /// <summary>
-    /// Deserializes a <see cref="StringUtilityTests"/> instance from a JSON string.
+    /// Deserializes a JSON string to the specified type.
     /// </summary>
+    /// <typeparam name="T">The type to deserialize to.</typeparam>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>The deserialized instance, or null if the JSON is null or empty.</returns>
-    /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
-    public static StringUtilityTests? FromJson(string json)
+    /// <returns>The deserialized object of type T, or null if the JSON is null or empty.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
+    /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized to type T.</exception>
+    public static T? FromJson<T>(string json)
     {
         if (string.IsNullOrEmpty(json))
         {
-            return null;
+            return default;
         }
 
-        return JsonSerializer.Deserialize<StringUtilityTests>(json, _jsonSerializerOptions);
+        return JsonSerializer.Deserialize<T>(json, _jsonSerializerOptions);
     }
 
     /// <summary>
-    /// Attempts to deserialize a <see cref="StringUtilityTests"/> instance from a JSON string.
+    /// Attempts to deserialize a JSON string to the specified type.
     /// </summary>
+    /// <typeparam name="T">The type to deserialize to.</typeparam>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <param name="value">The deserialized instance, or null if deserialization fails.</param>
+    /// <param name="value">Receives the deserialized value if successful; otherwise, null.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
-    public static bool TryFromJson(string json, out StringUtilityTests? value)
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
+    public static bool TryFromJson<T>(string json, out T? value)
     {
-        value = null;
+        value = default;
 
         if (string.IsNullOrEmpty(json))
         {
@@ -72,7 +80,7 @@ public static class StringUtilityTestsJsonExtensions
 
         try
         {
-            value = JsonSerializer.Deserialize<StringUtilityTests>(json, _jsonSerializerOptions);
+            value = JsonSerializer.Deserialize<T>(json, _jsonSerializerOptions);
             return true;
         }
         catch (JsonException)
