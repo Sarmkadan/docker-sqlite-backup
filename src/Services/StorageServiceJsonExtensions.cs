@@ -31,9 +31,7 @@ public static class StorageServiceJsonExtensions
 
         var options = indented
             ? new JsonSerializerOptions(_jsonOptions)
-            {
-                WriteIndented = true
-            }
+            { WriteIndented = true }
             : _jsonOptions;
 
         return JsonSerializer.Serialize(value, options);
@@ -43,7 +41,8 @@ public static class StorageServiceJsonExtensions
     /// Deserializes a JSON string to a <see cref="StorageService"/> instance.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>The deserialized storage service instance, or null if JSON is empty.</returns>
+    /// <returns>The deserialized storage service instance, or null if JSON is empty or whitespace.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
     public static StorageService? FromJson(string json)
     {
@@ -61,6 +60,7 @@ public static class StorageServiceJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized storage service instance, or null on failure.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
     public static bool TryFromJson(string json, out StorageService? value)
     {
         value = null;
