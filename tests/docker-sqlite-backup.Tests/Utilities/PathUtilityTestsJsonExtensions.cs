@@ -39,17 +39,12 @@ public static class PathUtilityTestsJsonExtensions
     /// Deserializes a JSON string to a <see cref="PathUtilityTests"/> instance.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>The deserialized instance, or null if the JSON is empty or whitespace.</returns>
+    /// <returns>The deserialized instance, or <see langword="null"/> if the JSON is empty or whitespace.</returns>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
     public static PathUtilityTests? FromJson(string json)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return null;
-        }
-
-        return JsonSerializer.Deserialize<PathUtilityTests>(json, _jsonOptions);
-    }
+        => string.IsNullOrWhiteSpace(json)
+            ? null
+            : JsonSerializer.Deserialize<PathUtilityTests>(json, _jsonOptions);
 
     /// <summary>
     /// Attempts to deserialize a JSON string to a <see cref="PathUtilityTests"/> instance.
