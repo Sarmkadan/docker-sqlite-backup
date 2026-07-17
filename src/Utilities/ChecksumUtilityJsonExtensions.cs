@@ -41,7 +41,7 @@ public static class ChecksumUtilityJsonExtensions
     /// Deserializes a JSON string to a checksum value.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>The deserialized checksum value, or null if the JSON is empty.</returns>
+    /// <returns>The deserialized checksum value, or null if the JSON is empty or whitespace.</returns>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
     public static string? FromJson(string json)
@@ -62,8 +62,11 @@ public static class ChecksumUtilityJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized checksum value if successful.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
     public static bool TryFromJson(string json, out string? value)
     {
+        ArgumentNullException.ThrowIfNull(json);
+
         value = null;
 
         if (string.IsNullOrWhiteSpace(json))
