@@ -86,9 +86,6 @@ public static class RotationPolicyValidation
             }
         }
 
-        // Validate boolean flags are reasonable (no specific validation needed beyond being boolean)
-        // These are always valid as they're just flags
-
         return problems.AsReadOnly();
     }
 
@@ -98,10 +95,7 @@ public static class RotationPolicyValidation
     /// <param name="value">The rotation policy to check.</param>
     /// <returns>True if the policy is valid; otherwise, false.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
-    public static bool IsValid(this RotationPolicy? value)
-    {
-        return value?.Validate().Count == 0;
-    }
+    public static bool IsValid(this RotationPolicy? value) => value?.Validate().Count == 0;
 
     /// <summary>
     /// Ensures the rotation policy is valid, throwing an <see cref="ArgumentException"/> if not.
