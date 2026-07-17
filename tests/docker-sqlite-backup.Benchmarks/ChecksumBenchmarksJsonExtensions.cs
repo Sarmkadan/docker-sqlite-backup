@@ -38,9 +38,12 @@ public static class ChecksumBenchmarksJsonExtensions
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>The deserialized benchmark instance, or null if the JSON is null or empty.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
     public static ChecksumBenchmarks? FromJson(string json)
     {
+        ArgumentNullException.ThrowIfNull(json);
+
         if (string.IsNullOrEmpty(json))
         {
             return null;
@@ -59,9 +62,11 @@ public static class ChecksumBenchmarksJsonExtensions
     {
         value = null;
 
+        ArgumentNullException.ThrowIfNull(json);
+
         if (string.IsNullOrEmpty(json))
         {
-            return true;
+            return false;
         }
 
         try
