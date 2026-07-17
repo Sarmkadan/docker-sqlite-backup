@@ -72,4 +72,69 @@ finally
 }
 ```
 
+## BackupServiceValidation
+
+The `BackupServiceValidation` class provides validation extension methods for `BackupService`, `BackupResult`, and `BackupSchedule` types. It helps ensure that service instances and backup artifacts are properly configured before use by validating required fields, enumerations, paths, timestamps, and business rules. The validation methods return detailed error messages when issues are detected, enabling robust error handling in backup workflows.
+
+Here's an example of how to use some of its public members:
+```csharp
+// Create a backup service instance (typically via DI)
+var backupService = new BackupService(
+    databasePath: "/var/lib/sqlite/production.db",
+    backupDirectory: "/backups/sqlite",
+    maxConcurrentBackups: 4,
+    s3Configuration: null);
+
+// Validate the service instance
+var validationProblems = backupService.Validate();
+if (validationProblems.Count > 0)
+{
+    Console.WriteLine("Backup service validation failed:");
+    foreach (var problem in validationProblems)
+    {
+        Console.WriteLine($"- {problem}");
+    }
+    return;
+}
+
+// Perform a backup operation
+var backupResult = await backupService.CreateBackupAsync(
+    scheduleId: Guid.NewGuid(),
+    backupMode: BackupMode.Full);
+
+// Validate the backup result
+if (!backupResult.IsValid())
+{
+    Console.WriteLine("Backup result is invalid:");
+    var resultProblems = backupResult.Validate();
+    foreach (var problem in resultProblems)
+    {
+        Console.WriteLine($"- {problem}");
+    }
+    backupService.EnsureValid(backupResult); // Throws if invalid
+}
+
+// Validate a backup schedule
+var backupSchedule = new BackupSchedule
+{
+    Name = "Daily Production Backup",
+    DatabasePath = "/var/lib/sqlite/production.db",
+    CronExpression = "0 2 * * *", // Daily at 2 AM
+    RetentionDays = 30,
+    MaxBackupCount = 10,
+    BackupMode = BackupMode.Full,
+    NotificationEmails = "admin@example.com,devops@example.com"
+};
+
+if (!backupSchedule.IsValid())
+{
+    Console.WriteLine("Backup schedule is invalid:");
+    var scheduleProblems = backupSchedule.Validate();
+    foreach (var problem in scheduleProblems)
+    {
+        Console.WriteLine($"- {problem}");
+    }
+}
+```
+
 // ... rest of the content ...
