@@ -10,6 +10,7 @@ public static class BackupResultExtensions
     /// </summary>
     /// <param name="backupResult">The backup result.</param>
     /// <returns>A human-readable status message.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="backupResult"/> is <see langword="null"/>.</exception>
     public static string GetStatusMessage(this BackupResult backupResult)
     {
         ArgumentNullException.ThrowIfNull(backupResult);
@@ -26,6 +27,7 @@ public static class BackupResultExtensions
     /// </summary>
     /// <param name="backupResult">The backup result.</param>
     /// <returns>The duration of the backup operation.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="backupResult"/> is <see langword="null"/>.</exception>
     public static TimeSpan GetDuration(this BackupResult backupResult)
     {
         ArgumentNullException.ThrowIfNull(backupResult);
@@ -40,6 +42,7 @@ public static class BackupResultExtensions
     /// </summary>
     /// <param name="backupResult">The backup result.</param>
     /// <returns><c>true</c> if the backup result has an error; otherwise, <c>false</c>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="backupResult"/> is <see langword="null"/>.</exception>
     public static bool HasError(this BackupResult backupResult)
     {
         ArgumentNullException.ThrowIfNull(backupResult);
