@@ -31,14 +31,9 @@ public static class RestoreVerificationExtensions
     {
         ArgumentNullException.ThrowIfNull(restoreVerification);
 
-        if (string.IsNullOrEmpty(restoreVerification.ErrorMessage))
-        {
-            return restoreVerification.StatusMessage;
-        }
-        else
-        {
-            return $"{restoreVerification.StatusMessage} - Error: {restoreVerification.ErrorMessage}";
-        }
+        return string.IsNullOrEmpty(restoreVerification.ErrorMessage)
+            ? restoreVerification.StatusMessage
+            : $"{restoreVerification.StatusMessage} - Error: {restoreVerification.ErrorMessage}";
     }
 
     /// <summary>
@@ -60,17 +55,17 @@ public static class RestoreVerificationExtensions
         {
             return $"{bytes} B";
         }
-        else if (bytes < Math.Pow(1024, 2))
+
+        if (bytes < 1024L * 1024L)
         {
             return $"{(bytes / 1024.0):F2} KB";
         }
-        else if (bytes < Math.Pow(1024, 3))
+
+        if (bytes < 1024L * 1024L * 1024L)
         {
-            return $"{(bytes / Math.Pow(1024, 2)):F2} MB";
+            return $"{(bytes / (1024.0 * 1024.0)):F2} MB";
         }
-        else
-        {
-            return $"{(bytes / Math.Pow(1024, 3)):F2} GB";
-        }
+
+        return $"{(bytes / (1024.0 * 1024.0 * 1024.0)):F2} GB";
     }
 }
