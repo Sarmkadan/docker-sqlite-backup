@@ -1,5 +1,6 @@
 #nullable enable
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -61,24 +62,24 @@ public static class MetricsEventListenerJsonExtensions
     /// <param name="value">Receives the deserialized instance if successful.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
-    public static bool TryFromJson(string json, out MetricsEventListener? value)
+    public static bool TryFromJson(string json, [NotNullWhen(true)] out MetricsEventListener? value)
     {
         ArgumentNullException.ThrowIfNull(json);
 
-        value = null;
-
         if (string.IsNullOrWhiteSpace(json))
         {
+            value = null;
             return true;
         }
 
         try
         {
             value = JsonSerializer.Deserialize<MetricsEventListener>(json, _jsonOptions);
-            return true;
+            return value is not null;
         }
         catch (JsonException)
         {
+            value = null;
             return false;
         }
     }
