@@ -24,9 +24,9 @@ public static class BackupServiceValidation
 
         var problems = new List<string>();
 
-        // Validate public members that would be used in operations
-        // Note: BackupService is a service class with injected dependencies, so we validate its configuration
-        // rather than its internal state, which is managed by DI
+        // BackupService is a service class with injected dependencies that should be validated
+        // through constructor injection. Since DI container handles this, we just verify the
+        // service instance itself is not null.
 
         return problems.AsReadOnly();
     }
@@ -37,10 +37,7 @@ public static class BackupServiceValidation
     /// <param name="value">The backup service instance to check.</param>
     /// <returns>True if the service is valid; otherwise, false.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
-    public static bool IsValid(this BackupService? value)
-    {
-        return value is not null && !value.Validate().Any();
-    }
+    public static bool IsValid(this BackupService? value) => value is not null && !value.Validate().Any();
 
     /// <summary>
     /// Ensures that the specified <see cref="BackupService"/> instance is valid, throwing an exception
@@ -229,10 +226,7 @@ public static class BackupServiceValidation
     /// <param name="result">The backup result to check.</param>
     /// <returns>True if the backup result is valid; otherwise, false.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="result"/> is null.</exception>
-    public static bool IsValid(this BackupResult? result)
-    {
-        return result is not null && !result.Validate().Any();
-    }
+    public static bool IsValid(this BackupResult? result) => result is not null && !result.Validate().Any();
 
     /// <summary>
     /// Ensures that the specified <see cref="BackupResult"/> instance is valid, throwing an exception
@@ -401,10 +395,7 @@ public static class BackupServiceValidation
     /// <param name="schedule">The backup schedule to check.</param>
     /// <returns>True if the backup schedule is valid; otherwise, false.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="schedule"/> is null.</exception>
-    public static bool IsValid(this BackupSchedule? schedule)
-    {
-        return schedule is not null && !schedule.Validate().Any();
-    }
+    public static bool IsValid(this BackupSchedule? schedule) => schedule is not null && !schedule.Validate().Any();
 
     /// <summary>
     /// Ensures that the specified <see cref="BackupSchedule"/> instance is valid, throwing an exception
@@ -476,7 +467,7 @@ public static class BackupServiceValidation
 
         try
         {
-            // Simple email validation
+            // Simple email validation - check basic structure
             var atIndex = email.IndexOf('@');
             if (atIndex <= 0 || atIndex >= email.Length - 1)
             {
@@ -491,7 +482,7 @@ public static class BackupServiceValidation
                 return false;
             }
 
-            // Check for valid characters (simplified)
+            // Check for valid characters (simplified but reasonable)
             foreach (var c in localPart + domainPart)
             {
                 if (!char.IsLetterOrDigit(c) && c != '.' && c != '-' && c != '_' && c != '@')
