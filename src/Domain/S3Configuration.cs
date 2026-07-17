@@ -100,7 +100,9 @@ public class S3Configuration : StorageConfiguration
     /// <summary>
     /// Validates if the storage class is one of the supported S3 classes.
     /// </summary>
-    private static bool IsValidStorageClass(string storageClass)
+    /// <param name="storageClass">The storage class to validate.</param>
+    /// <returns>True if the storage class is valid; otherwise, false.</returns>
+    public static bool IsValidStorageClass(string storageClass)
     {
         var validClasses = new[] { "STANDARD", "REDUCED_REDUNDANCY", "STANDARD_IA", "ONEZONE_IA", "INTELLIGENT_TIERING", "GLACIER", "DEEP_ARCHIVE" };
         return validClasses.Contains(storageClass, StringComparer.OrdinalIgnoreCase);

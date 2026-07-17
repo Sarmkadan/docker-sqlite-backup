@@ -1,12 +1,11 @@
 using System;
-using System.Globalization;
 
 namespace DockerSqliteBackup.Domain;
 
 public static class S3ConfigurationExtensions
 {
     /// <summary>
-    /// Creates a well-formed S3 object key by combining the <see cref="S3Configuration.ObjectKeyPrefix"/> 
+    /// Creates a well-formed S3 object key by combining the <see cref="S3Configuration.ObjectKeyPrefix"/>
     /// and the provided <paramref name="fileName"/>.
     /// </summary>
     /// <param name="configuration">The S3 configuration.</param>
@@ -39,8 +38,6 @@ public static class S3ConfigurationExtensions
     public static bool IsValidStorageClass(this S3Configuration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
-
-        var validStorageClasses = new[] { "STANDARD", "STANDARD_IA", "ONEZONE_IA", "GLACIER", "DEEP_ARCHIVE" };
-        return Array.Exists(validStorageClasses, x => string.Equals(x, configuration.StorageClass, StringComparison.OrdinalIgnoreCase));
+        return S3Configuration.IsValidStorageClass(configuration.StorageClass);
     }
 }
