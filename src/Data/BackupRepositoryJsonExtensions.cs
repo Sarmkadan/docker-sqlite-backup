@@ -42,11 +42,13 @@ public static class BackupRepositoryJsonExtensions
     /// Deserializes a JSON string to a <see cref="BackupRepository"/> instance.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>A <see cref="BackupRepository"/> instance, or null if the JSON is invalid.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
+    /// <returns>A <see cref="BackupRepository"/> instance if successful; otherwise, null.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
+/// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is empty.</exception>
     public static BackupRepository? FromJson(string json)
     {
-        ArgumentException.ThrowIfNullOrEmpty(json);
+        ArgumentNullException.ThrowIfNull(json);
+    ArgumentException.ThrowIfNullOrEmpty(json);
 
         try
         {
@@ -62,12 +64,14 @@ public static class BackupRepositoryJsonExtensions
     /// Attempts to deserialize a JSON string to a <see cref="BackupRepository"/> instance.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <param name="value">Receives the deserialized instance, or null if deserialization fails.</param>
+    /// <param name="value">Receives the deserialized instance if successful; otherwise, null.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
+/// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is empty.</exception>
     public static bool TryFromJson(string json, out BackupRepository? value)
     {
-        ArgumentException.ThrowIfNullOrEmpty(json);
+        ArgumentNullException.ThrowIfNull(json);
+    ArgumentException.ThrowIfNullOrEmpty(json);
 
         try
         {
