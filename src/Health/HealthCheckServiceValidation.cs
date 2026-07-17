@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace DockerSqliteBackup.Health;
 
@@ -14,6 +13,10 @@ public static class HealthCheckServiceValidation
     /// <summary>
     /// Validates a <see cref="HealthCheckService"/> instance and returns a list of human-readable problems.
     /// </summary>
+    /// <remarks>
+    /// The <see cref="HealthCheckService"/> class contains no public properties to validate.
+    /// Validation is performed at runtime when <see cref="HealthCheckService.PerformHealthCheckAsync"/> is called.
+    /// </remarks>
     /// <param name="value">The health check service to validate.</param>
     /// <returns>A read-only list of validation problems; empty if the instance is valid.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
@@ -21,13 +24,11 @@ public static class HealthCheckServiceValidation
     {
         ArgumentNullException.ThrowIfNull(value);
 
-        var problems = new List<string>();
-
         // HealthCheckService has no public properties to validate
         // It only has the PerformHealthCheckAsync method and internal state
         // No validation needed for the service itself
 
-        return problems.AsReadOnly();
+        return Array.Empty<string>();
     }
 
     /// <summary>
@@ -35,10 +36,7 @@ public static class HealthCheckServiceValidation
     /// </summary>
     /// <param name="value">The health check service to check.</param>
     /// <returns>True if the instance is valid; otherwise, false.</returns>
-    public static bool IsValid(this HealthCheckService? value)
-    {
-        return Validate(value).Count == 0;
-    }
+    public static bool IsValid(this HealthCheckService? value) => Validate(value).Count == 0;
 
     /// <summary>
     /// Ensures that a <see cref="HealthCheckService"/> instance is valid, throwing an <see cref="ArgumentException"/> if it is not.
@@ -56,7 +54,6 @@ public static class HealthCheckServiceValidation
             return;
         }
 
-        throw new ArgumentException(
-            $"HealthCheckService is not valid. Problems: {string.Join("; ", problems)}");
+        throw new ArgumentException($"HealthCheckService is not valid. Problems: {string.Join("; ", problems)}");
     }
 }
