@@ -13,18 +13,18 @@ namespace DockerSqliteBackup.Domain
         /// </summary>
         /// <param name="configuration">The Azure configuration.</param>
         /// <returns>
-        /// A <see cref="Uri"/> that points to the container/prefix, or <c>null</c> if neither
-        /// <see cref="AzureConfiguration.SasUri"/> nor <see cref="AzureConfiguration.ConnectionString"/> is supplied.
+        /// A <see cref="Uri"/> that points to the container/prefix, or <c>null</c> if either
+        /// <see cref="AzureConfiguration.SasUri"/> or <see cref="AzureConfiguration.ContainerName"/> is <c>null</c> or whitespace.
         /// </returns>
         /// <exception cref="System.ArgumentNullException">
         /// Thrown when <paramref name="configuration"/> is <c>null</c>.
         /// </exception>
         public static Uri? GetBlobUri(this AzureConfiguration configuration)
         {
-            System.ArgumentNullException.ThrowIfNull(configuration);
+            ArgumentNullException.ThrowIfNull(configuration);
 
             // Prefer a SAS URI if provided; otherwise we cannot construct a direct URI.
-            if (string.IsNullOrWhiteSpace(configuration.SasUri))
+            if (string.IsNullOrWhiteSpace(configuration.SasUri) || string.IsNullOrWhiteSpace(configuration.ContainerName))
                 return null;
 
             var baseUri = configuration.SasUri.TrimEnd('/');
@@ -50,12 +50,12 @@ namespace DockerSqliteBackup.Domain
         /// </exception>
         public static string? GetEffectiveConnectionString(this AzureConfiguration configuration)
         {
-            System.ArgumentNullException.ThrowIfNull(configuration);
+            ArgumentNullException.ThrowIfNull(configuration);
 
             if (!string.IsNullOrWhiteSpace(configuration.ConnectionString))
                 return configuration.ConnectionString;
 
-            if (string.IsNullOrWhiteSpace(configuration.SasUri))
+            if (string.IsNullOrWhiteSpace(configuration.SasUri) || string.IsNullOrWhiteSpace(configuration.ContainerName))
                 return null;
 
             // Build a minimal connection string using the SAS URI.
@@ -80,7 +80,7 @@ namespace DockerSqliteBackup.Domain
         /// </exception>
         public static AzureConfiguration WithImmutability(this AzureConfiguration configuration, bool enable)
         {
-            System.ArgumentNullException.ThrowIfNull(configuration);
+            ArgumentNullException.ThrowIfNull(configuration);
             configuration.EnableImmutability = enable;
             return configuration;
         }
