@@ -14,10 +14,10 @@ public static class ConfigurationExceptionValidation
     /// </summary>
     /// <param name="value">The configuration exception to validate.</param>
     /// <returns>A read-only list of validation problems; empty if the exception is valid.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="value"/> is <see langword="null"/>.</exception>
     public static IReadOnlyList<string> Validate(this ConfigurationException? value)
     {
-        if (value == null)
+        if (value is null)
         {
             throw new ArgumentNullException(nameof(value));
         }
@@ -37,10 +37,10 @@ public static class ConfigurationExceptionValidation
     /// </summary>
     /// <param name="value">The configuration exception to check.</param>
     /// <returns>True if the exception is valid; otherwise, false.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="value"/> is <see langword="null"/>.</exception>
     public static bool IsValid(this ConfigurationException? value)
     {
-        if (value == null)
+        if (value is null)
         {
             throw new ArgumentNullException(nameof(value));
         }
@@ -52,18 +52,20 @@ public static class ConfigurationExceptionValidation
     /// Ensures that a <see cref="ConfigurationException"/> instance is valid, throwing an <see cref="ArgumentException"/> if it is not.
     /// </summary>
     /// <param name="value">The configuration exception to validate.</param>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
-    /// <exception cref="ArgumentException">Thrown if the exception is invalid, containing a list of problems.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="value"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">The exception is invalid.</exception>
     public static void EnsureValid(this ConfigurationException? value)
     {
-        if (value == null)
+        if (value is null)
         {
             throw new ArgumentNullException(nameof(value));
         }
 
         if (string.IsNullOrEmpty(value.ConfigurationKey))
         {
-            throw new ArgumentException("ConfigurationException is invalid: ConfigurationKey must not be null or empty.", nameof(value));
+            throw new ArgumentException(
+                "ConfigurationException is invalid: ConfigurationKey must not be null or empty.",
+                nameof(value));
         }
     }
 }
