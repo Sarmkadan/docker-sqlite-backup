@@ -137,4 +137,38 @@ if (!backupSchedule.IsValid())
 }
 ```
 
+## FileSystemUtilityJsonExtensions
+
+The `FileSystemUtilityJsonExtensions` class provides JSON serialization and deserialization utilities for working with `FileSystemUtilityConfig` objects. It simplifies configuration management by allowing easy conversion between configuration objects and JSON strings, with support for error handling through both throwing and non-throwing methods. The extension methods handle serialization of file system search patterns, retry configurations, and recursive search settings.
+
+Here's an example of how to use its public members:
+```csharp
+using Docker.Sqlite.Backup.Utilities;
+
+// Create a configuration object
+var config = new FileSystemUtilityConfig
+{
+    MaxRetries = 3,
+    RetryDelayMultiplier = 2,
+    Recursive = true,
+    DefaultSearchPattern = "*.db"
+};
+
+// Serialize to JSON
+var json = config.ToJson();
+Console.WriteLine(json);
+// Output: {"MaxRetries":3,"RetryDelayMultiplier":2,"Recursive":true,"DefaultSearchPattern":"*.db"}
+
+// Deserialize from JSON (throws on error)
+var deserializedConfig = FileSystemUtilityConfig.FromJson(json);
+Console.WriteLine(deserializedConfig.DefaultSearchPattern); // *.db
+
+// Deserialize from JSON (returns null on error)
+var parsedConfig = FileSystemUtilityConfig.TryFromJson(json);
+if (parsedConfig != null)
+{
+    Console.WriteLine($"Loaded config: MaxRetries={parsedConfig.MaxRetries}");
+}
+```
+
 // ... rest of the content ...
