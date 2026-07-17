@@ -2,8 +2,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Globalization;
-using System.Linq;
 
 namespace DockerSqliteBackup.Configuration;
 
@@ -24,37 +24,21 @@ public static class AppSettingsValidation
 
         var problems = new List<string>();
 
-        // Validate boolean flags - these are always valid as they're just true/false
-        // Validate EnableVerificationByDefault
-        // Validate EnableS3StorageByDefault
-        // Validate CompressBackups
-        // Validate EnableEncryption
-
         // Validate NotificationEmails array
-        if (value.NotificationEmails is null)
-        {
-            problems.Add("NotificationEmails cannot be null.");
-        }
-        else if (value.NotificationEmails.Length == 0)
-        {
-            // Empty array is acceptable
-        }
-        else
-        {
-            // Validate each email address format
-            foreach (var email in value.NotificationEmails)
-            {
-                if (string.IsNullOrWhiteSpace(email))
-                {
-                    problems.Add("NotificationEmails contains null or whitespace entry.");
-                    break;
-                }
+        ArgumentNullException.ThrowIfNull(value.NotificationEmails);
 
-                // Basic email format validation (simple check for @ symbol)
-                if (!email.Contains('@', StringComparison.Ordinal))
-                {
-                    problems.Add($"NotificationEmails contains invalid email format: '{email}'.");
-                }
+        foreach (var email in value.NotificationEmails)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                problems.Add("NotificationEmails contains null or whitespace entry.");
+                break;
+            }
+
+            // Validate email format using DataAnnotations.EmailAddressAttribute for proper validation
+            if (!new EmailAddressAttribute().IsValid(email))
+            {
+                problems.Add($"NotificationEmails contains invalid email format: '{email}'.");
             }
         }
 
