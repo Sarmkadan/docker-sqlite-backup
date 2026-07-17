@@ -13,6 +13,7 @@ public static class AuditLoggerExtensions
     /// <param name="action">The action being logged.</param>
     /// <param name="success">Whether the operation was successful.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="auditLogger"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="category"/> or <paramref name="action"/> is null or empty.</exception>
     public static void LogSuccess(this AuditLogger auditLogger, string category, string action, bool success)
     {
         ArgumentNullException.ThrowIfNull(auditLogger);
@@ -36,6 +37,7 @@ public static class AuditLoggerExtensions
     /// <param name="userId">The ID of the user performing the backup.</param>
     /// <param name="success">Whether the operation was successful.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="auditLogger"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="targetId"/> is null or empty.</exception>
     public static void LogBackupResult(this AuditLogger auditLogger, string targetId, string? userId, bool success)
     {
         ArgumentNullException.ThrowIfNull(auditLogger);
