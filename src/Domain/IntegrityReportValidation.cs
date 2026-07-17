@@ -60,12 +60,9 @@ public static class IntegrityReportValidation
             problems.Add("QuickCheckErrors must be null when PassedQuickCheck is true.");
         }
 
-        if (value.QuickCheckErrors is not null)
+        if (value.QuickCheckErrors is not null && value.QuickCheckErrors.Length > 10_000)
         {
-            if (value.QuickCheckErrors.Length > 10_000)
-            {
-                problems.Add("QuickCheckErrors exceeds maximum length of 10000 characters.");
-            }
+            problems.Add("QuickCheckErrors exceeds maximum length of 10000 characters.");
         }
 
         // Validate PassedFullCheck
@@ -77,12 +74,9 @@ public static class IntegrityReportValidation
             problems.Add("FullCheckErrors must be null when PassedFullCheck is true.");
         }
 
-        if (value.FullCheckErrors is not null)
+        if (value.FullCheckErrors is not null && value.FullCheckErrors.Length > 10_000)
         {
-            if (value.FullCheckErrors.Length > 10_000)
-            {
-                problems.Add("FullCheckErrors exceeds maximum length of 10000 characters.");
-            }
+            problems.Add("FullCheckErrors exceeds maximum length of 10000 characters.");
         }
 
         // Validate PassedForeignKeyCheck
@@ -94,12 +88,9 @@ public static class IntegrityReportValidation
             problems.Add("ForeignKeyErrors must be null when PassedForeignKeyCheck is true.");
         }
 
-        if (value.ForeignKeyErrors is not null)
+        if (value.ForeignKeyErrors is not null && value.ForeignKeyErrors.Length > 10_000)
         {
-            if (value.ForeignKeyErrors.Length > 10_000)
-            {
-                problems.Add("ForeignKeyErrors exceeds maximum length of 10000 characters.");
-            }
+            problems.Add("ForeignKeyErrors exceeds maximum length of 10000 characters.");
         }
 
         // Validate PageCount
@@ -158,6 +149,7 @@ public static class IntegrityReportValidation
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is <c>null</c>.</exception>
     public static bool IsValid(this IntegrityReport value)
     {
+        ArgumentNullException.ThrowIfNull(value);
         return value.Validate().Count == 0;
     }
 
@@ -179,9 +171,14 @@ public static class IntegrityReportValidation
         }
 
         throw new ArgumentException(
-            $"IntegrityReport is invalid. Problems: {string.Join("; ", problems)}");
+            $"IntegrityReport is invalid. Problems: {string.Join("; ", problems)}", nameof(value));
     }
 
+    /// <summary>
+    /// Determines whether the specified journal mode string is a valid SQLite journal mode.
+    /// </summary>
+    /// <param name="mode">The journal mode to validate.</param>
+    /// <returns><c>true</c> if the mode is valid; otherwise, <c>false</c>.</returns>
     private static bool IsValidJournalMode(string mode)
     {
         return mode is "DELETE" or "TRUNCATE" or "PERSIST" or "MEMORY" or "WAL" or "OFF";
