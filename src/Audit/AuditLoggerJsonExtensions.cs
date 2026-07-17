@@ -23,18 +23,14 @@ public static class AuditLoggerJsonExtensions
     /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
     /// <returns>A JSON string representation of the audit logger.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
-    public static string ToJson(this AuditLogger value, bool indented = false)
-    {
-        ArgumentNullException.ThrowIfNull(value);
-
-        return JsonSerializer.Serialize(value, indented ? GetIndentedOptions() : _jsonOptions);
-    }
+    public static string ToJson(this AuditLogger value, bool indented = false) =>
+        JsonSerializer.Serialize(value, indented ? GetIndentedOptions() : _jsonOptions);
 
     /// <summary>
     /// Deserializes an <see cref="AuditLogger"/> instance from a JSON string.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>The deserialized audit logger instance, or null if the JSON is invalid.</returns>
+    /// <returns>The deserialized audit logger instance, or null if the JSON is invalid or deserialization fails.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
     public static AuditLogger? FromJson(string json)
     {
@@ -54,7 +50,7 @@ public static class AuditLoggerJsonExtensions
     /// Attempts to deserialize an <see cref="AuditLogger"/> instance from a JSON string.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <param name="value">The deserialized audit logger instance, or null if deserialization failed.</param>
+    /// <param name="value">When this method returns, contains the deserialized audit logger instance if deserialization succeeded; otherwise, null.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
     public static bool TryFromJson(string json, out AuditLogger? value)
@@ -73,12 +69,6 @@ public static class AuditLoggerJsonExtensions
         }
     }
 
-    private static JsonSerializerOptions GetIndentedOptions()
-    {
-        var options = new JsonSerializerOptions(_jsonOptions)
-        {
-            WriteIndented = true
-        };
-        return options;
-    }
+    private static JsonSerializerOptions GetIndentedOptions() =>
+        new JsonSerializerOptions(_jsonOptions) { WriteIndented = true };
 }
