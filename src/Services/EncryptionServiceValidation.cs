@@ -60,17 +60,8 @@ public static class EncryptionServiceValidation
     /// </summary>
     /// <param name="value">The service instance to check.</param>
     /// <returns><c>true</c> if the instance is valid; otherwise <c>false</c>.</returns>
-    public static bool IsValid(this EncryptionService value)
-    {
-        try
-        {
-            return value.Validate().Count == 0;
-        }
-        catch (ArgumentNullException)
-        {
-            return false;
-        }
-    }
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is <c>null</c>.</exception>
+    public static bool IsValid(this EncryptionService value) => value.Validate().Count == 0;
 
     /// <summary>
     /// Ensures that the provided <see cref="EncryptionService"/> instance is valid.
