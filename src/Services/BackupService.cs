@@ -138,6 +138,9 @@ public sealed class BackupService : IBackupService
             }
             result.Status = (int)Constants.BackupStatus.Success;
 
+            // Create manifest file next to the backup
+            await CreateBackupManifestAsync(result, schedule, backupPath);
+
             // Upload to the configured remote storage backend, if one is configured.
             // Exceptions here (e.g. AmazonS3Exception for missing s3:PutObject permission)
             // are intentionally NOT caught so they propagate and mark the job as failed.
@@ -338,6 +341,64 @@ public sealed class BackupService : IBackupService
         {
             // Non-WAL databases silently ignore the checkpoint — this is acceptable.
             _logger.LogDebug(ex, "WAL checkpoint skipped for {SourcePath} (database may not be in WAL mode)", sourcePath);
+        }
+    }
+
+    /// <summary>
+    /// Creates a manifest file next to the backup file with metadata about the backup.
+    /// </summary>
+    /// <param name="backupResult">The backup result containing metadata about the backup.</param>
+    /// <param name="schedule">The backup schedule that was executed.</param>
+    /// <param name="backupFilePath">The path to the backup file.</param>
+    private async Task CreateBackupManifestAsync(BackupResult backupResult, BackupSchedule schedule, string backupFilePath)
+    {
+        try
+        {
+            var manifest = new BackupManifest
+            {
+                ScheduleId = backupResult.ScheduleId,
+                BackupJobId = backupResult.BackupJobId,
+                CreatedAt = backupResult.StartedAt,
+                CompletedAt = backupResult.CompletedAt ?? DateTime.UtcNow,
+                SourceDatabasePath = schedule.DatabasePath,
+                SourceDatabaseSizeBytes = new FileInfo(schedule.DatabasePath).Length,
+                BackupFilePath = backupResult.BackupFilePath,
+                BackupFileSizeBytes = backupResult.BackupFileSizeBytes,
+                OriginalFileSizeBytes = backupResult.OriginalFileSizeBytes,
+                CompressionRatio = backupResult.CompressionRatio,
+                Checksum = backupResult.Checksum,
+                IsEncrypted = backupFilePath.EndsWith(".enc", StringComparison.OrdinalIgnoreCase),
+                IsCompressed = backupFilePath.EndsWith(BackupConstants.CompressedBackupExtension, StringComparison.OrdinalIgnoreCase),
+                BackupMode = ((Constants.BackupMode)backupResult.BackupMode).ToString(),
+                BaseBackupResultId = backupResult.BaseBackupResultId,
+                Notes = $"Backup created by docker-sqlite-backup v{BackupConstants.ApplicationVersion}"
+            };
+
+            // Set storage type based on configuration
+            if (schedule.StorageConfiguration is null or LocalStorageConfiguration)
+            {
+                manifest.StorageType = "Local";
+            }
+            else if (schedule.StorageConfiguration is S3Configuration)
+            {
+                manifest.StorageType = "S3";
+                manifest.RemoteStorageKey = backupResult.S3ObjectKey;
+            }
+            else
+            {
+                manifest.StorageType = schedule.StorageConfiguration.GetType().Name.Replace("Configuration", "");
+            }
+
+            // Write manifest file next to the backup
+            var manifestPath = backupFilePath + BackupConstants.BackupMetadataExtension;
+            manifest.WriteToFile(manifestPath);
+
+            _logger.LogInformation("Backup manifest created: {ManifestPath}", manifestPath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to create backup manifest, continuing with backup operation");
+            // Don't throw - manifest creation is optional
         }
     }
 
