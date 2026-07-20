@@ -34,4 +34,10 @@ public interface IRotationService
     /// Calculates the disk space that would be freed by rotation.
     /// </summary>
     Task<long> CalculateDiskSpaceFreedAsync(Guid scheduleId);
+
+    /// <summary>
+    /// Previews which backups would be deleted by the rotation policy without actually deleting them.
+    /// Returns a tuple containing the list of backups that would be deleted and the total disk space that would be freed.
+    /// </summary>
+    Task<(IEnumerable<BackupResult> backupsToDelete, long diskSpaceFreed)> PreviewRotationAsync(Guid scheduleId);
 }

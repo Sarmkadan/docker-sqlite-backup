@@ -155,4 +155,27 @@ public sealed class RotationService : IRotationService
         var backupsForRotation = await GetBackupsForRotationAsync(scheduleId);
         return backupsForRotation.Sum(b => b.BackupFileSizeBytes);
     }
+
+    /// <summary>
+    /// Previews which backups would be deleted by the rotation policy without actually deleting them.
+    /// Returns a tuple containing the list of backups that would be deleted and the total disk space that would be freed.
+    /// </summary>
+    public async Task<(IEnumerable<BackupResult> backupsToDelete, long diskSpaceFreed)> PreviewRotationAsync(Guid scheduleId)
+    {
+        var policy = await _repository.GetRotationPolicyAsync(scheduleId);
+        if (policy is null || policy.Strategy == (int)Constants.RotationStrategy.NoRotation)
+        {
+            _logger.LogInformation("No rotation policy or rotation disabled for schedule {ScheduleId}", scheduleId);
+            return (Enumerable.Empty<BackupResult>(), 0);
+        }
+
+        var backupsForRotation = await GetBackupsForRotationAsync(scheduleId);
+        var backupsToDelete = backupsForRotation.ToList();
+        var diskSpaceFreed = backupsToDelete.Sum(b => b.BackupFileSizeBytes);
+
+        _logger.LogInformation("Rotation preview completed for schedule {ScheduleId}. Would delete {DeletedCount} backups, freeing {DiskSpaceFreed} bytes",
+            scheduleId, backupsToDelete.Count, diskSpaceFreed);
+
+        return (backupsToDelete, diskSpaceFreed);
+    }
 }
