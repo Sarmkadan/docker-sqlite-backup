@@ -1,8 +1,10 @@
 #nullable enable
 // Author: Vladyslav Zaiets
 
+using System.IO.Compression;
 using System.Security.Cryptography;
 using DockerSqliteBackup.Configuration;
+using DockerSqliteBackup.Constants;
 using DockerSqliteBackup.Data;
 using DockerSqliteBackup.Domain;
 using DockerSqliteBackup.Exceptions;
@@ -112,7 +114,19 @@ public sealed class BackupService : IBackupService
 
             backupPath = await EncryptBackupIfNeededAsync(backupPath);
 
+            // Track original file size before compression
+            long? originalFileSize = null;
+            if (_appSettings.CompressBackups)
+            {
+                originalFileSize = new FileInfo(backupPath).Length;
+            }
+
+            var compressionResult = await CompressBackupIfNeededAsync(backupPath, originalFileSize);
+            backupPath = compressionResult.compressedPath;
+            result.CompressionRatio = compressionResult.compressionRatio;
+
             result.BackupFilePath = backupPath;
+            result.OriginalFileSizeBytes = originalFileSize;
             try
             {
                 result.BackupFileSizeBytes = new FileInfo(backupPath).Length;
@@ -411,5 +425,55 @@ public sealed class BackupService : IBackupService
         }
 
         return key;
+    }
+
+    /// <summary>
+    /// Compresses a backup file using gzip if compression is enabled in settings.
+    /// Returns the path to the compressed file (or original if compression is disabled).
+    /// </summary>
+    /// <param name="backupPath">The path to the backup file to compress.</param>
+    /// <param name="originalFileSize">The original file size before compression (for calculating ratio).</param>
+    /// <returns>The path to the compressed file (with .gz extension) or original path if compression disabled.</returns>
+    private async Task<(string compressedPath, double? compressionRatio)> CompressBackupIfNeededAsync(string backupPath, long? originalFileSize = null)
+    {
+        if (!_appSettings.CompressBackups)
+        {
+            _logger.LogDebug("Compression is disabled, skipping backup compression");
+            return (backupPath, null);
+        }
+
+        try
+        {
+            var compressedPath = backupPath + BackupConstants.CompressedBackupExtension;
+            long compressedFileSize = 0;
+
+            await using (var sourceStream = File.OpenRead(backupPath))
+            await using (var compressedStream = File.Create(compressedPath))
+            await using (var gzipStream = new GZipStream(compressedStream, (CompressionLevel)_appSettings.CompressionLevel))
+            {
+                await sourceStream.CopyToAsync(gzipStream);
+            }
+
+            // Get compressed file size
+            compressedFileSize = new FileInfo(compressedPath).Length;
+
+            // Delete the original uncompressed file
+            File.Delete(backupPath);
+
+            double? compressionRatio = null;
+            if (originalFileSize.HasValue && originalFileSize > 0 && compressedFileSize > 0)
+            {
+                compressionRatio = (double)originalFileSize.Value / compressedFileSize;
+            }
+
+            _logger.LogInformation("Backup compressed with gzip: {CompressedPath} (Original: {OriginalSize} bytes, Compressed: {CompressedSize} bytes, Ratio: {Ratio:F2}x)",
+                compressedPath, originalFileSize, compressedFileSize, compressionRatio);
+            return (compressedPath, compressionRatio);
+        }
+        catch (Exception ex) when (ex is not BackupException and not ArgumentException)
+        {
+            _logger.LogWarning(ex, "Failed to compress backup file {BackupPath}, continuing with uncompressed version", backupPath);
+            return (backupPath, null); // Return original path if compression fails
+        }
     }
 }

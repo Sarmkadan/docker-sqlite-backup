@@ -1,5 +1,6 @@
 #nullable enable
 
+using DockerSqliteBackup.Constants;
 using DockerSqliteBackup.Exceptions;
 
 namespace DockerSqliteBackup.Configuration;
@@ -109,6 +110,12 @@ public class AppSettings
     public bool EnableVerificationByDefault { get; set; } = true;
     public bool EnableS3StorageByDefault { get; set; } = false;
     public bool CompressBackups { get; set; } = false;
+
+        /// <summary>
+        /// Gets or sets the compression level for gzip compression (1-9, where 1 is fastest and 9 is best compression).
+        /// Default is 6 (balanced compression).
+        /// </summary>
+        public int CompressionLevel { get; set; } = BackupConstants.DefaultCompressionLevel;
     public string[] NotificationEmails { get; set; } = [];
 
     // Encryption settings

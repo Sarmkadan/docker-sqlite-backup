@@ -26,6 +26,12 @@ public class BackupResult
     /// <summary>Gets or sets the size of the backup file in bytes.</summary>
     public long BackupFileSizeBytes { get; set; }
 
+        /// <summary>Gets or sets the size of the backup file before compression (if compressed).</summary>
+        public long? OriginalFileSizeBytes { get; set; }
+
+        /// <summary>Gets or sets the compression ratio (original size / compressed size).</summary>
+        public double? CompressionRatio { get; set; }
+
     /// <summary>Gets or sets the checksum (SHA256) of the backup file.</summary>
     public string Checksum { get; set; } = string.Empty;
 

@@ -1,8 +1,10 @@
 #nullable enable
 // Author: Vladyslav Zaiets
 
+using System.IO.Compression;
 using System.Security.Cryptography;
 using DockerSqliteBackup.Configuration;
+using DockerSqliteBackup.Constants;
 using DockerSqliteBackup.Data;
 using DockerSqliteBackup.Domain;
 using DockerSqliteBackup.Exceptions;
@@ -205,6 +207,16 @@ public sealed class VerificationService : IVerificationService
 
             _logger.LogInformation("Decrypting encrypted backup for verification: {FilePath}", backup.BackupFilePath);
             await EncryptionUtility.DecryptFileAsync(backup.BackupFilePath, tempDbPath, encryptionKey);
+        }
+        else if (backup.BackupFilePath.EndsWith(BackupConstants.CompressedBackupExtension, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogInformation("Decompressing gzip backup for verification: {FilePath}", backup.BackupFilePath);
+            await using (var compressedStream = File.OpenRead(backup.BackupFilePath))
+            await using (var gzipStream = new GZipStream(compressedStream, CompressionMode.Decompress))
+            await using (var outputStream = File.Create(tempDbPath))
+            {
+                await gzipStream.CopyToAsync(outputStream);
+            }
         }
         else
         {
