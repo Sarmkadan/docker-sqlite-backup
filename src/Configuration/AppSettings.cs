@@ -1,4 +1,7 @@
 #nullable enable
+// =============================================================================
+// Author: Vladyslav Zaiets | https://sarmkadan.com
+// =============================================================================
 
 using DockerSqliteBackup.Constants;
 using DockerSqliteBackup.Exceptions;
@@ -111,25 +114,32 @@ public class AppSettings
     public bool EnableS3StorageByDefault { get; set; } = false;
     public bool CompressBackups { get; set; } = false;
 
-        /// <summary>
-        /// Gets or sets the compression level for gzip compression (1-9, where 1 is fastest and 9 is best compression).
-        /// Default is 6 (balanced compression).
-        /// </summary>
-        public int CompressionLevel { get; set; } = BackupConstants.DefaultCompressionLevel;
+    /// <summary>
+    /// Gets or sets the compression level for gzip compression (1-9, where 1 is fastest and 9 is best compression).
+    /// Default is 6 (balanced compression).
+    /// </summary>
+    public int CompressionLevel { get; set; } = BackupConstants.DefaultCompressionLevel;
     public string[] NotificationEmails { get; set; } = [];
 
-    // Encryption settings
     /// <summary>
-    /// When true, backup archives are encrypted with AES-256-CBC before being written to storage.
-    /// Set <see cref="EncryptionKey"/> or the <c>BACKUP_ENCRYPTION_KEY</c> environment variable
-    /// to supply the Base64-encoded 32-byte key.
+    /// Gets or sets the webhook secret used to sign webhook payloads with HMAC-SHA256.
+    /// This secret should be a secure random string (at least 32 characters recommended).
+    /// Set via the <c>BACKUP_WEBHOOK_SECRET</c> environment variable or in appsettings.json.
     /// </summary>
-    public bool EnableEncryption { get; set; } = false;
+    public string? WebhookSecret { get; set; }
 
-    /// <summary>
-    /// Base64-encoded 32-byte AES-256 key used to encrypt and decrypt backup files.
-    /// Prefer injecting this via the <c>AppSettings__EncryptionKey</c> environment variable
-    /// rather than storing it in appsettings.json.
-    /// </summary>
-    public string? EncryptionKey { get; set; }
+// Encryption settings
+/// <summary>
+/// When true, backup archives are encrypted with AES-256-CBC before being written to storage.
+/// Set <see cref="EncryptionKey"/> or the <c>BACKUP_ENCRYPTION_KEY</c> environment variable
+/// to supply the Base64-encoded 32-byte key.
+/// </summary>
+public bool EnableEncryption { get; set; } = false;
+
+/// <summary>
+/// Base64-encoded 32-byte AES-256 key used to encrypt and decrypt backup files.
+/// Prefer injecting this via the <c>AppSettings__EncryptionKey</c> environment variable
+/// rather than storing it in appsettings.json.
+/// </summary>
+public string? EncryptionKey { get; set; }
 }
