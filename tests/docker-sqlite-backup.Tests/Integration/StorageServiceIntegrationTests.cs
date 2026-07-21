@@ -4,6 +4,7 @@ using DockerSqliteBackup.Domain;
 using DockerSqliteBackup.Exceptions;
 using DockerSqliteBackup.Services;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -21,8 +22,15 @@ public class StorageServiceIntegrationTests : IDisposable
 
     public StorageServiceIntegrationTests()
     {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<LocalStorageBackend>();
+        services.AddSingleton<S3StorageBackend>();
+        services.AddSingleton<AzureStorageBackend>();
+        var serviceProvider = services.BuildServiceProvider();
+
         var logger = new Mock<ILogger<StorageService>>().Object;
-        _sut = new StorageService(logger);
+        _sut = new StorageService(logger, serviceProvider);
         _tempDir = Path.Combine(Path.GetTempPath(), $"storage-tests-{Guid.NewGuid()}");
         Directory.CreateDirectory(_tempDir);
     }
