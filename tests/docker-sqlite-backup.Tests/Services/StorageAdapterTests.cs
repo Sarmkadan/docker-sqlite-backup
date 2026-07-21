@@ -4,6 +4,7 @@ using DockerSqliteBackup.Domain;
 using DockerSqliteBackup.Exceptions;
 using DockerSqliteBackup.Services;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -38,7 +39,13 @@ public class StorageAdapterTests : IAsyncLifetime
 	{
 		_tempDir = Path.Combine(Path.GetTempPath(), $"storage-adapter-tests-{Guid.NewGuid()}");
 		Directory.CreateDirectory(_tempDir);
-		_sut = new StorageService(new Mock<ILogger<StorageService>>().Object);
+		var services = new ServiceCollection();
+		services.AddLogging();
+		services.AddSingleton<LocalStorageBackend>();
+		services.AddSingleton<S3StorageBackend>();
+		services.AddSingleton<AzureStorageBackend>();
+		var serviceProvider = services.BuildServiceProvider();
+		_sut = new StorageService(new Mock<ILogger<StorageService>>().Object, serviceProvider);
 		return Task.CompletedTask;
 	}
 

@@ -1,5 +1,4 @@
 #nullable enable
-// Author: Vladyslav Zaiets
 
 using DockerSqliteBackup.Data;
 using DockerSqliteBackup.Exceptions;
@@ -60,6 +59,11 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IVerificationService, VerificationService>();
             services.AddSingleton<IEncryptionService, EncryptionService>();
             services.AddSingleton<IIntegrityCheckerService, IntegrityCheckerService>();
+
+            // Register storage backend implementations
+            services.AddSingleton<LocalStorageBackend>();
+            services.AddSingleton<S3StorageBackend>();
+            services.AddSingleton<AzureStorageBackend>();
 
             return services;
         }
