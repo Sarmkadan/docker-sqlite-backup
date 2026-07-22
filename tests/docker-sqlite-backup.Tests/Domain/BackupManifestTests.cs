@@ -69,25 +69,25 @@ public class BackupManifestTests
         var json = manifest.ToJson();
 
         json.Should().NotBeNullOrEmpty();
-        json.Should().Contain("\"version\":\"1.0\"");
-        json.Should().Contain("\"scheduleId\"");
-        json.Should().Contain("\"backupJobId\"");
-        json.Should().Contain("\"createdAt\"");
-        json.Should().Contain("\"completedAt\"");
-        json.Should().Contain("\"sourceDatabasePath\"");
-        json.Should().Contain("\"sourceDatabaseSizeBytes\"");
-        json.Should().Contain("\"backupFilePath\"");
-        json.Should().Contain("\"backupFileSizeBytes\"");
-        json.Should().Contain("\"originalFileSizeBytes\"");
-        json.Should().Contain("\"compressionRatio\"");
-        json.Should().Contain("\"checksum\"");
-        json.Should().Contain("\"isEncrypted\":true");
-        json.Should().Contain("\"isCompressed\":true");
-        json.Should().Contain("\"backupMode\":\"Full\"");
-        json.Should().Contain("\"baseBackupResultId\"");
-        json.Should().Contain("\"storageType\":\"S3\"");
-        json.Should().Contain("\"remoteStorageKey\"");
-        json.Should().Contain("\"notes\"");
+        json.Should().Contain("\"version\": \"1.0\"");
+        json.Should().Contain("\"scheduleId\":");
+        json.Should().Contain("\"backupJobId\":");
+        json.Should().Contain("\"createdAt\":");
+        json.Should().Contain("\"completedAt\":");
+        json.Should().Contain("\"sourceDatabasePath\":");
+        json.Should().Contain("\"sourceDatabaseSizeBytes\":");
+        json.Should().Contain("\"backupFilePath\":");
+        json.Should().Contain("\"backupFileSizeBytes\":");
+        json.Should().Contain("\"originalFileSizeBytes\":");
+        json.Should().Contain("\"compressionRatio\":");
+        json.Should().Contain("\"checksum\":");
+        json.Should().Contain("\"isEncrypted\": true");
+        json.Should().Contain("\"isCompressed\": true");
+        json.Should().Contain("\"backupMode\": \"Full\"");
+        json.Should().Contain("\"baseBackupResultId\":");
+        json.Should().Contain("\"storageType\": \"S3\"");
+        json.Should().Contain("\"remoteStorageKey\":");
+        json.Should().Contain("\"notes\":");
     }
 
     [Fact]
