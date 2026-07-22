@@ -272,23 +272,74 @@ public sealed class BackupService : IBackupService
     /// snapshot even when the source database has active writers in WAL mode.
     /// Falls back to File.Copy only if the backup API call fails (e.g., non-SQLite file).
     /// </summary>
-    private async Task SafeCopyDatabaseAsync(string sourcePath, string destinationPath)
-    {
-        try
-        {
-            using var source = new SqliteConnection($"Data Source={sourcePath};Mode=ReadOnly");
-            using var destination = new SqliteConnection($"Data Source={destinationPath}");
-            await source.OpenAsync();
-            await destination.OpenAsync();
-            source.BackupDatabase(destination);
-            _logger.LogDebug("Database backed up using SQLite Online Backup API");
-        }
-        catch (SqliteException ex)
-        {
-            _logger.LogWarning(ex, "SQLite backup API failed, falling back to file copy");
-            File.Copy(sourcePath, destinationPath, overwrite: true);
-        }
-    }
+private async Task SafeCopyDatabaseAsync(string sourcePath, string destinationPath)
+{
+	try
+	{
+		using var source = new SqliteConnection($"Data Source={sourcePath};Mode=ReadOnly");
+		using var destination = new SqliteConnection($"Data Source={destinationPath}");
+		await source.OpenAsync();
+		await destination.OpenAsync();
+		source.BackupDatabase(destination);
+		_logger.LogDebug("Database backed up using SQLite Online Backup API");
+	}
+	catch (SqliteException ex) when (ex.SqliteErrorCode == 5 ||
+								 ex.SqliteErrorCode == 6 ||
+								 ex.SqliteErrorCode == 10 || // SQLITE_BUSY_RECOVERY
+								 ex.SqliteErrorCode == 12) // SQLITE_BUSY_SNAPSHOT
+	{
+		// Handle database locked errors with retry logic
+		_logger.LogWarning(ex, "Database is locked (SQLITE_BUSY/SQLITE_LOCKED), attempting retry with bounded backoff");
+		await RetryDatabaseCopyAsync(sourcePath, destinationPath);
+	}
+	catch (SqliteException ex) when (ex.SqliteErrorCode == 11)
+	{
+		// Database is corrupt - cannot recover from this
+		_logger.LogError(ex, "Database file is corrupt (SQLITE_CORRUPT), cannot create backup");
+		throw new DatabaseAccessException($"Database file is corrupt and cannot be backed up: {sourcePath}", ex);
+	}
+	catch (SqliteException ex)
+	{
+		// Other SQLite errors - fall back to file copy
+		_logger.LogWarning(ex, "SQLite backup API failed, falling back to file copy");
+		File.Copy(sourcePath, destinationPath, overwrite: true);
+	}
+}
+
+	/// <summary>
+	/// Retries database copy operation with bounded exponential backoff and jitter
+	/// </summary>
+	private async Task RetryDatabaseCopyAsync(string sourcePath, string destinationPath, int maxRetries = 5)
+	{
+		var lastException = default(Exception);
+		var random = new Random();
+
+		for (int attempt = 0; attempt <= maxRetries; attempt++)
+		{
+			try
+			{
+				File.Copy(sourcePath, destinationPath, overwrite: true);
+				_logger.LogDebug("Database copied successfully after {Attempt} attempt(s)", attempt + 1);
+				return;
+			}
+			catch (IOException ioEx) when (attempt < maxRetries)
+			{
+				lastException = ioEx;
+
+				// Exponential backoff with jitter: base delay * 2^attempt + random jitter
+				var baseDelayMs = 100 * (int)Math.Pow(2, attempt);
+				var jitterMs = random.Next(0, 50);
+				var delayMs = baseDelayMs + jitterMs;
+
+				_logger.LogWarning(ioEx, "Failed to copy database (attempt {Attempt}/{MaxRetries}), retrying in {DelayMs}ms",
+					attempt + 1, maxRetries, delayMs);
+
+				await Task.Delay(delayMs);
+			}
+		}
+
+		throw new DatabaseAccessException($"Failed to copy database after {maxRetries} retry attempts", lastException);
+	}
 
     private static string GenerateBackupPath(BackupSchedule schedule, DateTime timestamp)
     {
