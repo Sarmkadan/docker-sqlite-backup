@@ -142,4 +142,17 @@ public bool EnableEncryption { get; set; } = false;
 /// rather than storing it in appsettings.json.
 /// </summary>
 public string? EncryptionKey { get; set; }
+
+/// <summary>
+/// Enables streaming uploads for S3 backups using multipart upload with bounded part sizes.
+/// When true, large backups are uploaded in chunks to avoid loading the entire file into memory.
+/// </summary>
+public bool EnableStreamingS3Uploads { get; set; } = true;
+
+/// <summary>
+/// The maximum size of each multipart upload part in bytes for S3 uploads.
+/// Default is 16MB (16 * 1024 * 1024), which is the recommended minimum for S3.
+/// Maximum allowed by S3 is 5GB per part.
+/// </summary>
+public int S3MultipartPartSizeBytes { get; set; } = 16 * 1024 * 1024; // 16MB
 }
