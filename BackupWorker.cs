@@ -6,6 +6,7 @@ using Cronos;
 using DockerSqliteBackup.Configuration;
 using DockerSqliteBackup.Constants;
 using DockerSqliteBackup.Domain;
+using DockerSqliteBackup.Events;
 using DockerSqliteBackup.Exceptions;
 using DockerSqliteBackup.Services;
 using Microsoft.Extensions.Hosting;
@@ -22,6 +23,7 @@ public class BackupWorker : BackgroundService
     private readonly IBackupService _backupService;
     private readonly IVerificationService _verificationService;
     private readonly IRotationService _rotationService;
+    private readonly IBackupEventPublisher _eventPublisher;
     private readonly AppSettings _appSettings;
     private readonly ILogger<BackupWorker> _logger;
 
@@ -34,6 +36,7 @@ public class BackupWorker : BackgroundService
         IBackupService backupService,
         IVerificationService verificationService,
         IRotationService rotationService,
+        IBackupEventPublisher eventPublisher,
         AppSettings appSettings,
         ILogger<BackupWorker> logger)
     {
@@ -41,6 +44,7 @@ public class BackupWorker : BackgroundService
         _backupService = backupService;
         _verificationService = verificationService;
         _rotationService = rotationService;
+        _eventPublisher = eventPublisher;
         _appSettings = appSettings;
         _logger = logger;
     }
@@ -198,6 +202,13 @@ public class BackupWorker : BackgroundService
                             // Do NOT rotate when verification fails - preserve all existing backups
                             _logger.LogWarning("Skipping rotation for schedule {ScheduleId} due to verification failure", schedule.Id);
                         }
+
+                        await _eventPublisher.PublishAsync(new RestoreVerificationCompletedEvent
+                        {
+                            BackupResultId = result.Id,
+                            IsValid = verification.IsSuccessful,
+                            ValidationMessage = verification.StatusMessage
+                        }, cancellationToken);
                     }
                     else
                     {
@@ -215,10 +226,23 @@ public class BackupWorker : BackgroundService
                     await _scheduleService.UpdateScheduleAsync(schedule);
 
                     job.MarkCompleted((int)BackupStatus.Success);
+
+                    await _eventPublisher.PublishAsync(new BackupCompletedEvent
+                    {
+                        Result = result,
+                        Duration = TimeSpan.FromMilliseconds(result.DurationMilliseconds),
+                        ScheduleCronExpression = schedule.CronExpression
+                    }, cancellationToken);
                 }
                 else
                 {
                     job.MarkCompleted((int)BackupStatus.Failed);
+
+                    await _eventPublisher.PublishAsync(new BackupFailedEvent
+                    {
+                        ScheduleId = schedule.Id,
+                        ErrorMessage = result.ErrorMessage ?? "Backup did not complete successfully"
+                    }, cancellationToken);
                 }
             }
             catch (OperationCanceledException)
@@ -227,12 +251,24 @@ public class BackupWorker : BackgroundService
                     schedule.Id,
                     _appSettings.BackupTimeoutSeconds);
                 job.MarkCompleted((int)BackupStatus.Failed);
+
+                await _eventPublisher.PublishAsync(new BackupFailedEvent
+                {
+                    ScheduleId = schedule.Id,
+                    ErrorMessage = $"Backup timed out after {_appSettings.BackupTimeoutSeconds} seconds"
+                }, cancellationToken);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Backup execution failed for schedule {ScheduleId}",
                     schedule.Id);
                 job.MarkCompleted((int)BackupStatus.Failed);
+
+                await _eventPublisher.PublishAsync(new BackupFailedEvent
+                {
+                    ScheduleId = schedule.Id,
+                    ErrorMessage = ex.Message
+                }, cancellationToken);
             }
         }
         catch (Exception ex)

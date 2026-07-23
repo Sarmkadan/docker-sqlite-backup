@@ -105,3 +105,5 @@ public static class AppSettingsValidation
         }
     }
 }
+
+	// Validate CatchUpOnStartup is a boolean (no validation needed, just ensure it's set)

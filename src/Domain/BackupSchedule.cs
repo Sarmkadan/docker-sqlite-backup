@@ -32,6 +32,12 @@ public class BackupSchedule
     /// <summary>Gets or sets the next calculated run time for this schedule.</summary>
     public DateTime? NextRunTime { get; set; }
 
+	/// <summary>
+	/// Gets or sets the next scheduled run time that was calculated when the schedule was last updated.
+	/// This is persisted to detect missed schedules after container restarts.
+	/// </summary>
+	public DateTime? NextScheduledRunTime { get; set; }
+
     /// <summary>Gets or sets the timestamp when this schedule was created.</summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

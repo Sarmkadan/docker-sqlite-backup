@@ -1,7 +1,9 @@
 #nullable enable
 
 using DockerSqliteBackup.Data;
+using DockerSqliteBackup.Events;
 using DockerSqliteBackup.Exceptions;
+using DockerSqliteBackup.Health;
 using DockerSqliteBackup.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -64,6 +66,12 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<LocalStorageBackend>();
             services.AddSingleton<S3StorageBackend>();
             services.AddSingleton<AzureStorageBackend>();
+
+            // Register the event pipeline and the health status listener that persists
+            // last-event state for the Docker HEALTHCHECK subcommand.
+            services.AddSingleton<IBackupEventPublisher, BackupEventPublisher>();
+            services.AddSingleton(new HealthStatusStore(appSettings.HealthCheckStatusFilePath));
+            services.AddSingleton<HealthStatusEventListener>();
 
             return services;
         }

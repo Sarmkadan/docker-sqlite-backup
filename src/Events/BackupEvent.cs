@@ -29,6 +29,12 @@ public class BackupStartedEvent : BackupEvent
     public BackupSchedule Schedule { get; set; } = null!;
     public DateTime StartTime { get; set; }
 
+    /// <summary>
+    /// Gets or sets the reason for the backup start.
+    /// "Scheduled" for regular scheduled backups, "CatchUp" for backups triggered after container restart.
+    /// </summary>
+    public string Reason { get; set; } = "Scheduled";
+
     public BackupStartedEvent() : base("backup.started") { }
 }
 
@@ -39,6 +45,13 @@ public class BackupCompletedEvent : BackupEvent
 {
     public BackupResult Result { get; set; } = null!;
     public TimeSpan Duration { get; set; }
+
+    /// <summary>
+    /// Gets or sets the cron expression of the schedule that produced this backup, used by
+    /// <see cref="DockerSqliteBackup.Health.HealthStatusEventListener"/> to compute the
+    /// expected freshness window for the Docker healthcheck.
+    /// </summary>
+    public string? ScheduleCronExpression { get; set; }
 
     public BackupCompletedEvent() : base("backup.completed") { }
 }
