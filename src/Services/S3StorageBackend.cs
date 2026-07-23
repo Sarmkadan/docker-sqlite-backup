@@ -3,6 +3,7 @@
 using Amazon.S3;
 using Amazon.S3.Model;
 using DockerSqliteBackup.Domain;
+using DockerSqliteBackup.Events;
 using DockerSqliteBackup.Exceptions;
 using Microsoft.Extensions.Logging;
 
@@ -17,10 +18,12 @@ namespace DockerSqliteBackup.Services;
 public sealed class S3StorageBackend : IStorageBackend
 {
     private readonly ILogger<S3StorageBackend> _logger;
+    private readonly IBackupEventPublisher _eventPublisher;
 
-    public S3StorageBackend(ILogger<S3StorageBackend> logger)
+    public S3StorageBackend(ILogger<S3StorageBackend> logger, IBackupEventPublisher eventPublisher)
     {
         _logger = logger;
+        _eventPublisher = eventPublisher;
     }
 
     public async Task<string> UploadBackupAsync(string filePath, StorageConfiguration config)
@@ -192,26 +195,71 @@ public sealed class S3StorageBackend : IStorageBackend
         return long.MaxValue;
     }
 
+    private async Task<T> ExecuteWithRetryAsync<T>(Func<Task<T>> operation)
+    {
+        int maxAttempts = 3;
+        int delayMs = 1000;
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                return await operation();
+            }
+            catch (AmazonS3Exception ex) when (IsTransient(ex) && attempt < maxAttempts)
+            {
+                _logger.LogWarning(ex, "Transient S3 error on attempt {Attempt}. Retrying...", attempt);
+                
+                await _eventPublisher.PublishAsync(new BackupRetryEvent 
+                { 
+                    AttemptNumber = attempt,
+                    PreviousError = ex.Message
+                });
+                
+                await Task.Delay(delayMs);
+                delayMs *= 2;
+            }
+            catch (AmazonS3Exception ex)
+            {
+                throw new S3StorageException(ex.Message, ex, IsTransient(ex));
+            }
+        }
+        return await operation(); // Should not reach here
+    }
+
+    private static bool IsTransient(AmazonS3Exception ex)
+    {
+        return ex.StatusCode == System.Net.HttpStatusCode.InternalServerError ||
+               ex.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable ||
+               ex.StatusCode == System.Net.HttpStatusCode.GatewayTimeout ||
+               ex.ErrorCode == "SlowDown" ||
+               ex.ErrorCode == "Throttling" ||
+               ex.ErrorCode == "RequestTimeout";
+    }
+
     private async Task<string> UploadToS3Async(string filePath, S3Configuration config)
     {
-        using var s3Client = CreateS3Client(config);
-        var fileName = Path.GetFileName(filePath);
-        var key = Path.Combine(config.ObjectKeyPrefix, fileName).Replace("\\", "/");
-
-        var request = new PutObjectRequest
+        return await ExecuteWithRetryAsync(async () =>
         {
-            BucketName = config.BucketName,
-            Key = key,
-            FilePath = filePath,
-            ServerSideEncryptionMethod = config.EnableServerSideEncryption ? ServerSideEncryptionMethod.AES256 : null,
-            StorageClass = S3StorageClass.FindValue(
-                string.IsNullOrWhiteSpace(config.StorageClass) ? "STANDARD" : config.StorageClass)
-        };
+            using var s3Client = CreateS3Client(config);
+            var fileName = Path.GetFileName(filePath);
+            var key = Path.Combine(config.ObjectKeyPrefix, fileName).Replace("\\", "/");
 
-        await s3Client.PutObjectAsync(request);
-        _logger.LogInformation("Successfully uploaded backup to S3: {Key}", key);
+            var request = new PutObjectRequest
+            {
+                BucketName = config.BucketName,
+                Key = key,
+                FilePath = filePath,
+                ServerSideEncryptionMethod = config.EnableServerSideEncryption ? ServerSideEncryptionMethod.AES256 : null,
+                StorageClass = S3StorageClass.FindValue(
+                    string.IsNullOrWhiteSpace(config.StorageClass) ? "STANDARD" : config.StorageClass)
+            };
 
-        return key;
+            await s3Client.PutObjectAsync(request);
+            _logger.LogInformation("Successfully uploaded backup to S3: {Key}", key);
+
+            return key;
+        });
     }
 
     private async Task DownloadFromS3Async(string s3Key, string localPath, S3Configuration config)
