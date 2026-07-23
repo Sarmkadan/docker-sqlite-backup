@@ -1,6 +1,7 @@
 #nullable enable
 // Author: Vladyslav Zaiets
 
+using DockerSqliteBackup.Constants;
 using DockerSqliteBackup.Data;
 using DockerSqliteBackup.Domain;
 using DockerSqliteBackup.Exceptions;
@@ -132,16 +133,30 @@ public sealed class RotationService : IRotationService
         {
             var backup = backupsList[i];
 
+            // Skip failed backups if configured to delete them
             if (policy.DeleteFailedBackups && !backup.IsSuccess)
             {
                 backupsToDelete.Add(backup);
                 continue;
             }
 
-            if (policy.ShouldRotate(backupsList.Count, backup.StartedAt, !backup.IsSuccess))
+            // Skip backups that don't meet rotation criteria
+            if (!policy.ShouldRotate(backupsList.Count, backup.StartedAt, !backup.IsSuccess))
             {
-                backupsToDelete.Add(backup);
+                continue;
             }
+
+            // If verification is required before deletion and backup is not verified, skip deletion
+            if (policy.VerifyBeforeDeletion && backup.Status != (int)BackupStatus.VerifiedSuccess)
+            {
+                _logger.LogInformation(
+                    "Skipping deletion of backup {BackupId} for schedule {ScheduleId} - backup is not verified and VerifyBeforeDeletion is enabled",
+                    backup.Id,
+                    scheduleId);
+                continue;
+            }
+
+            backupsToDelete.Add(backup);
         }
 
         return backupsToDelete;

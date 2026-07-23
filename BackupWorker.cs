@@ -132,7 +132,8 @@ public class BackupWorker : BackgroundService
         {
             _logger.LogWarning(
                 "Skipping backup for schedule {ScheduleId} - max concurrent backups reached ({Count})",
-                schedule.Id, _appSettings.MaxConcurrentBackups);
+                schedule.Id,
+                _appSettings.MaxConcurrentBackups);
             return;
         }
 
@@ -165,7 +166,7 @@ public class BackupWorker : BackgroundService
                         "Backup completed for {DatabaseName}: {SizeMb:F1} MB in {DurationSec:F1}s — {BackupPath}",
                         schedule.Name, sizeMb, durationSec, result.BackupFilePath);
 
-                    // Verify if enabled
+                    // Verify if enabled - verification must pass before rotation
                     if (schedule.VerifyAfterBackup)
                     {
                         _logger.LogInformation("Starting verification for backup {BackupId}",
@@ -179,21 +180,34 @@ public class BackupWorker : BackgroundService
                             result.VerifiedAt = DateTime.UtcNow;
                             _logger.LogInformation("Verification successful for backup {BackupId}",
                                 result.Id);
+
+                            // Execute rotation only after successful verification
+                            var deletedCount = await _rotationService.ExecuteRotationAsync(schedule.Id);
+                            if (deletedCount > 0)
+                            {
+                                _logger.LogInformation("Rotation deleted {DeletedCount} old backups for schedule {ScheduleId}",
+                                    deletedCount, schedule.Id);
+                            }
                         }
                         else
                         {
                             result.Status = (int)BackupStatus.VerificationFailed;
                             _logger.LogError("Verification failed for backup {BackupId}: {Reason}",
                                 result.Id, verification.StatusMessage);
+
+                            // Do NOT rotate when verification fails - preserve all existing backups
+                            _logger.LogWarning("Skipping rotation for schedule {ScheduleId} due to verification failure", schedule.Id);
                         }
                     }
-
-                    // Execute rotation
-                    var deletedCount = await _rotationService.ExecuteRotationAsync(schedule.Id);
-                    if (deletedCount > 0)
+                    else
                     {
-                        _logger.LogInformation("Rotation deleted {DeletedCount} old backups for schedule {ScheduleId}",
-                            deletedCount, schedule.Id);
+                        // No verification, still execute rotation
+                        var deletedCount = await _rotationService.ExecuteRotationAsync(schedule.Id);
+                        if (deletedCount > 0)
+                        {
+                            _logger.LogInformation("Rotation deleted {DeletedCount} old backups for schedule {ScheduleId}",
+                                deletedCount, schedule.Id);
+                        }
                     }
 
                     // Update schedule's last backup time
@@ -210,7 +224,8 @@ public class BackupWorker : BackgroundService
             catch (OperationCanceledException)
             {
                 _logger.LogError("Backup timeout for schedule {ScheduleId} after {TimeoutSeconds} seconds",
-                    schedule.Id, _appSettings.BackupTimeoutSeconds);
+                    schedule.Id,
+                    _appSettings.BackupTimeoutSeconds);
                 job.MarkCompleted((int)BackupStatus.Failed);
             }
             catch (Exception ex)
