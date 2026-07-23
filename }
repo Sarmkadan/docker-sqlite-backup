@@ -1,2 +1,2 @@
 
-This file includes 7 test methods that cover the happy path, edge cases, and error paths for the `ToJson`, `FromJson`, and `TryFromJson` methods. The tests ensure that the methods behave as expected and handle null inputs, empty collections, and boundary values correctly.
+This file includes 6 test methods that cover the happy path, edge cases, and error paths for the `MetricsEventListener` class. The tests ensure that the class behaves as expected and handles null inputs, empty collections, and boundary values correctly.
