@@ -39,8 +39,11 @@ USER backup
 
 EXPOSE 8080
 
+# The 'healthcheck' subcommand evaluates the persisted health-status.json file
+# (last BackupCompletedEvent/BackupFailedEvent/RestoreVerificationCompletedEvent)
+# without starting the full host. It exits 0 when healthy, 1 otherwise.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --quiet --tries=1 --spider http://localhost:8080/health || exit 1
+    CMD ["dotnet", "docker-sqlite-backup.dll", "healthcheck"]
 
 ENTRYPOINT ["dotnet", "docker-sqlite-backup.dll"]
 
