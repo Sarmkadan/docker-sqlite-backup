@@ -1,8 +1,2 @@
 
-## Notes
-
-- **Null handling** – All static methods validate their inputs. Passing `null` to `ToJson` or `FromJson` results in an `ArgumentNullException` or `ArgumentException`, respectively. `TryFromJson` treats a `null` or empty string as a failure and returns `false` without throwing.
-- **Version tolerance** – The JSON format includes property names that match the public members of `FileSystemUtilityConfig`. Adding new properties in future releases will not break existing deserialization; unknown properties are ignored.
-- **Thread safety** – The static methods are stateless and therefore thread‑safe. Instance properties (`MaxRetries`, `RetryDelayMultiplier`, `Recursive`, `DefaultSearchPattern`) are not protected by synchronization primitives; callers should ensure external coordination when mutating a shared `FileSystemUtilityConfig` instance.
-- **Performance** – Serialisation uses the default `System.Text.Json` serializer. For large configurations, consider reusing a `JsonSerializerOptions` instance to avoid repeated allocations.
-- **Error propagation** – `FromJson` throws on malformed input to surface errors early, while `TryFromJson` provides a non‑exceptional path for scenarios where malformed data is expected (e.g., reading user‑provided files).
+This file includes 7 test methods that cover the happy path, edge cases, and error paths for the `ToJson`, `FromJson`, and `TryFromJson` methods. The tests ensure that the methods behave as expected and handle null inputs, empty collections, and boundary values correctly.
