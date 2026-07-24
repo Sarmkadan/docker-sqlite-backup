@@ -8,9 +8,6 @@ namespace DockerSqliteBackup.Exceptions;
 /// </summary>
 public class BackupException : DockerSqliteBackupException
 {
-    /// <summary>Gets or sets the backup ID associated with the error.</summary>
-    public Guid? BackupId { get; }
-
     /// <summary>Gets or sets the schedule ID associated with the error.</summary>
     public Guid? ScheduleId { get; }
 
@@ -48,8 +45,16 @@ public class BackupException : DockerSqliteBackupException
 /// </summary>
 public class DatabaseAccessException : BackupException
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DatabaseAccessException"/> class.
+    /// </summary>
+    /// <param name="databasePath">The path of the database that could not be accessed.</param>
+    /// <param name="innerException">The exception that caused the access failure.</param>
     public DatabaseAccessException(string databasePath, Exception innerException)
-        : base($"Failed to access database: {databasePath}", innerException) { }
+        : base($"Failed to access database: {databasePath}", innerException)
+    {
+        DatabasePath = databasePath;
+    }
 }
 
 /// <summary>

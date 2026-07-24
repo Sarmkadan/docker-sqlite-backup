@@ -6,7 +6,12 @@ using System.Text.Json.Serialization;
 namespace DockerSqliteBackup.Exceptions;
 
 /// <summary>
-/// Provides System.Text.Json serialization extensions for <see cref="DockerSqliteBackupException"/>.
+/// Provides System.Text.Json serialization extensions for <see cref="DockerSqliteBackupException"/> and
+/// every derived exception type in the hierarchy (storage, verification, validation, configuration,
+/// schedule and rotation exceptions). Polymorphic serialization is driven by the
+/// <see cref="JsonPolymorphicAttribute"/>/<see cref="JsonDerivedTypeAttribute"/> declarations on
+/// <see cref="DockerSqliteBackupException"/>, so a single set of members here replaces the previous
+/// per-type serialization helpers.
 /// </summary>
 public static class DockerSqliteBackupExceptionJsonExtensions
 {
