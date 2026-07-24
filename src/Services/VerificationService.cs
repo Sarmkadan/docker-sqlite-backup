@@ -7,6 +7,7 @@ using DockerSqliteBackup.Configuration;
 using DockerSqliteBackup.Constants;
 using DockerSqliteBackup.Data;
 using DockerSqliteBackup.Domain;
+using DockerSqliteBackup.Events;
 using DockerSqliteBackup.Exceptions;
 using DockerSqliteBackup.Utilities;
 using Microsoft.Data.Sqlite;
@@ -25,15 +26,18 @@ public sealed class VerificationService : IVerificationService
     private readonly IBackupRepository _repository;
     private readonly AppSettings _appSettings;
     private readonly ILogger<VerificationService> _logger;
+    private readonly IBackupEventPublisher? _eventPublisher;
 
     public VerificationService(
         IBackupRepository repository,
         AppSettings appSettings,
-        ILogger<VerificationService> logger)
+        ILogger<VerificationService> logger,
+        IBackupEventPublisher? eventPublisher = null)
     {
         _repository = repository;
         _appSettings = appSettings;
         _logger = logger;
+        _eventPublisher = eventPublisher;
     }
 
     /// <summary>
@@ -83,12 +87,44 @@ public sealed class VerificationService : IVerificationService
 
             verification.MarkCompleted(true, "Backup verification successful");
             _logger.LogInformation("Backup verification completed successfully for {BackupId}", backup.Id);
+
+            if (_eventPublisher is not null)
+            {
+                await _eventPublisher.PublishAsync(
+                    new RestoreVerificationCompletedEvent
+                    {
+                        BackupResultId = backup.Id,
+                        IsValid = true,
+                        ValidationMessage = verification.StatusMessage
+                    },
+                    cancellationToken);
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Backup verification failed for {BackupId}", backup.Id);
             verification.MarkCompleted(false, $"Verification failed: {ex.Message}");
             verification.ErrorMessage = ex.Message;
+
+            if (_eventPublisher is not null)
+            {
+                var failureStage = ex switch
+                {
+                    IntegrityCheckFailedException => RestoreVerificationFailureStage.IntegrityCheckFailed,
+                    RestoreVerificationFailedException => RestoreVerificationFailureStage.RestoreFailed,
+                    BackupCorruptedException => RestoreVerificationFailureStage.ChecksumMismatch,
+                    _ => RestoreVerificationFailureStage.Unknown
+                };
+
+                await _eventPublisher.PublishAsync(
+                    new RestoreVerificationFailedEvent
+                    {
+                        BackupResultId = backup.Id,
+                        FailureStage = failureStage,
+                        ExceptionMessage = ex.Message
+                    },
+                    cancellationToken);
+            }
         }
         finally
         {

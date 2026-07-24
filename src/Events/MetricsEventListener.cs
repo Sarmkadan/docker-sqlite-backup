@@ -17,12 +17,29 @@ public class MetricsEventListener : IBackupEventListener
     private long _failedBackups;
     private long _totalBytes;
     private double _totalDurationSeconds;
+    private long _restoreVerificationFailures;
     private readonly Dictionary<string, int> _failureReasons = [];
     private readonly ILogger<MetricsEventListener> _logger;
 
     public MetricsEventListener(ILogger<MetricsEventListener> logger)
     {
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Gets the number of restore verifications that have failed, tracked separately from
+    /// backup failures so monitoring can distinguish "backup never ran" from "backup ran but
+    /// the restore verification failed".
+    /// </summary>
+    public long RestoreVerificationFailures
+    {
+        get
+        {
+            lock (_metricsLock)
+            {
+                return _restoreVerificationFailures;
+            }
+        }
     }
 
     /// <summary>
@@ -38,6 +55,9 @@ public class MetricsEventListener : IBackupEventListener
             case BackupFailedEvent failedEvent:
                 RecordBackupFailure(failedEvent);
                 break;
+            case RestoreVerificationFailedEvent verificationFailedEvent:
+                RecordRestoreVerificationFailure(verificationFailedEvent);
+                break;
         }
 
         await Task.CompletedTask;
@@ -50,6 +70,7 @@ public class MetricsEventListener : IBackupEventListener
     {
         yield return "backup.completed";
         yield return "backup.failed";
+        yield return "restore.verification.failed";
     }
 
     /// <summary>
@@ -79,6 +100,7 @@ public class MetricsEventListener : IBackupEventListener
                 TotalBytesTransferred = _totalBytes,
                 AverageDurationSeconds = avgDuration,
                 FailureReasons = new Dictionary<string, int>(_failureReasons),
+                RestoreVerificationFailures = _restoreVerificationFailures,
                 CapturedAt = DateTime.UtcNow
             };
         }
@@ -96,6 +118,7 @@ public class MetricsEventListener : IBackupEventListener
             _failedBackups = 0;
             _totalBytes = 0;
             _totalDurationSeconds = 0;
+            _restoreVerificationFailures = 0;
             _failureReasons.Clear();
             _logger.LogInformation("Metrics have been reset");
         }
@@ -139,6 +162,20 @@ public class MetricsEventListener : IBackupEventListener
         }
     }
 
+    private void RecordRestoreVerificationFailure(RestoreVerificationFailedEvent @event)
+    {
+        lock (_metricsLock)
+        {
+            _restoreVerificationFailures++;
+
+            _logger.LogWarning(
+                "Restore verification failed: {Stage} for backup {BackupResultId}: {ExceptionMessage}",
+                @event.FailureStage,
+                @event.BackupResultId,
+                @event.ExceptionMessage);
+        }
+    }
+
     private static string ExtractErrorReason(string errorMessage)
     {
         if (string.IsNullOrEmpty(errorMessage))
@@ -164,6 +201,7 @@ public class BackupMetrics
     public long TotalBytesTransferred { get; set; }
     public double AverageDurationSeconds { get; set; }
     public Dictionary<string, int> FailureReasons { get; set; } = [];
+    public long RestoreVerificationFailures { get; set; }
     public DateTime CapturedAt { get; set; }
 
     /// <summary>

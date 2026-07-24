@@ -125,6 +125,47 @@ public class RestoreVerificationCompletedEvent : BackupEvent
 }
 
 /// <summary>
+/// Identifies which stage of the restore verification pipeline produced a
+/// <see cref="RestoreVerificationFailedEvent"/>.
+/// </summary>
+public enum RestoreVerificationFailureStage
+{
+    /// <summary>The failure occurred while validating a restored backup's checksum.</summary>
+    ChecksumMismatch,
+
+    /// <summary>The failure occurred while restoring the backup to a temporary location.</summary>
+    RestoreFailed,
+
+    /// <summary>The failure occurred during the SQLite <c>PRAGMA integrity_check</c> step.</summary>
+    IntegrityCheckFailed,
+
+    /// <summary>The failure occurred for a reason not covered by the other verification stages.</summary>
+    Unknown
+}
+
+/// <summary>
+/// Event fired when restoration verification fails, whether due to a checksum mismatch,
+/// a failed restore, or a failed integrity check. Emitted so monitoring can distinguish
+/// "verification never ran" from "verification ran and failed".
+/// </summary>
+public class RestoreVerificationFailedEvent : BackupEvent
+{
+    /// <summary>Gets or sets the identifier of the backup that failed verification.</summary>
+    public Guid BackupResultId { get; set; }
+
+    /// <summary>Gets or sets the pipeline stage at which verification failed.</summary>
+    public RestoreVerificationFailureStage FailureStage { get; set; } = RestoreVerificationFailureStage.Unknown;
+
+    /// <summary>Gets or sets the message of the exception that caused the failure.</summary>
+    public string ExceptionMessage { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RestoreVerificationFailedEvent"/> class.
+    /// </summary>
+    public RestoreVerificationFailedEvent() : base("restore.verification.failed") { }
+}
+
+/// <summary>
 /// Event fired for health status changes.
 /// </summary>
 public class HealthCheckEvent : BackupEvent

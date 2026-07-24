@@ -87,6 +87,7 @@ public static class NotificationEventListenerExtensions
             "backup.retry" => new BackupRetryEvent(),
             "schedule.created" => new ScheduleCreatedEvent(),
             "restore.verification.completed" => new RestoreVerificationCompletedEvent(),
+            "restore.verification.failed" => new RestoreVerificationFailedEvent(),
             _ => throw new InvalidOperationException($"Event type '{eventType}' is not supported by this listener")
         };
 
