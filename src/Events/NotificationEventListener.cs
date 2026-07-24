@@ -60,6 +60,9 @@ public class NotificationEventListener : IBackupEventListener
             case RestoreVerificationCompletedEvent verificationEvent:
                 await HandleVerificationCompletedAsync(verificationEvent, cancellationToken);
                 break;
+            case RestoreVerificationFailedEvent verificationFailedEvent:
+                await HandleVerificationFailedAsync(verificationFailedEvent, cancellationToken);
+                break;
         }
     }
 
@@ -73,6 +76,7 @@ public class NotificationEventListener : IBackupEventListener
         yield return "backup.retry";
         yield return "schedule.created";
         yield return "restore.verification.completed";
+        yield return "restore.verification.failed";
     }
 
     /// <summary>
@@ -134,6 +138,16 @@ public class NotificationEventListener : IBackupEventListener
     {
         var title = @event.IsValid ? "✓ Verification Passed" : "✗ Verification Failed";
         var message = @event.ValidationMessage ?? "Restore verification completed";
+
+        await SendNotificationsAsync(title, message, ct);
+    }
+
+    private async Task HandleVerificationFailedAsync(
+        RestoreVerificationFailedEvent @event,
+        CancellationToken ct)
+    {
+        var title = "✗ Verification Failed";
+        var message = $"Restore verification failed at stage {@event.FailureStage}: {@event.ExceptionMessage}";
 
         await SendNotificationsAsync(title, message, ct);
     }

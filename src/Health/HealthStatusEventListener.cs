@@ -68,6 +68,15 @@ public class HealthStatusEventListener : IBackupEventListener
                         snapshot.LastRestoreVerificationMessage = verification.ValidationMessage;
                     });
                     break;
+                case RestoreVerificationFailedEvent verificationFailed:
+                    _store.Update(snapshot =>
+                    {
+                        snapshot.LastRestoreVerificationAt = verificationFailed.OccurredAt;
+                        snapshot.LastRestoreVerificationPassed = false;
+                        snapshot.LastRestoreVerificationMessage =
+                            $"[{verificationFailed.FailureStage}] {verificationFailed.ExceptionMessage}";
+                    });
+                    break;
             }
         }
         catch (IOException ex)
@@ -87,6 +96,7 @@ public class HealthStatusEventListener : IBackupEventListener
         yield return "backup.completed";
         yield return "backup.failed";
         yield return "restore.verification.completed";
+        yield return "restore.verification.failed";
     }
 
     /// <summary>
