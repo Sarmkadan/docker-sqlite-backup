@@ -140,9 +140,8 @@ public class MemoryCacheService : ICacheService, IDisposable
     /// </summary>
     public T GetOrSet<T>(string key, Func<T> factory, TimeSpan? expiration = null)
     {
-        var cached = Get<T>(key);
-        if (cached  is not null)
-            return cached;
+        if (Exists(key))
+            return Get<T>(key)!;
 
         var value = factory();
         Set(key, value, expiration);
@@ -158,9 +157,8 @@ public class MemoryCacheService : ICacheService, IDisposable
         TimeSpan? expiration = null,
         CancellationToken cancellationToken = default)
     {
-        var cached = Get<T>(key);
-        if (cached  is not null)
-            return cached;
+        if (Exists(key))
+            return Get<T>(key)!;
 
         var value = await factory(cancellationToken);
         await SetAsync(key, value, expiration, cancellationToken);
