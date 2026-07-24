@@ -1,269 +1,167 @@
 # MemoryCacheService
 
-Provides an in‑memory caching layer backed by `Microsoft.Extensions.Caching.Memory.IMemoryCache`. The service wraps common cache operations (get, set, remove, clear) and adds helper methods for atomic “get‑or‑set” patterns, both synchronously and asynchronously. It is intended for scenarios where temporary data must be shared across components within a single process, such as configuration lookup results, expensive computation outputs, or intermediate backup metadata.
+Provides an in-memory caching layer implementing `ICacheService`, backed by a `ConcurrentDictionary<string, CacheEntry>` with a background `Timer` that periodically sweeps expired entries. It is intended for single-instance applications and development scenarios where temporary data must be shared across components within a single process, such as configuration lookup results, expensive computation outputs, or intermediate backup metadata.
+
+Namespace: `DockerSqliteBackup.Caching`
 
 ## API
 
-### MemoryCacheService()
+### MemoryCacheService(TimeSpan? cleanupInterval = null)
 
-**Purpose**  
-Initializes a new instance of the cache service with default options.
+**Purpose**
+Initializes a new instance of the cache service and starts the background cleanup timer.
 
-**Parameters**  
-None.
+**Parameters**
+- `cleanupInterval` – Optional interval between expired-entry sweeps. Defaults to 5 minutes.
 
-**Return**  
+**Return**
 A new `MemoryCacheService` instance.
 
-**Throws**  
+**Throws**
 None.
 
 ### Get<T>(string key)
 
-**Purpose**  
-Retrieves a cached value of type `T` associated with `key`.
+**Purpose**
+Retrieves and deserializes a cached value of type `T` associated with `key`.
 
-**Parameters**  
-- `key` – The cache key. Must not be `null`.
+**Parameters**
+- `key` – The cache key.
 
-**Return**  
-The cached value if present and compatible with `T`; otherwise `null`.
+**Return**
+The cached value if present and not expired; otherwise `default(T)`.
 
-**Throws**  
-- `ArgumentNullException` if `key` is `null`.
+**Throws**
+None directly; deserialization failures are swallowed and `default(T)` is returned.
 
-### GetAsync<T>(string key)
+### GetAsync<T>(string key, CancellationToken cancellationToken = default)
 
-**Purpose**  
-Asynchronously retrieves a cached value of type `T` associated with `key`.
+**Purpose**
+Asynchronous wrapper around `Get<T>`.
 
-**Parameters**  
-- `key` – The cache key. Must not be `null`.
+**Return**
+A `Task<T?>` that completes synchronously with the cached value or `default(T)`.
 
-**Return**  
-A `Task<T?>` that completes with the cached value or `null`.
+### Set<T>(string key, T value, TimeSpan? expiration = null)
 
-**Throws**  
-- `ArgumentNullException` if `key` is `null` (exception thrown synchronously before the task is returned).
+**Purpose**
+Serializes `value` to JSON and inserts or overwrites the cache entry for `key`.
 
-### Set<T>(string key, T value, TimeSpan? slidingExpiration = null, DateTimeOffset? absoluteExpiration = null)
+**Parameters**
+- `key` – The cache key.
+- `value` – The object to cache. May be `null`.
+- `expiration` – Optional relative expiration; if omitted, the entry never expires on its own (it can still be removed via `Remove`/`Clear`).
 
-**Purpose**  
-Inserts or updates a cache entry.
-
-**Parameters**  
-- `key` – The cache key. Must not be `null` or empty.  
-- `value` – The object to cache. May be `null`.  
-- `slidingExpiration` – Optional sliding expiration interval. If specified, must be non‑negative.  
-- `absoluteExpiration` – Optional absolute expiration point. If specified, must be in the future.
-
-**Return**  
+**Return**
 `void`.
 
-**Throws**  
-- `ArgumentNullException` if `key` is `null`.  
-- `ArgumentException` if `key` is empty.  
-- `ArgumentOutOfRangeException` if `slidingExpiration` is negative.  
-- `InvalidOperationException` if both `slidingExpiration` and `absoluteExpiration` are supplied (the implementation chooses to require exactly one).
+**Throws**
+None.
 
-### SetAsync<T>(string key, T value, TimeSpan? slidingExpiration = null, DateTimeOffset? absoluteExpiration = null)
+### SetAsync<T>(string key, T value, TimeSpan? expiration = null, CancellationToken cancellationToken = default)
 
-**Purpose**  
-Asynchronously inserts or updates a cache entry.
+**Purpose**
+Asynchronous wrapper around `Set<T>`.
 
-**Parameters**  
-Same as `Set<T>`.
-
-**Return**  
-A `Task` representing the operation.
-
-**Throws**  
-Same exceptions as `Set<T>`; they are thrown synchronously before the task is returned.
+**Return**
+A completed `Task`.
 
 ### Remove(string key)
 
-**Purpose**  
-Removes the entry associated with `key` from the cache.
+**Purpose**
+Removes the entry associated with `key`, if any.
 
-**Parameters**  
-- `key` – The cache key. Must not be `null`.
-
-**Return**  
+**Return**
 `void`.
 
-**Throws**  
-- `ArgumentNullException` if `key` is `null`.
+### RemoveAsync(string key, CancellationToken cancellationToken = default)
 
-### RemoveAsync(string key)
+**Purpose**
+Asynchronous wrapper around `Remove`.
 
-**Purpose**  
-Asynchronously removes the entry associated with `key`.
-
-**Parameters**  
-- `key` – The cache key. Must not be `null`.
-
-**Return**  
-A `Task` representing the operation.
-
-**Throws**  
-- `ArgumentNullException` if `key` is `null` (exception thrown synchronously).
+**Return**
+A completed `Task`.
 
 ### Clear()
 
-**Purpose**  
+**Purpose**
 Removes all entries from the cache.
 
-**Parameters**  
-None.
-
-**Return**  
+**Return**
 `void`.
-
-**Throws**  
-None.
 
 ### Exists(string key)
 
-**Purpose**  
-Determines whether a non‑expired entry exists for `key`.
+**Purpose**
+Determines whether a non-expired entry exists for `key`. Lazily removes the entry if it has expired.
 
-**Parameters**  
-- `key` – The cache key. Must not be `null`.
+**Return**
+`true` if a live entry is present; otherwise `false`.
 
-**Return**  
-`true` if an entry is present and has not expired; otherwise `false`.
+### GetOrSet<T>(string key, Func<T> factory, TimeSpan? expiration = null)
 
-**Throws**  
-- `ArgumentNullException` if `key` is `null`.
+**Purpose**
+Returns the cached value if present and not expired; otherwise invokes `factory`, caches its result, and returns it.
 
-### GetOrSet<T>(string key, Func<T> factory, TimeSpan? slidingExpiration = null, DateTimeOffset? absoluteExpiration = null)
-
-**Purpose**  
-Returns the cached value if present; otherwise invokes `factory` to create a value, caches it, and returns the result. The operation is atomic with respect to other threads.
-
-**Parameters**  
-- `key` – The cache key. Must not be `null` or empty.  
-- `factory` – A delegate that creates the value when the key is missing. Must not be `null`.  
-- `slidingExpiration` – Optional sliding expiration for the newly cached value.  
-- `absoluteExpiration` – Optional absolute expiration for the newly cached value.
-
-**Return**  
+**Return**
 The cached or newly created value of type `T`.
 
-**Throws**  
-- `ArgumentNullException` if `key` or `factory` is `null`.  
-- `ArgumentException` if `key` is empty.  
-- `ArgumentOutOfRangeException` if `slidingExpiration` is negative.  
-- `InvalidOperationException` if both `slidingExpiration` and `absoluteExpiration` are supplied.  
-- Any exception thrown by `factory` is propagated unchanged.
+**Throws**
+Any exception thrown by `factory` is propagated unchanged.
 
-### GetOrSetAsync<T>(string key, Func<Task<T>> factory, TimeSpan? slidingExpiration = null, DateTimeOffset? absoluteExpiration = null)
+### GetOrSetAsync<T>(string key, Func<CancellationToken, Task<T>> factory, TimeSpan? expiration = null, CancellationToken cancellationToken = default)
 
-**Purpose**  
-Asynchronously returns the cached value if present; otherwise awaits `factory` to produce a value, caches it, and returns the result. The operation is atomic with respect to other threads.
+**Purpose**
+Asynchronous counterpart of `GetOrSet`.
 
-**Parameters**  
-- `key` – The cache key. Must not be `null` or empty.  
-- `factory` – An async delegate that creates the value when the key is missing. Must not be `null`.  
-- `slidingExpiration` – Optional sliding expiration for the newly cached value.  
-- `absoluteExpiration` – Optional absolute expiration for the newly cached value.
-
-**Return**  
+**Return**
 A `Task<T>` that completes with the cached or newly created value.
 
-**Throws**  
-- `ArgumentNullException` if `key` or `factory` is `null` (exception thrown synchronously).  
-- `ArgumentException` if `key` is empty.  
-- `ArgumentOutOfRangeException` if `slidingExpiration` is negative.  
-- `InvalidOperationException` if both `slidingExpiration` and `absoluteExpiration` are supplied.  
-- Any exception thrown by `factory` is propagated through the returned task.
+**Throws**
+Any exception thrown by `factory` is propagated through the returned task.
 
-### Value
+### Dispose()
 
-**Purpose**  
-Gets the most recently accessed cache entry as a string. If the entry is not a string or no entry was accessed, returns `null`.
+**Purpose**
+Stops the background cleanup timer and releases its resources. Safe to call multiple times.
 
-**Parameters**  
-None.
-
-**Return**  
-`string` representation of the last accessed cached value, or `null`.
-
-**Throws**  
-None.
-
-### ExpiresAt
-
-**Purpose**  
-Gets the absolute expiration timestamp of the most recently accessed cache entry, if the entry uses an absolute expiration policy; otherwise returns `null`.
-
-**Parameters**  
-None.
-
-**Return**  
-`DateTime?` representing the absolute expiration moment, or `null` for sliding‑expired, non‑expiring, or absent entries.
-
-**Throws**  
-None.
-
-### IsExpired
-
-**Purpose**  
-Indicates whether the most recently accessed cache entry has expired.
-
-**Parameters**  
-None.
-
-**Return**  
-`true` if the entry does not exist or is expired; `false` if the entry exists and has not expired.
-
-**Throws**  
-None.
+**Return**
+`void`.
 
 ## Usage
 
-### Synchronous get‑or‑set pattern
+### Synchronous get-or-set pattern
 
 ```csharp
-var cache = new MemoryCacheService();
+using var cache = new MemoryCacheService();
 
-// Retrieve a configuration object, creating it on first miss.
 var config = cache.GetOrSet(
     key: "AppConfig",
-    factory: () =>
-    {
-        // Expensive operation – e.g., read from file or remote service.
-        return LoadConfigurationFromFile();
-    },
-    slidingExpiration: TimeSpan.FromMinutes(10));
+    factory: () => LoadConfigurationFromFile(),
+    expiration: TimeSpan.FromMinutes(10));
 
-// Use the config object...
 Process(config);
 ```
 
 ### Asynchronous caching with fallback
 
 ```csharp
-private readonly MemoryCacheService _cache = new MemoryCacheService();
+private readonly MemoryCacheService _cache = new();
 
-public async Task<BackupMetadata> GetLatestMetadataAsync()
+public async Task<BackupMetadata> GetLatestMetadataAsync(CancellationToken ct)
 {
     return await _cache.GetOrSetAsync(
         key: "LatestBackupMetadata",
-        factory: async () =>
-        {
-            // Simulate an I/O bound operation.
-            return await BackupRepository.FetchLatestMetadataAsync();
-        },
-        absoluteExpiration: DateTimeOffset.UtcNow.AddHours(1));
+        factory: cancellationToken => BackupRepository.FetchLatestMetadataAsync(cancellationToken),
+        expiration: TimeSpan.FromHours(1),
+        cancellationToken: ct);
 }
 ```
 
 ## Notes
 
-- **Thread safety** – All public members are safe to call concurrently from multiple threads. Internal synchronization ensures that `GetOrSet`/`GetOrSetAsync` invoke the factory only once even when several threads race on the same missing key.
-- **Null values** – The cache permits storing `null` values. `Get<T>` will return `null` for a deliberately cached null, making it indistinguishable from a missing entry; use `Exists` to differentiate.
-- **Expiration policies** – Only one of `slidingExpiration` or `absoluteExpiration` may be supplied; supplying both results in an `InvalidOperationException`. If neither is supplied, the entry lives until the cache is cleared or evicted under memory pressure.
-- **Property semantics** – `Value`, `ExpiresAt`, and `IsExpired` reflect the state of the *last* key accessed via any of the get‑or‑set methods. They are primarily intended for debugging or diagnostic scenarios and should not be relied upon for programmatic logic that depends on a specific key.
-- **Memory pressure** – The underlying `IMemoryCache` may evict entries when the system runs low on memory, regardless of expiration settings. Callers should be prepared to handle a missing entry after a `Set` operation if the cache aggressively purges data.
-- **Exception propagation** – Exceptions thrown by user‑supplied factories in `GetOrSet`/`GetOrSetAsync` are not caught by the cache; they bubble up to the caller, leaving the cache unchanged for the requested key.
+- **Serialization** – Values are stored as JSON via `System.Text.Json`. Types must be JSON-serializable; failed deserialization is treated as a cache miss (`default(T)` is returned) rather than throwing.
+- **Expiration** – Only a single relative `expiration` `TimeSpan` is supported per entry. Entries without an expiration are never swept by the background timer, but can still be removed explicitly.
+- **Lazy + background eviction** – Expired entries are removed both lazily (on `Get`/`Exists`) and periodically by the background cleanup timer.
+- **Disposal** – `MemoryCacheService` implements `IDisposable`; dispose it (or wrap it in a `using` statement) to stop the cleanup timer when the cache is no longer needed.
+- **Thread safety** – Backed by `ConcurrentDictionary`, so all public members are safe to call concurrently from multiple threads.
