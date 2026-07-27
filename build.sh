@@ -1,0 +1,3 @@
+#!/bin/bash
+
+# ... rest of the script ...
