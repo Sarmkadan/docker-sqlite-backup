@@ -20,7 +20,8 @@ public static class DockerSqliteBackupExceptionJsonExtensions
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = false,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        ReferenceHandler = ReferenceHandler.IgnoreCycles
+        ReferenceHandler = ReferenceHandler.IgnoreCycles,
+        TypeInfoResolver = DockerSqliteBackupExceptionJsonContext.Default
     };
 
     /// <summary>
