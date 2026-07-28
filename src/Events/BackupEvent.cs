@@ -222,6 +222,18 @@ public class ScheduleCreatedEvent : BackupEvent
     /// <summary>Gets or sets the schedule that was created.</summary>
     public BackupSchedule Schedule { get; set; } = null!;
 
+    /// <summary>Gets the identifier of the newly created schedule.</summary>
+    /// <exception cref="InvalidOperationException">Thrown when <see cref="Schedule"/> is null.</exception>
+    public Guid ScheduleId => Schedule?.Id ?? throw new InvalidOperationException("Schedule must be set before accessing ScheduleId.");
+
+    /// <summary>Gets the name of the newly created schedule.</summary>
+    /// <exception cref="InvalidOperationException">Thrown when <see cref="Schedule"/> is null.</exception>
+    public string ScheduleName => Schedule?.Name ?? throw new InvalidOperationException("Schedule must be set before accessing ScheduleName.");
+
+    /// <summary>Gets the cron expression of the newly created schedule.</summary>
+    /// <exception cref="InvalidOperationException">Thrown when <see cref="Schedule"/> is null.</exception>
+    public string? ScheduleCronExpression => Schedule?.CronExpression;
+
     /// <summary>
     /// Initializes a new instance of <see cref="ScheduleCreatedEvent"/>.
     /// </summary>
@@ -235,6 +247,12 @@ public class ScheduleUpdatedEvent : BackupEvent
 {
     /// <summary>Gets or sets the identifier of the schedule being updated.</summary>
     public Guid ScheduleId { get; set; }
+
+    /// <summary>Gets or sets the new state of the schedule after the update.</summary>
+    public BackupSchedule NewSchedule { get; set; } = null!;
+
+    /// <summary>Gets or sets the previous state of the schedule before the update, if available.</summary>
+    public BackupSchedule? OldSchedule { get; set; }
 
     private Dictionary<string, object> _changes = [];
 
@@ -267,13 +285,12 @@ public class ScheduleUpdatedEvent : BackupEvent
 public class ScheduleDeletedEvent : BackupEvent
 {
     private string _scheduleName = string.Empty;
+    private string? _scheduleCronExpression;
 
     /// <summary>Gets or sets the identifier of the schedule being deleted.</summary>
     public Guid ScheduleId { get; set; }
 
-    /// <summary>
-    /// Gets or sets the name of the schedule being deleted.
-    /// </summary>
+    /// <summary>Gets or sets the name of the schedule being deleted.</summary>
     /// <exception cref="ArgumentException">Thrown when the value exceeds <see cref="ValidationConstants.MaxNameLength"/>.</exception>
     public string ScheduleName
     {
@@ -284,6 +301,22 @@ public class ScheduleDeletedEvent : BackupEvent
             if (value.Length > ValidationConstants.MaxNameLength)
                 throw new ArgumentException($"ScheduleName length exceeds {ValidationConstants.MaxNameLength}.", nameof(value));
             _scheduleName = value;
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the cron expression of the schedule being deleted.
+    /// This mirrors the property on <see cref="ScheduleCreatedEvent"/> and <see cref="ScheduleUpdatedEvent"/>.
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown when the value exceeds <see cref="ValidationConstants.MaxCronExpressionLength"/>.</exception>
+    public string? ScheduleCronExpression
+    {
+        get => _scheduleCronExpression;
+        set
+        {
+            if (value != null && value.Length > ValidationConstants.MaxCronExpressionLength)
+                throw new ArgumentException($"Cron expression length exceeds {ValidationConstants.MaxCronExpressionLength}.", nameof(value));
+            _scheduleCronExpression = value;
         }
     }
 
