@@ -1,2 +1,2 @@
 
-This test class covers the happy path for each major public method, edge cases, and error paths. It also tests the `GetElapsedDuration` method and the `IsSuccess` and `IsInProgress` properties.
+This test class covers the happy path for the `PerformHealthCheckAsync` method, as well as edge cases and error paths. It also tests the `ToString` method of the `ComponentHealth` and `HealthCheckResult` classes.
