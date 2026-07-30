@@ -1,5 +1,8 @@
 #nullable enable
 
+using System;
+using System.Collections.Generic;
+using System.Text;
 using DockerSqliteBackup.Constants;
 
 namespace DockerSqliteBackup.Domain;
@@ -91,6 +94,35 @@ public static class BackupJobExtensions
     }
 
     /// <summary>
+    /// Gets the raw <see cref="TimeSpan"/> representing the duration of the backup job.
+    /// </summary>
+    /// <param name="job">The backup job.</param>
+    /// <returns>The elapsed <see cref="TimeSpan"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="job"/> is null.</exception>
+    public static TimeSpan Duration(this BackupJob job)
+    {
+        ArgumentNullException.ThrowIfNull(job);
+        return job.GetElapsedTime();
+    }
+
+    /// <summary>
+    /// Determines whether the backup job can be retried.
+    /// </summary>
+    /// <param name="job">The backup job.</param>
+    /// <returns>True if the job is in a retry‑able state and has remaining retries; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="job"/> is null.</exception>
+    public static bool IsRetryable(this BackupJob job)
+    {
+        ArgumentNullException.ThrowIfNull(job);
+
+        // A job is retryable when it has failed (or verification failed) and still has retries left.
+        var isFailedState = job.Status is (int)BackupStatus.Failed or (int)BackupStatus.VerificationFailed;
+        var hasRetriesLeft = job.RetryCount < job.MaxRetries;
+
+        return isFailedState && hasRetriesLeft;
+    }
+
+    /// <summary>
     /// Gets the formatted retry count as a percentage of max retries.
     /// </summary>
     /// <param name="job">The backup job.</param>
@@ -148,6 +180,46 @@ public static class BackupJobExtensions
             (int)BackupStatus.VerificationFailed => true,
             _ => false
         };
+    }
+
+    /// <summary>
+    /// Returns a concise string suitable for audit logging.
+    /// </summary>
+    /// <param name="job">The backup job.</param>
+    /// <returns>A string containing key information about the job.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="job"/> is null.</exception>
+    public static string ToAuditString(this BackupJob job)
+    {
+        ArgumentNullException.ThrowIfNull(job);
+
+        var sb = new StringBuilder();
+
+        // Identifier (if present)
+        if (job.Id != null)
+        {
+            sb.Append($"Id={job.Id} ");
+        }
+
+        // Status name – fallback to numeric value if enum name cannot be resolved
+        var statusName = Enum.IsDefined(typeof(BackupStatus), job.Status)
+            ? Enum.GetName(typeof(BackupStatus), job.Status)
+            : job.Status.ToString();
+
+        sb.Append($"Status={statusName} ");
+
+        // Duration
+        sb.Append($"Duration={job.Duration():c} ");
+
+        // Retry progress
+        sb.Append($"Retries={job.GetRetryProgress()} ");
+
+        // Result presence
+        if (job.Result != null)
+        {
+            sb.Append($"Result={job.Result}");
+        }
+
+        return sb.ToString().TrimEnd();
     }
 
     private static string FormatTimeSpan(TimeSpan span)
