@@ -14,7 +14,7 @@ public class BackupException : DockerSqliteBackupException
     /// <summary>
     /// Initializes a new instance of the BackupException class.
     /// </summary>
-    public BackupException(string message) : base(message) { }
+    public BackupException(string message) : base(message) { } { }
 
     /// <summary>
     /// Initializes a new instance of the BackupException class with a backup ID.
