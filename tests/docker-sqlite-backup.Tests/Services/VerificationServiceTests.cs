@@ -13,6 +13,9 @@ using FileNotFoundException = System.IO.FileNotFoundException;
 
 namespace DockerSqliteBackup.Tests.Services;
 
+/// <summary>
+/// Contains unit tests for the <see cref="VerificationService"/> class.
+/// </summary>
 public class VerificationServiceTests : IDisposable
 {
     private readonly Mock<IBackupRepository> _mockRepository;
@@ -22,6 +25,10 @@ public class VerificationServiceTests : IDisposable
     private readonly string _tempDirectory;
     private readonly string _testDbPath;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VerificationServiceTests"/> class.
+    /// Sets up mock dependencies, creates a temporary directory, and initializes a test SQLite database.
+    /// </summary>
     public VerificationServiceTests()
     {
         _mockRepository = new Mock<IBackupRepository>();
