@@ -5,8 +5,15 @@ using ArgumentNullException = System.ArgumentNullException;
 
 namespace DockerSqliteBackup.Tests;
 
+/// <summary>
+/// Contains unit tests for the <see cref="StorageException"/> and its derived classes, 
+/// verifying correct initialization of messages, storage types, and inner exceptions.
+/// </summary>
 public class StorageExceptionTests
 {
+    /// <summary>
+    /// Verifies that the <see cref="StorageException"/> constructor correctly sets the exception message.
+    /// </summary>
     [Fact]
     public void StorageException_Constructor_WithMessage_ShouldSetMessage()
     {
@@ -22,6 +29,9 @@ public class StorageExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the <see cref="StorageException"/> constructor correctly sets the message and storage type.
+    /// </summary>
     [Fact]
     public void StorageException_Constructor_WithMessageAndStorageType_ShouldSetMessageAndStorageType()
     {
@@ -38,6 +48,9 @@ public class StorageExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the <see cref="StorageException"/> constructor correctly sets the message and inner exception.
+    /// </summary>
     [Fact]
     public void StorageException_Constructor_WithMessageAndInnerException_ShouldSetMessageAndInnerException()
     {
@@ -54,6 +67,9 @@ public class StorageExceptionTests
         exception.StorageType.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the <see cref="StorageException.StorageType"/> property is read-only.
+    /// </summary>
     [Fact]
     public void StorageException_StorageTypeProperty_ShouldBeReadOnly()
     {
@@ -65,6 +81,10 @@ public class StorageExceptionTests
         exception.StorageType.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the <see cref="StorageException"/> constructor handles null, empty, or whitespace messages gracefully.
+    /// </summary>
+    /// <param name="message">The message to test.</param>
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -80,6 +100,10 @@ public class StorageExceptionTests
         exception.StorageType.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the <see cref="StorageException"/> constructor handles null, empty, or whitespace storage types.
+    /// </summary>
+    /// <param name="storageType">The storage type to test.</param>
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -93,6 +117,9 @@ public class StorageExceptionTests
         exception.StorageType.Should().Be(storageType);
     }
 
+    /// <summary>
+    /// Verifies that the <see cref="S3StorageException"/> constructor correctly sets the message and storage type to "S3".
+    /// </summary>
     [Fact]
     public void S3StorageException_Constructor_WithMessage_ShouldSetMessageAndStorageTypeToS3()
     {
@@ -108,6 +135,9 @@ public class StorageExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the <see cref="S3StorageException"/> constructor correctly sets the message, inner exception, and storage type.
+    /// </summary>
     [Fact]
     public void S3StorageException_Constructor_WithMessageAndInnerException_ShouldSetMessageInnerExceptionAndStorageType()
     {
@@ -125,6 +155,9 @@ public class StorageExceptionTests
         exception.StorageType.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="S3StorageException"/> inherits from <see cref="StorageException"/>.
+    /// </summary>
     [Fact]
     public void S3StorageException_InheritsFromStorageException()
     {
@@ -138,6 +171,9 @@ public class StorageExceptionTests
         exception.Should().BeAssignableTo<StorageException>();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="S3StorageException.StorageType"/> is correctly set to "S3" for appropriate constructors.
+    /// </summary>
     [Fact]
     public void S3StorageException_StorageType_ShouldAlwaysBeS3()
     {
@@ -151,6 +187,9 @@ public class StorageExceptionTests
         exception2.StorageType.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the <see cref="LocalStorageException"/> constructor correctly sets the message and storage type to "Local".
+    /// </summary>
     [Fact]
     public void LocalStorageException_Constructor_WithMessage_ShouldSetMessageAndStorageTypeToLocal()
     {
@@ -166,6 +205,9 @@ public class StorageExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the <see cref="LocalStorageException"/> constructor correctly sets the message, inner exception, and storage type.
+    /// </summary>
     [Fact]
     public void LocalStorageException_Constructor_WithMessageAndInnerException_ShouldSetMessageInnerExceptionAndStorageType()
     {
@@ -183,6 +225,9 @@ public class StorageExceptionTests
         exception.StorageType.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="LocalStorageException"/> inherits from <see cref="StorageException"/>.
+    /// </summary>
     [Fact]
     public void LocalStorageException_InheritsFromStorageException()
     {
@@ -196,6 +241,9 @@ public class StorageExceptionTests
         exception.Should().BeAssignableTo<StorageException>();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="LocalStorageException.StorageType"/> is correctly set to "Local" for appropriate constructors.
+    /// </summary>
     [Fact]
     public void LocalStorageException_StorageType_ShouldAlwaysBeLocal()
     {
@@ -209,6 +257,9 @@ public class StorageExceptionTests
         exception2.StorageType.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the <see cref="AzureStorageException"/> constructor correctly sets the message and storage type to "Azure".
+    /// </summary>
     [Fact]
     public void AzureStorageException_Constructor_WithMessage_ShouldSetMessageAndStorageTypeToAzure()
     {
@@ -224,6 +275,9 @@ public class StorageExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the <see cref="AzureStorageException"/> constructor correctly sets the message, inner exception, and storage type.
+    /// </summary>
     [Fact]
     public void AzureStorageException_Constructor_WithMessageAndInnerException_ShouldSetMessageInnerExceptionAndStorageType()
     {
@@ -241,6 +295,9 @@ public class StorageExceptionTests
         exception.StorageType.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="AzureStorageException"/> inherits from <see cref="StorageException"/>.
+    /// </summary>
     [Fact]
     public void AzureStorageException_InheritsFromStorageException()
     {
@@ -254,6 +311,9 @@ public class StorageExceptionTests
         exception.Should().BeAssignableTo<StorageException>();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="AzureStorageException.StorageType"/> is correctly set to "Azure" for appropriate constructors.
+    /// </summary>
     [Fact]
     public void AzureStorageException_StorageType_ShouldAlwaysBeAzure()
     {
@@ -267,6 +327,9 @@ public class StorageExceptionTests
         exception2.StorageType.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the <see cref="InsufficientStorageException"/> constructor correctly sets the message with required and available bytes.
+    /// </summary>
     [Fact]
     public void InsufficientStorageException_Constructor_WithRequiredAndAvailableBytes_ShouldSetMessageWithCorrectValues()
     {
@@ -284,6 +347,9 @@ public class StorageExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the <see cref="InsufficientStorageException"/> constructor correctly handles zero values.
+    /// </summary>
     [Fact]
     public void InsufficientStorageException_Constructor_WithZeroValues_ShouldSetMessageWithZeroValues()
     {
@@ -300,6 +366,9 @@ public class StorageExceptionTests
         exception.StorageType.Should().Be("Local");
     }
 
+    /// <summary>
+    /// Verifies that the <see cref="InsufficientStorageException"/> constructor correctly handles large values.
+    /// </summary>
     [Fact]
     public void InsufficientStorageException_Constructor_WithLargeValues_ShouldHandleLargeNumbers()
     {
@@ -316,6 +385,9 @@ public class StorageExceptionTests
         exception.StorageType.Should().Be("Local");
     }
 
+    /// <summary>
+    /// Verifies that <see cref="InsufficientStorageException"/> inherits from <see cref="StorageException"/>.
+    /// </summary>
     [Fact]
     public void InsufficientStorageException_InheritsFromStorageException()
     {
