@@ -26,6 +26,23 @@ cache.Remove("key");
 cache.Clear();
 ```
 
+## WebhookClientTests
+The `WebhookClientTests` class contains integration tests for the `WebhookClient`, validating its ability to send backup and schedule notifications and to generate correct webhook signature headers. These tests ensure the client properly handles various configurations and dependency interactions, including different webhook secrets and URL formats.
+
+Here's an example of how to invoke these tests:
+```csharp
+using DockerSqliteBackup.Tests.Integration;
+
+// Examples of invoking tests directly from the WebhookClientTests suite:
+var tests = new WebhookClientTests();
+
+// Run signature header validation test
+tests.CreateSignatureHeader_Format_IsCorrect();
+
+// Run notification test (requires await)
+await tests.SendBackupNotificationAsync_CompletesWithoutError();
+```
+
 ## Docker HEALTHCHECK
 
 The image exposes a `healthcheck` CLI subcommand instead of an HTTP endpoint, since the
