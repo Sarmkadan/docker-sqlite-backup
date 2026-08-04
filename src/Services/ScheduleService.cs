@@ -183,7 +183,8 @@ public sealed class ScheduleService : IScheduleService
         try
         {
             var expression = CronExpression.Parse(schedule.CronExpression);
-            var nextOccurrence = expression.GetNextOccurrence(DateTime.UtcNow);
+            var anchor = schedule.NextScheduledRunTime ?? DateTime.UtcNow;
+            var nextOccurrence = expression.GetNextOccurrence(anchor);
             return nextOccurrence;
         }
         catch (Exception ex)
