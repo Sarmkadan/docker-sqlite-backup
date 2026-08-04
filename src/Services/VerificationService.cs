@@ -28,6 +28,13 @@ public sealed class VerificationService : IVerificationService
     private readonly ILogger<VerificationService> _logger;
     private readonly IBackupEventPublisher? _eventPublisher;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VerificationService"/> class.
+    /// </summary>
+    /// <param name="repository">The backup repository.</param>
+    /// <param name="appSettings">The application settings.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="eventPublisher">The event publisher (optional).</param>
     public VerificationService(
         IBackupRepository repository,
         AppSettings appSettings,
@@ -43,6 +50,9 @@ public sealed class VerificationService : IVerificationService
     /// <summary>
     /// Verifies a backup by attempting to restore and validate the database.
     /// </summary>
+    /// <param name="backup">The backup result to verify.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task representing the verification operation. Returns the verification result.</returns>
     public async Task<RestoreVerification> VerifyBackupAsync(BackupResult backup, CancellationToken cancellationToken = default)
     {
         var verification = new RestoreVerification
