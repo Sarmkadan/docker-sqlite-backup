@@ -17,6 +17,7 @@ public class BackupEventPublisher : IBackupEventPublisher
 
     public BackupEventPublisher(ILogger<BackupEventPublisher> logger)
     {
+        ArgumentNullException.ThrowIfNull(logger);
         _logger = logger;
     }
 
@@ -26,6 +27,7 @@ public class BackupEventPublisher : IBackupEventPublisher
     /// </summary>
     public async Task PublishAsync(BackupEvent @event, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(@event);
         _logger.LogInformation(
             "Publishing event: {EventType} [{EventId}] from correlation {CorrelationId}",
             @event.EventType,
@@ -56,6 +58,7 @@ public class BackupEventPublisher : IBackupEventPublisher
     /// </summary>
     public void Subscribe(IBackupEventListener listener)
     {
+        ArgumentNullException.ThrowIfNull(listener);
         lock (_subscriberLock)
         {
             if (!_listeners.Contains(listener))
@@ -74,6 +77,7 @@ public class BackupEventPublisher : IBackupEventPublisher
     /// </summary>
     public void Unsubscribe(IBackupEventListener listener)
     {
+        ArgumentNullException.ThrowIfNull(listener);
         lock (_subscriberLock)
         {
             if (_listeners.Remove(listener))
