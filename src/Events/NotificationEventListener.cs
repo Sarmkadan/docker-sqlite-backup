@@ -22,6 +22,7 @@ public class NotificationEventListener : IBackupEventListener
         WebhookClient? webhookClient = null,
         string? webhookUrl = null)
     {
+        ArgumentNullException.ThrowIfNull(logger);
         _logger = logger;
         _webhookClient = webhookClient;
         _webhookUrl = webhookUrl;
