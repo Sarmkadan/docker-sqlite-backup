@@ -21,6 +21,14 @@ namespace DockerSqliteBackup.Tests.Integration
     public class WebhookClientTests
     {
         private readonly Mock<ILogger<WebhookClient>> _loggerMock = new();
+        private readonly ILogger<WebhookClient> _logger;
+
+        public WebhookClientTests()
+        {
+            // Resolve the logger from the mock for structured logging within the tests.
+            _logger = _loggerMock.Object;
+        }
+
         private const string TestSecret = "test-webhook-secret-1234567890";
 
         /// <summary>
@@ -30,11 +38,15 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public void Constructor_WithMaxRetriesAndSecret_SetsProperties()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(Constructor_WithMaxRetriesAndSecret_SetsProperties));
+
             // Arrange & Act
             var client = new WebhookClient(_loggerMock.Object, maxRetries: 5, webhookSecret: TestSecret);
 
             // Assert
             Assert.NotNull(client);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(Constructor_WithMaxRetriesAndSecret_SetsProperties));
         }
 
         /// <summary>
@@ -44,6 +56,8 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public void Constructor_WithAppSettings_SetsWebhookSecret()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(Constructor_WithAppSettings_SetsWebhookSecret));
+
             // Arrange
             var settings = new AppSettings { WebhookSecret = TestSecret };
 
@@ -52,6 +66,8 @@ namespace DockerSqliteBackup.Tests.Integration
 
             // Assert
             Assert.NotNull(client);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(Constructor_WithAppSettings_SetsWebhookSecret));
         }
 
         /// <summary>
@@ -61,11 +77,15 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public void Constructor_WithoutSecret_CanBeCreated()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(Constructor_WithoutSecret_CanBeCreated));
+
             // Arrange & Act
             var client = new WebhookClient(_loggerMock.Object);
 
             // Assert
             Assert.NotNull(client);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(Constructor_WithoutSecret_CanBeCreated));
         }
 
         /// <summary>
@@ -75,6 +95,8 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public void WebhookClient_HasRequiredConstructorOverloads()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(WebhookClient_HasRequiredConstructorOverloads));
+
             // Test all constructor overloads exist
             var logger = _loggerMock.Object;
 
@@ -89,6 +111,8 @@ namespace DockerSqliteBackup.Tests.Integration
             // Constructor 3: logger, AppSettings, maxRetries
             var client3 = new WebhookClient(logger, new AppSettings(), 3);
             Assert.NotNull(client3);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(WebhookClient_HasRequiredConstructorOverloads));
         }
 
         /// <summary>
@@ -98,6 +122,8 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public void AppSettings_HasWebhookSecretProperty()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(AppSettings_HasWebhookSecretProperty));
+
             // Arrange
             var settings = new AppSettings();
 
@@ -106,6 +132,8 @@ namespace DockerSqliteBackup.Tests.Integration
 
             // Assert
             Assert.Equal(TestSecret, settings.WebhookSecret);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(AppSettings_HasWebhookSecretProperty));
         }
 
         /// <summary>
@@ -114,6 +142,8 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public void AppSettings_WebhookSecret_CanBeNull()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(AppSettings_WebhookSecret_CanBeNull));
+
             // Arrange
             var settings = new AppSettings();
 
@@ -122,6 +152,8 @@ namespace DockerSqliteBackup.Tests.Integration
 
             // Assert
             Assert.Null(settings.WebhookSecret);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(AppSettings_WebhookSecret_CanBeNull));
         }
 
         /// <summary>
@@ -130,6 +162,8 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public void AppSettings_WebhookSecret_CanBeEmpty()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(AppSettings_WebhookSecret_CanBeEmpty));
+
             // Arrange
             var settings = new AppSettings();
 
@@ -138,6 +172,8 @@ namespace DockerSqliteBackup.Tests.Integration
 
             // Assert
             Assert.Empty(settings.WebhookSecret);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(AppSettings_WebhookSecret_CanBeEmpty));
         }
 
         /// <summary>
@@ -148,6 +184,8 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public async Task SendBackupNotificationAsync_CompletesWithoutError()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(SendBackupNotificationAsync_CompletesWithoutError));
+
             // Arrange
             var client = new WebhookClient(_loggerMock.Object, webhookSecret: TestSecret);
             var backupResult = new BackupResult
@@ -165,6 +203,8 @@ namespace DockerSqliteBackup.Tests.Integration
 
             // Act & Assert (should not throw)
             await client.SendBackupNotificationAsync("https://example.com/webhook", backupResult);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(SendBackupNotificationAsync_CompletesWithoutError));
         }
 
         /// <summary>
@@ -175,6 +215,8 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public async Task SendScheduleNotificationAsync_CompletesWithoutError()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(SendScheduleNotificationAsync_CompletesWithoutError));
+
             // Arrange
             var client = new WebhookClient(_loggerMock.Object, webhookSecret: TestSecret);
             var schedule = new BackupSchedule
@@ -188,6 +230,8 @@ namespace DockerSqliteBackup.Tests.Integration
 
             // Act & Assert (should not throw)
             await client.SendScheduleNotificationAsync("https://example.com/webhook", schedule, "schedule.created");
+
+            _logger.LogInformation("{TestMethod} completed", nameof(SendScheduleNotificationAsync_CompletesWithoutError));
         }
 
         /// <summary>
@@ -198,6 +242,8 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public async Task SendBackupNotificationAsync_WithEmptyUrl_DoesNotThrow()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(SendBackupNotificationAsync_WithEmptyUrl_DoesNotThrow));
+
             // Arrange
             var client = new WebhookClient(_loggerMock.Object, webhookSecret: TestSecret);
             var backupResult = new BackupResult
@@ -215,6 +261,8 @@ namespace DockerSqliteBackup.Tests.Integration
 
             // Act & Assert (should not throw)
             await client.SendBackupNotificationAsync(string.Empty, backupResult);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(SendBackupNotificationAsync_WithEmptyUrl_DoesNotThrow));
         }
 
         /// <summary>
@@ -225,6 +273,8 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public async Task SendScheduleNotificationAsync_WithEmptyUrl_DoesNotThrow()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(SendScheduleNotificationAsync_WithEmptyUrl_DoesNotThrow));
+
             // Arrange
             var client = new WebhookClient(_loggerMock.Object, webhookSecret: TestSecret);
             var schedule = new BackupSchedule
@@ -238,6 +288,8 @@ namespace DockerSqliteBackup.Tests.Integration
 
             // Act & Assert (should not throw)
             await client.SendScheduleNotificationAsync(string.Empty, schedule, "schedule.created");
+
+            _logger.LogInformation("{TestMethod} completed", nameof(SendScheduleNotificationAsync_WithEmptyUrl_DoesNotThrow));
         }
 
         /// <summary>
@@ -247,11 +299,15 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public void WebhookClient_IntegrationNamespace_IsCorrect()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(WebhookClient_IntegrationNamespace_IsCorrect));
+
             // Arrange
             var client = new WebhookClient(_loggerMock.Object);
 
             // Assert
             Assert.Equal("DockerSqliteBackup.Integration", client.GetType().Namespace);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(WebhookClient_IntegrationNamespace_IsCorrect));
         }
 
         /// <summary>
@@ -261,6 +317,8 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public void WebhookClient_ImplementsRequiredMethods()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(WebhookClient_ImplementsRequiredMethods));
+
             // Arrange
             var client = new WebhookClient(_loggerMock.Object);
 
@@ -270,6 +328,8 @@ namespace DockerSqliteBackup.Tests.Integration
 
             var sendScheduleMethod = client.GetType().GetMethod("SendScheduleNotificationAsync");
             Assert.NotNull(sendScheduleMethod);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(WebhookClient_ImplementsRequiredMethods));
         }
 
         /// <summary>
@@ -279,11 +339,15 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public void WebhookClient_HasLoggingSupport()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(WebhookClient_HasLoggingSupport));
+
             // Arrange
             var client = new WebhookClient(_loggerMock.Object, webhookSecret: TestSecret);
 
             // Assert
             Assert.NotNull(client);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(WebhookClient_HasLoggingSupport));
         }
 
         /// <summary>
@@ -293,6 +357,8 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public void CreateSignatureHeader_WithSecret_ReturnsValidSignature()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(CreateSignatureHeader_WithSecret_ReturnsValidSignature));
+
             // Arrange
             var client = new WebhookClient(_loggerMock.Object, webhookSecret: TestSecret);
             var payload = "{\"test\":\"value\"}";
@@ -305,6 +371,8 @@ namespace DockerSqliteBackup.Tests.Integration
             Assert.NotEmpty(signatureHeader);
             Assert.StartsWith("t=", signatureHeader);
             Assert.Contains(",v1=", signatureHeader);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(CreateSignatureHeader_WithSecret_ReturnsValidSignature));
         }
 
         /// <summary>
@@ -314,6 +382,8 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public void CreateSignatureHeader_WithoutSecret_ReturnsEmptyString()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(CreateSignatureHeader_WithoutSecret_ReturnsEmptyString));
+
             // Arrange
             var client = new WebhookClient(_loggerMock.Object);
             var payload = "{\"test\":\"value\"}";
@@ -323,6 +393,8 @@ namespace DockerSqliteBackup.Tests.Integration
 
             // Assert
             Assert.Empty(signatureHeader);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(CreateSignatureHeader_WithoutSecret_ReturnsEmptyString));
         }
 
         /// <summary>
@@ -332,6 +404,8 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public void CreateSignatureHeader_WithNullSecret_ReturnsEmptyString()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(CreateSignatureHeader_WithNullSecret_ReturnsEmptyString));
+
             // Arrange
             var client = new WebhookClient(_loggerMock.Object, webhookSecret: null);
             var payload = "{\"test\":\"value\"}";
@@ -341,6 +415,8 @@ namespace DockerSqliteBackup.Tests.Integration
 
             // Assert
             Assert.Empty(signatureHeader);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(CreateSignatureHeader_WithNullSecret_ReturnsEmptyString));
         }
 
         /// <summary>
@@ -350,6 +426,8 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public void CreateSignatureHeader_WithCustomSecret_UsesCustomSecret()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(CreateSignatureHeader_WithCustomSecret_UsesCustomSecret));
+
             // Arrange
             var customSecret = "custom-secret-key";
             var client = new WebhookClient(_loggerMock.Object, webhookSecret: TestSecret);
@@ -361,6 +439,8 @@ namespace DockerSqliteBackup.Tests.Integration
             // Assert
             Assert.NotNull(signatureHeader);
             Assert.NotEmpty(signatureHeader);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(CreateSignatureHeader_WithCustomSecret_UsesCustomSecret));
         }
 
         /// <summary>
@@ -370,6 +450,8 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public void CreateSignatureHeader_WithEmptyCustomSecret_ReturnsEmptyString()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(CreateSignatureHeader_WithEmptyCustomSecret_ReturnsEmptyString));
+
             // Arrange
             var client = new WebhookClient(_loggerMock.Object, webhookSecret: TestSecret);
             var payload = "{\"test\":\"value\"}";
@@ -379,6 +461,8 @@ namespace DockerSqliteBackup.Tests.Integration
 
             // Assert
             Assert.Empty(signatureHeader);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(CreateSignatureHeader_WithEmptyCustomSecret_ReturnsEmptyString));
         }
 
         /// <summary>
@@ -388,6 +472,8 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public void CreateSignatureHeader_Format_IsCorrect()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(CreateSignatureHeader_Format_IsCorrect));
+
             // Arrange
             var client = new WebhookClient(_loggerMock.Object, webhookSecret: TestSecret);
             var payload = "{\"test\":\"value\"}";
@@ -400,6 +486,8 @@ namespace DockerSqliteBackup.Tests.Integration
             Assert.Equal(2, parts.Length);
             Assert.StartsWith("t=", parts[0]);
             Assert.StartsWith("v1=", parts[1]);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(CreateSignatureHeader_Format_IsCorrect));
         }
 
         /// <summary>
@@ -409,6 +497,8 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public void CreateSignatureHeader_ProducesConsistentSignatures_ForSamePayloadAndSecret()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(CreateSignatureHeader_ProducesConsistentSignatures_ForSamePayloadAndSecret));
+
             // Arrange
             var client = new WebhookClient(_loggerMock.Object, webhookSecret: TestSecret);
             var payload = "{\"eventType\":\"backup.completed\",\"timestamp\":\"2024-01-01T00:00:00Z\"}";
@@ -419,6 +509,8 @@ namespace DockerSqliteBackup.Tests.Integration
 
             // Assert - signatures should be identical for the same payload and secret
             Assert.Equal(signature1, signature2);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(CreateSignatureHeader_ProducesConsistentSignatures_ForSamePayloadAndSecret));
         }
 
         /// <summary>
@@ -427,6 +519,8 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public void CreateSignatureHeader_ProducesDifferentSignatures_ForDifferentPayloads()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(CreateSignatureHeader_ProducesDifferentSignatures_ForDifferentPayloads));
+
             // Arrange
             var client = new WebhookClient(_loggerMock.Object, webhookSecret: TestSecret);
             var payload1 = "{\"eventType\":\"backup.completed\"}";
@@ -438,6 +532,8 @@ namespace DockerSqliteBackup.Tests.Integration
 
             // Assert - signatures should be different for different payloads
             Assert.NotEqual(signature1, signature2);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(CreateSignatureHeader_ProducesDifferentSignatures_ForDifferentPayloads));
         }
 
         /// <summary>
@@ -446,6 +542,8 @@ namespace DockerSqliteBackup.Tests.Integration
         [Fact]
         public void CreateSignatureHeader_ProducesDifferentSignatures_ForDifferentSecrets()
         {
+            _logger.LogInformation("Starting {TestMethod}", nameof(CreateSignatureHeader_ProducesDifferentSignatures_ForDifferentSecrets));
+
             // Arrange
             var client1 = new WebhookClient(_loggerMock.Object, webhookSecret: "secret1");
             var client2 = new WebhookClient(_loggerMock.Object, webhookSecret: "secret2");
@@ -457,6 +555,8 @@ namespace DockerSqliteBackup.Tests.Integration
 
             // Assert - signatures should be different for different secrets
             Assert.NotEqual(signature1, signature2);
+
+            _logger.LogInformation("{TestMethod} completed", nameof(CreateSignatureHeader_ProducesDifferentSignatures_ForDifferentSecrets));
         }
     }
 }
