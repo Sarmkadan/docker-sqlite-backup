@@ -36,6 +36,7 @@ public class NotificationEventListener : IBackupEventListener
     /// </summary>
     public void AddNotificationClient(INotificationClient client)
     {
+        ArgumentNullException.ThrowIfNull(client);
         _notificationClients.Add(client);
     }
 
@@ -44,6 +45,7 @@ public class NotificationEventListener : IBackupEventListener
     /// </summary>
     public async Task HandleAsync(BackupEvent @event, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(@event);
         switch (@event)
         {
             case BackupCompletedEvent completedEvent:
@@ -85,6 +87,7 @@ public class NotificationEventListener : IBackupEventListener
     /// </summary>
     public bool CanHandle(string eventType)
     {
+        ArgumentException.ThrowIfNullOrEmpty(eventType);
         return GetSupportedEventTypes().Contains(eventType);
     }
 
