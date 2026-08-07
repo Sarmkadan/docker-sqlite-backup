@@ -5,8 +5,14 @@ using Xunit;
 
 namespace DockerSqliteBackup.Exceptions.Tests
 {
+    /// <summary>
+    /// Contains unit tests for the <see cref="ValidationException"/> class.
+    /// </summary>
     public class ValidationExceptionTests
     {
+        /// <summary>
+        /// Verifies that the parameterless constructor creates a <see cref="ValidationException"/> with default values.
+        /// </summary>
         [Fact]
         public void DefaultConstructor_CreatesInstance()
         {
@@ -19,6 +25,9 @@ namespace DockerSqliteBackup.Exceptions.Tests
             exception.Errors.Should().BeNull();
         }
 
+        /// <summary>
+        /// Verifies that the constructor with a message parameter creates a <see cref="ValidationException"/> with the specified message.
+        /// </summary>
         [Fact]
         public void Constructor_WithMessage_CreatesInstanceWithMessage()
         {
@@ -34,6 +43,9 @@ namespace DockerSqliteBackup.Exceptions.Tests
             exception.Errors.Should().BeNull();
         }
 
+        /// <summary>
+        /// Verifies that the constructor with a message and inner exception creates a <see cref="ValidationException"/> with the specified message and inner exception.
+        /// </summary>
         [Fact]
         public void Constructor_WithMessageAndInnerException_CreatesInstanceWithBoth()
         {
@@ -51,6 +63,9 @@ namespace DockerSqliteBackup.Exceptions.Tests
             exception.Errors.Should().BeNull();
         }
 
+        /// <summary>
+        /// Verifies that the constructor with parameter name and message creates a <see cref="ValidationException"/> with the specified parameter name and formatted message.
+        /// </summary>
         [Fact]
         public void Constructor_WithParameterNameAndMessage_CreatesInstanceWithParameterName()
         {
@@ -67,6 +82,9 @@ namespace DockerSqliteBackup.Exceptions.Tests
             exception.Errors.Should().BeNull();
         }
 
+        /// <summary>
+        /// Verifies that the constructor with an errors dictionary creates a <see cref="ValidationException"/> with the provided errors.
+        /// </summary>
         [Fact]
         public void Constructor_WithErrorsDictionary_CreatesInstanceWithErrors()
         {
@@ -88,6 +106,9 @@ namespace DockerSqliteBackup.Exceptions.Tests
             exception.Errors.Should().BeSameAs(errors);
         }
 
+        /// <summary>
+        /// Verifies that the constructor with parameter name, message, and inner exception creates a <see cref="ValidationException"/> with all properties set correctly.
+        /// </summary>
         [Fact]
         public void Constructor_WithParameterNameMessageAndInnerException_CreatesInstanceWithAll()
         {
@@ -106,6 +127,9 @@ namespace DockerSqliteBackup.Exceptions.Tests
             exception.Errors.Should().BeNull();
         }
 
+        /// <summary>
+        /// Verifies that the <see cref="ValidationException.ParameterName"/> property returns the correct parameter name.
+        /// </summary>
         [Fact]
         public void ParameterName_Getter_ReturnsCorrectValue()
         {
@@ -117,6 +141,9 @@ namespace DockerSqliteBackup.Exceptions.Tests
             exception.ParameterName.Should().Be(parameterName);
         }
 
+        /// <summary>
+        /// Verifies that the <see cref="ValidationException.Errors"/> property returns the correct dictionary of errors.
+        /// </summary>
         [Fact]
         public void Errors_Getter_ReturnsCorrectDictionary()
         {
