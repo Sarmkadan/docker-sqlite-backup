@@ -19,6 +19,7 @@ public class AuditLogger
         ILogger<AuditLogger> logger,
         string? auditLogPath = null)
     {
+        ArgumentNullException.ThrowIfNull(logger);
         _logger = logger;
         _auditLogPath = auditLogPath ?? Path.Combine(AppContext.BaseDirectory, "audit.log");
     }
@@ -28,6 +29,7 @@ public class AuditLogger
     /// </summary>
     public void LogBackupOperation(Guid scheduleId, string operation, bool success, string? details = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(operation);
         var entry = new AuditEntry
         {
             Timestamp = DateTime.UtcNow,
@@ -46,6 +48,8 @@ public class AuditLogger
     /// </summary>
     public void LogScheduleChange(Guid scheduleId, string action, Dictionary<string, string> changes)
     {
+        ArgumentException.ThrowIfNullOrEmpty(action);
+        ArgumentNullException.ThrowIfNull(changes);
         var changeDetails = string.Join("; ", changes.Select(kvp => $"{kvp.Key}={kvp.Value}"));
         var entry = new AuditEntry
         {
@@ -65,6 +69,9 @@ public class AuditLogger
     /// </summary>
     public void LogConfigChange(string setting, string oldValue, string newValue, string? reason = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(setting);
+        ArgumentException.ThrowIfNullOrEmpty(oldValue);
+        ArgumentException.ThrowIfNullOrEmpty(newValue);
         var entry = new AuditEntry
         {
             Timestamp = DateTime.UtcNow,
@@ -83,6 +90,8 @@ public class AuditLogger
     /// </summary>
     public void LogDataAccess(string resource, string action, string? userId = null, bool success = true)
     {
+        ArgumentException.ThrowIfNullOrEmpty(resource);
+        ArgumentException.ThrowIfNullOrEmpty(action);
         var entry = new AuditEntry
         {
             Timestamp = DateTime.UtcNow,
@@ -101,6 +110,7 @@ public class AuditLogger
     /// </summary>
     public void LogEntry(AuditEntry entry)
     {
+        ArgumentNullException.ThrowIfNull(entry);
         LogAuditEntry(entry);
     }
 
