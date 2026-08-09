@@ -25,6 +25,7 @@ public static class DateTimeUtility
     /// </summary>
     public static bool TryParseIso8601(string dateString, out DateTime result)
     {
+        ArgumentException.ThrowIfNullOrEmpty(dateString);
         return DateTime.TryParse(
             dateString,
             CultureInfo.InvariantCulture,
@@ -37,6 +38,7 @@ public static class DateTimeUtility
     /// </summary>
     public static string FormatForDisplay(DateTime dateTime, string format = "yyyy-MM-dd HH:mm:ss")
     {
+        ArgumentException.ThrowIfNullOrEmpty(format);
         return dateTime.ToString(format);
     }
 
