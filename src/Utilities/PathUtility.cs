@@ -15,8 +15,7 @@ public static class PathUtility
     /// </summary>
     public static string SanitizeFileName(string fileName)
     {
-        if (string.IsNullOrWhiteSpace(fileName))
-            throw new ArgumentException("File name cannot be empty", nameof(fileName));
+        ArgumentException.ThrowIfNullOrEmpty(fileName);
 
         var invalidChars = Path.GetInvalidFileNameChars();
         var sanitized = string.Concat(fileName.Split(invalidChars));
@@ -43,6 +42,8 @@ public static class PathUtility
     /// </summary>
     public static bool IsAbsolute(string path)
     {
+        ArgumentException.ThrowIfNullOrEmpty(path);
+
         return Path.IsPathRooted(path);
     }
 
@@ -51,6 +52,9 @@ public static class PathUtility
     /// </summary>
     public static string GetRelativePath(string basePath, string targetPath)
     {
+        ArgumentException.ThrowIfNullOrEmpty(basePath);
+        ArgumentException.ThrowIfNullOrEmpty(targetPath);
+
         try
         {
             return Path.GetRelativePath(basePath, targetPath);
@@ -66,6 +70,8 @@ public static class PathUtility
     /// </summary>
     public static void EnsureDirectoryExists(string directoryPath)
     {
+        ArgumentException.ThrowIfNullOrEmpty(directoryPath);
+
         if (!Directory.Exists(directoryPath))
             Directory.CreateDirectory(directoryPath);
     }
@@ -75,6 +81,8 @@ public static class PathUtility
     /// </summary>
     public static string CombinePath(params string[] segments)
     {
+        ArgumentNullException.ThrowIfNull(segments);
+
         if (segments.Length == 0)
             throw new ArgumentException("At least one segment is required", nameof(segments));
 
@@ -90,6 +98,8 @@ public static class PathUtility
     /// </summary>
     public static long GetFileSize(string filePath)
     {
+        ArgumentException.ThrowIfNullOrEmpty(filePath);
+
         try
         {
             var info = new FileInfo(filePath);
@@ -106,6 +116,8 @@ public static class PathUtility
     /// </summary>
     public static bool IsValidFilePath(string filePath)
     {
+        ArgumentException.ThrowIfNullOrEmpty(filePath);
+
         try
         {
             var fileInfo = new FileInfo(filePath);
@@ -122,6 +134,8 @@ public static class PathUtility
     /// </summary>
     public static string GenerateBackupFileName(string baseName, DateTime? timestamp = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(baseName);
+
         var time = timestamp ?? DateTime.UtcNow;
         var sanitized = SanitizeFileName(baseName);
         return $"{sanitized}_backup_{time:yyyy-MM-dd_HH-mm-ss}.sqlite";
