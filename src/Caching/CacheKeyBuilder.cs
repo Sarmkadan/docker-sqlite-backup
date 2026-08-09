@@ -17,6 +17,7 @@ public class CacheKeyBuilder
     /// </summary>
     public CacheKeyBuilder Add(string part)
     {
+        ArgumentException.ThrowIfNullOrEmpty(part);
         if (!string.IsNullOrWhiteSpace(part))
             _parts.Add(part);
 
