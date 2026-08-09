@@ -17,6 +17,7 @@ public static class ChecksumUtility
     /// </summary>
     public static async Task<string> CalculateFileSha256Async(string filePath)
     {
+        ArgumentException.ThrowIfNullOrEmpty(filePath);
         if (!File.Exists(filePath))
             throw new FileNotFoundException($"File not found: {filePath}");
 
@@ -31,6 +32,7 @@ public static class ChecksumUtility
     /// </summary>
     public static string CalculateStringSha256(string input)
     {
+        ArgumentException.ThrowIfNullOrEmpty(input);
         using var sha256 = SHA256.Create();
         var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
         return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
@@ -41,6 +43,7 @@ public static class ChecksumUtility
     /// </summary>
     public static async Task<string> CalculateFileMd5Async(string filePath)
     {
+        ArgumentException.ThrowIfNullOrEmpty(filePath);
         if (!File.Exists(filePath))
             throw new FileNotFoundException($"File not found: {filePath}");
 
@@ -55,6 +58,8 @@ public static class ChecksumUtility
     /// </summary>
     public static async Task<bool> VerifyFileSha256Async(string filePath, string expectedHash)
     {
+        ArgumentException.ThrowIfNullOrEmpty(filePath);
+        ArgumentException.ThrowIfNullOrEmpty(expectedHash);
         var actualHash = await CalculateFileSha256Async(filePath);
         return actualHash.Equals(expectedHash, StringComparison.OrdinalIgnoreCase);
     }
@@ -64,6 +69,7 @@ public static class ChecksumUtility
     /// </summary>
     public static async Task<uint> CalculateFileCrc32Async(string filePath)
     {
+        ArgumentException.ThrowIfNullOrEmpty(filePath);
         if (!File.Exists(filePath))
             throw new FileNotFoundException($"File not found: {filePath}");
 
@@ -98,6 +104,7 @@ public static class ChecksumUtility
     /// </summary>
     public static string GenerateQuickChecksum(string filePath)
     {
+        ArgumentException.ThrowIfNullOrEmpty(filePath);
         if (!File.Exists(filePath))
             throw new FileNotFoundException($"File not found: {filePath}");
 
@@ -142,6 +149,7 @@ public static class ChecksumUtility
     /// </summary>
     public static string CalculateCollectionChecksum(params object[] values)
     {
+        ArgumentNullException.ThrowIfNull(values);
         var combined = string.Join("|", values);
         using var sha256 = SHA256.Create();
         var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(combined));
