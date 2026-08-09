@@ -23,6 +23,10 @@ public static class EncryptionUtility
     /// <param name="base64Key">Base64-encoded 32-byte AES key.</param>
     public static async Task EncryptFileAsync(string sourcePath, string destinationPath, string base64Key)
     {
+        ArgumentException.ThrowIfNullOrEmpty(nameof(sourcePath));
+        ArgumentException.ThrowIfNullOrEmpty(nameof(destinationPath));
+        ArgumentException.ThrowIfNullOrEmpty(nameof(base64Key));
+
         var key = DecodeKey(base64Key);
 
         using var aes = Aes.Create();
@@ -50,6 +54,10 @@ public static class EncryptionUtility
     /// <param name="base64Key">Base64-encoded 32-byte AES key.</param>
     public static async Task DecryptFileAsync(string sourcePath, string destinationPath, string base64Key)
     {
+        ArgumentException.ThrowIfNullOrEmpty(nameof(sourcePath));
+        ArgumentException.ThrowIfNullOrEmpty(nameof(destinationPath));
+        ArgumentException.ThrowIfNullOrEmpty(nameof(base64Key));
+
         var key = DecodeKey(base64Key);
 
         await using var sourceStream = File.OpenRead(sourcePath);
@@ -81,8 +89,7 @@ public static class EncryptionUtility
     /// </summary>
     public static string GenerateBase64Key()
     {
-        var key = RandomNumberGenerator.GetBytes(KeySizeBytes);
-        return Convert.ToBase64String(key);
+        return Convert.ToBase64String(RandomNumberGenerator.GetBytes(KeySizeBytes));
     }
 
     /// <summary>
@@ -90,8 +97,7 @@ public static class EncryptionUtility
     /// </summary>
     public static bool IsValidKey(string? base64Key)
     {
-        if (string.IsNullOrWhiteSpace(base64Key))
-            return false;
+        ArgumentException.ThrowIfNullOrEmpty(nameof(base64Key));
 
         try
         {
@@ -106,6 +112,8 @@ public static class EncryptionUtility
 
     private static byte[] DecodeKey(string base64Key)
     {
+        ArgumentException.ThrowIfNullOrEmpty(nameof(base64Key));
+
         byte[] key;
         try
         {
