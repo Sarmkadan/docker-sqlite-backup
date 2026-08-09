@@ -18,6 +18,8 @@ public class BackupRepository : IBackupRepository
 
     public BackupRepository(string connectionString, ILogger<BackupRepository> logger)
     {
+        ArgumentException.ThrowIfNullOrEmpty(connectionString);
+        ArgumentNullException.ThrowIfNull(logger);
         _connectionString = connectionString;
         _logger = logger;
     }
