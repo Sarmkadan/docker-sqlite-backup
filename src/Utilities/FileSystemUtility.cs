@@ -14,6 +14,8 @@ public static class FileSystemUtility
     /// </summary>
     public static async Task SafeCopyFileAsync(string sourceFile, string destinationFile, int maxRetries = 3)
     {
+        ArgumentException.ThrowIfNullOrEmpty(sourceFile);
+        ArgumentException.ThrowIfNullOrEmpty(destinationFile);
         if (!File.Exists(sourceFile))
             throw new FileNotFoundException($"Source file not found: {sourceFile}");
 
@@ -46,6 +48,7 @@ public static class FileSystemUtility
     /// </summary>
     public static void SafeDeleteFile(string filePath)
     {
+        ArgumentException.ThrowIfNullOrEmpty(filePath);
         try
         {
             if (File.Exists(filePath))
@@ -63,6 +66,8 @@ public static class FileSystemUtility
     /// </summary>
     public static IEnumerable<string> GetFilesWithPattern(string directory, string searchPattern)
     {
+        ArgumentException.ThrowIfNullOrEmpty(directory);
+        ArgumentException.ThrowIfNullOrEmpty(searchPattern);
         try
         {
             if (!Directory.Exists(directory))
@@ -81,6 +86,7 @@ public static class FileSystemUtility
     /// </summary>
     public static long CalculateDirectorySize(string directory)
     {
+        ArgumentException.ThrowIfNullOrEmpty(directory);
         try
         {
             var dirInfo = new DirectoryInfo(directory);
@@ -101,6 +107,7 @@ public static class FileSystemUtility
     /// </summary>
     public static async Task DeleteDirectoryAsync(string directory, bool recursive = true)
     {
+        ArgumentException.ThrowIfNullOrEmpty(directory);
         try
         {
             if (!Directory.Exists(directory))
@@ -133,6 +140,7 @@ public static class FileSystemUtility
     /// </summary>
     public static long GetAvailableDiskSpace(string path = "/")
     {
+        ArgumentException.ThrowIfNullOrEmpty(path);
         try
         {
             var drive = DriveInfo.GetDrives().FirstOrDefault(d => path.StartsWith(d.RootDirectory.FullName));
@@ -149,6 +157,7 @@ public static class FileSystemUtility
     /// </summary>
     public static bool IsFileInUse(string filePath)
     {
+        ArgumentException.ThrowIfNullOrEmpty(filePath);
         try
         {
             using var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None);
