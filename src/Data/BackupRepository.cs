@@ -76,6 +76,7 @@ public class BackupRepository : IBackupRepository
 
     public async Task<BackupSchedule> CreateScheduleAsync(BackupSchedule schedule)
     {
+        ArgumentNullException.ThrowIfNull(schedule);
         using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
 
@@ -94,6 +95,7 @@ public class BackupRepository : IBackupRepository
 
     public async Task<BackupSchedule> UpdateScheduleAsync(BackupSchedule schedule)
     {
+        ArgumentNullException.ThrowIfNull(schedule);
         using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
 
@@ -177,6 +179,7 @@ public class BackupRepository : IBackupRepository
 
     public async Task<BackupResult> CreateBackupResultAsync(BackupResult result)
     {
+        ArgumentNullException.ThrowIfNull(result);
         using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
 
@@ -197,6 +200,7 @@ public class BackupRepository : IBackupRepository
 
     public async Task<BackupResult> UpdateBackupResultAsync(BackupResult result)
     {
+        ArgumentNullException.ThrowIfNull(result);
         using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
 
@@ -216,6 +220,7 @@ public class BackupRepository : IBackupRepository
 
     public async Task DeleteBackupResultAsync(Guid resultId)
     {
+        ArgumentNullException.ThrowIfNull(resultId);
         using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
 
@@ -281,8 +286,9 @@ public class BackupRepository : IBackupRepository
 
     public async Task<RotationPolicy> SaveRotationPolicyAsync(RotationPolicy policy)
     {
+        ArgumentNullException.ThrowIfNull(policy);
         var existing = await GetRotationPolicyAsync(policy.ScheduleId);
-        
+
         if (existing  is not null)
         {
             policy.Id = existing.Id;
