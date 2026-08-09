@@ -42,6 +42,7 @@ public class MemoryCacheService : ICacheService, IDisposable
     /// </summary>
     public T? Get<T>(string key)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         if (_cache.TryGetValue(key, out var entry))
         {
             if (entry.IsExpired())
@@ -61,6 +62,7 @@ public class MemoryCacheService : ICacheService, IDisposable
     /// </summary>
     public Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         return Task.FromResult(Get<T>(key));
     }
 
@@ -69,6 +71,7 @@ public class MemoryCacheService : ICacheService, IDisposable
     /// </summary>
     public void Set<T>(string key, T value, TimeSpan? expiration = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         var entry = new CacheEntry
         {
             Value = Serialize(value),
@@ -87,6 +90,7 @@ public class MemoryCacheService : ICacheService, IDisposable
         TimeSpan? expiration = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         Set(key, value, expiration);
         return Task.CompletedTask;
     }
@@ -96,6 +100,7 @@ public class MemoryCacheService : ICacheService, IDisposable
     /// </summary>
     public void Remove(string key)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         _cache.TryRemove(key, out _);
     }
 
@@ -104,6 +109,7 @@ public class MemoryCacheService : ICacheService, IDisposable
     /// </summary>
     public Task RemoveAsync(string key, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         Remove(key);
         return Task.CompletedTask;
     }
@@ -121,6 +127,7 @@ public class MemoryCacheService : ICacheService, IDisposable
     /// </summary>
     public bool Exists(string key)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
         if (_cache.TryGetValue(key, out var entry))
         {
             if (entry.IsExpired())
@@ -140,6 +147,8 @@ public class MemoryCacheService : ICacheService, IDisposable
     /// </summary>
     public T GetOrSet<T>(string key, Func<T> factory, TimeSpan? expiration = null)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        ArgumentNullException.ThrowIfNull(factory);
         if (Exists(key))
             return Get<T>(key)!;
 
@@ -157,6 +166,8 @@ public class MemoryCacheService : ICacheService, IDisposable
         TimeSpan? expiration = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        ArgumentNullException.ThrowIfNull(factory);
         if (Exists(key))
             return Get<T>(key)!;
 
