@@ -21,6 +21,7 @@ public class StringUtilityTests
         /// </summary>
         /// <param name="bytes">The number of bytes to format.</param>
         /// <param name="expected">The expected string representation of the bytes.</param>
+        ArgumentException.ThrowIfNullOrEmpty(expected);
         var result = StringUtility.FormatBytes(bytes);
         result.Should().Be(expected);
     }
@@ -36,6 +37,8 @@ public class StringUtilityTests
         /// </summary>
         /// <param name="input">The string to convert.</param>
         /// <param name="expected">The expected kebab case representation of the string.</param>
+        ArgumentException.ThrowIfNullOrEmpty(input);
+        ArgumentException.ThrowIfNullOrEmpty(expected);
         var result = StringUtility.ToKebabCase(input);
         result.Should().Be(expected);
     }
@@ -51,6 +54,8 @@ public class StringUtilityTests
         /// </summary>
         /// <param name="input">The string to convert.</param>
         /// <param name="expected">The expected snake case representation of the string.</param>
+        ArgumentException.ThrowIfNullOrEmpty(input);
+        ArgumentException.ThrowIfNullOrEmpty(expected);
         var result = StringUtility.ToSnakeCase(input);
         result.Should().Be(expected);
     }
@@ -66,6 +71,8 @@ public class StringUtilityTests
         /// </summary>
         /// <param name="input">The string to convert.</param>
         /// <param name="expected">The expected pascal case representation of the string.</param>
+        ArgumentException.ThrowIfNullOrEmpty(input);
+        ArgumentException.ThrowIfNullOrEmpty(expected);
         var result = StringUtility.ToPascalCase(input);
         result.Should().Be(expected);
     }
@@ -98,6 +105,8 @@ public class StringUtilityTests
         /// <param name="maxLength">The maximum length of the truncated string.</param>
         /// <param name="addEllipsis">Whether to add an ellipsis to the truncated string.</param>
         /// <param name="expected">The expected truncated string.</param>
+        ArgumentException.ThrowIfNullOrEmpty(value);
+        ArgumentException.ThrowIfNullOrEmpty(expected);
         var result = StringUtility.Truncate(value, maxLength, addEllipsis);
         result.Should().Be(expected);
     }
@@ -113,6 +122,8 @@ public class StringUtilityTests
         /// <param name="value">The string to mask.</param>
         /// <param name="visibleChars">The number of visible characters to reveal.</param>
         /// <param name="expected">The expected masked string.</param>
+        /// <param name="value">The string to mask.</param>
+        ArgumentException.ThrowIfNullOrEmpty(value);
         var result = StringUtility.MaskSensitive(value, visibleChars);
         result.Should().Be(expected);
     }
