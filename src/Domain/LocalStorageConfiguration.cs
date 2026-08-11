@@ -119,4 +119,12 @@ public class LocalStorageConfiguration : StorageConfiguration
         var invalidChars = Path.GetInvalidFileNameChars();
         return string.Concat(fileName.Split(invalidChars));
     }
+
+    /// <summary>
+    /// Returns a concise string representation of the configuration.
+    /// </summary>
+    public override string ToString()
+    {
+        return $"LocalStorageConfiguration {{ BaseDirectory = {BaseDirectory}, CreateSubdirectoriesBySchedule = {CreateSubdirectoriesBySchedule}, FilePermissions = {FilePermissions}, CompressBackups = {CompressBackups}, MinimumFreeSpaceBytes = {MinimumFreeSpaceBytes}, PreserveFileTimestamp = {PreserveFileTimestamp} }}";
+    }
 }
