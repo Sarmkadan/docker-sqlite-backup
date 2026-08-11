@@ -26,6 +26,9 @@ public abstract class StorageConfiguration
     /// <summary>Gets or sets when the configuration was last modified.</summary>
     public DateTime LastModifiedAt { get; set; } = DateTime.UtcNow;
 
+    /// <inheritdoc/>
+    public override string ToString() => $"StorageConfiguration {{ Id = {Id}, Name = {Name}, IsDefault = {IsDefault}, CreatedAt = {CreatedAt}, LastModifiedAt = {LastModifiedAt} }}";
+
     /// <summary>
     /// Validates the storage configuration.
     /// </summary>
