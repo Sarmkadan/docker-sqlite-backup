@@ -29,6 +29,7 @@ public class AuditLogger
     /// </summary>
     public void LogBackupOperation(Guid scheduleId, string operation, bool success, string? details = null)
     {
+        _logger.LogInformation("LogBackupOperation called for {ScheduleId} with operation {Operation}", scheduleId, operation);
         ArgumentException.ThrowIfNullOrEmpty(operation);
         var entry = new AuditEntry
         {
@@ -41,6 +42,7 @@ public class AuditLogger
         };
 
         LogAuditEntry(entry);
+        _logger.LogInformation("LogBackupOperation completed for {ScheduleId}", scheduleId);
     }
 
     /// <summary>
@@ -48,6 +50,7 @@ public class AuditLogger
     /// </summary>
     public void LogScheduleChange(Guid scheduleId, string action, Dictionary<string, string> changes)
     {
+        _logger.LogInformation("LogScheduleChange called for {ScheduleId} with action {Action}", scheduleId, action);
         ArgumentException.ThrowIfNullOrEmpty(action);
         ArgumentNullException.ThrowIfNull(changes);
         var changeDetails = string.Join("; ", changes.Select(kvp => $"{kvp.Key}={kvp.Value}"));
@@ -62,6 +65,7 @@ public class AuditLogger
         };
 
         LogAuditEntry(entry);
+        _logger.LogInformation("LogScheduleChange completed for {ScheduleId}", scheduleId);
     }
 
     /// <summary>
@@ -69,6 +73,7 @@ public class AuditLogger
     /// </summary>
     public void LogConfigChange(string setting, string oldValue, string newValue, string? reason = null)
     {
+        _logger.LogInformation("LogConfigChange called for {Setting}", setting);
         ArgumentException.ThrowIfNullOrEmpty(setting);
         ArgumentException.ThrowIfNullOrEmpty(oldValue);
         ArgumentException.ThrowIfNullOrEmpty(newValue);
@@ -83,6 +88,7 @@ public class AuditLogger
         };
 
         LogAuditEntry(entry);
+        _logger.LogInformation("LogConfigChange completed for {Setting}", setting);
     }
 
     /// <summary>
@@ -90,6 +96,7 @@ public class AuditLogger
     /// </summary>
     public void LogDataAccess(string resource, string action, string? userId = null, bool success = true)
     {
+        _logger.LogInformation("LogDataAccess called for {Resource} with action {Action}", resource, action);
         ArgumentException.ThrowIfNullOrEmpty(resource);
         ArgumentException.ThrowIfNullOrEmpty(action);
         var entry = new AuditEntry
@@ -103,6 +110,7 @@ public class AuditLogger
         };
 
         LogAuditEntry(entry);
+        _logger.LogInformation("LogDataAccess completed for {Resource}", resource);
     }
 
     /// <summary>
@@ -110,8 +118,10 @@ public class AuditLogger
     /// </summary>
     public void LogEntry(AuditEntry entry)
     {
+        _logger.LogInformation("LogEntry called for category {Category}", entry.Category);
         ArgumentNullException.ThrowIfNull(entry);
         LogAuditEntry(entry);
+        _logger.LogInformation("LogEntry completed for category {Category}", entry.Category);
     }
 
     private void LogAuditEntry(AuditEntry entry)
