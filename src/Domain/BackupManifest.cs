@@ -108,4 +108,6 @@ public class BackupManifest
 	/// Gets or sets additional notes about the backup.
 	/// </summary>
 	public string Notes { get; set; } = string.Empty;
+
+	public override string ToString() => $"BackupManifest {{ Version = {Version}, Id = {Id}, ScheduleId = {ScheduleId}, BackupJobId = {BackupJobId}, CreatedAt = {CreatedAt}, CompletedAt = {CompletedAt} }}";
 }
