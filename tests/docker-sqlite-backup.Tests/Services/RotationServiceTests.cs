@@ -35,19 +35,13 @@ public class RotationServiceTests
 	/// Initializes a new instance of the <see cref="RotationServiceTests"/> class.
 	/// </summary>
 	public RotationServiceTests()
-        {
-            _loggerMock.Verify(l => l.LogInformation("RotationServiceTests initialized", It.IsAny<object[]>()), Times.Once);
-        }
-        {
-            _loggerMock.Verify(l => l.LogInformation("RotationServiceTests initialized", It.IsAny<object[]>()), Times.Once);
-        }
-        {
-            _loggerMock.Verify(l => l.LogInformation("RotationServiceTests initialized", It.IsAny<object[]>()), Times.Once);
-        }
 	{
 		_repositoryMock = new Mock<IBackupRepository>();
 		_loggerMock = new Mock<ILogger<RotationService>>();
 		_sut = new RotationService(_repositoryMock.Object, _loggerMock.Object);
+
+		// Structured log indicating the test class has been constructed.
+		_loggerMock.Object.LogInformation("RotationServiceTests constructed");
 	}
 
 	[Fact]
@@ -56,6 +50,8 @@ public class RotationServiceTests
 	/// </summary>
 	public async Task ExecuteRotationAsync_NoPolicyFound_ReturnsZero()
 	{
+		_loggerMock.Object.LogInformation("Starting {Method}", nameof(ExecuteRotationAsync_NoPolicyFound_ReturnsZero));
+
 		var scheduleId = Guid.NewGuid();
 		_repositoryMock
 			.Setup(r => r.GetRotationPolicyAsync(scheduleId))
@@ -64,6 +60,8 @@ public class RotationServiceTests
 		var result = await _sut.ExecuteRotationAsync(scheduleId);
 
 		result.Should().Be(0);
+
+		_loggerMock.Object.LogInformation("Finished {Method}", nameof(ExecuteRotationAsync_NoPolicyFound_ReturnsZero));
 	}
 
 	[Fact]
@@ -72,6 +70,8 @@ public class RotationServiceTests
 	/// </summary>
 	public async Task ExecuteRotationAsync_NoRotationStrategy_ReturnsZero()
 	{
+		_loggerMock.Object.LogInformation("Starting {Method}", nameof(ExecuteRotationAsync_NoRotationStrategy_ReturnsZero));
+
 		var scheduleId = Guid.NewGuid();
 		var policy = new RotationPolicy
 		{
@@ -86,6 +86,8 @@ public class RotationServiceTests
 
 		result.Should().Be(0);
 		_repositoryMock.Verify(r => r.DeleteBackupResultAsync(It.IsAny<Guid>()), Times.Never);
+
+		_loggerMock.Object.LogInformation("Finished {Method}", nameof(ExecuteRotationAsync_NoRotationStrategy_ReturnsZero));
 	}
 
 	[Fact]
@@ -95,6 +97,8 @@ public class RotationServiceTests
 	/// </summary>
 	public async Task ExecuteRotationAsync_WithBackupsEligibleForDeletion_ReturnsDeletedCount()
 	{
+		_loggerMock.Object.LogInformation("Starting {Method}", nameof(ExecuteRotationAsync_WithBackupsEligibleForDeletion_ReturnsDeletedCount));
+
 		var scheduleId = Guid.NewGuid();
 		var policy = new RotationPolicy
 		{
@@ -130,6 +134,8 @@ public class RotationServiceTests
 
 		result.Should().BeGreaterThan(0);
 		_repositoryMock.Verify(r => r.DeleteBackupResultAsync(It.IsAny<Guid>()), Times.AtLeastOnce);
+
+		_loggerMock.Object.LogInformation("Finished {Method}", nameof(ExecuteRotationAsync_WithBackupsEligibleForDeletion_ReturnsDeletedCount));
 	}
 
 	[Fact]
@@ -139,6 +145,8 @@ public class RotationServiceTests
 	/// </summary>
 	public async Task ExecuteRotationAsync_UpdatesLastRotatedAt()
 	{
+		_loggerMock.Object.LogInformation("Starting {Method}", nameof(ExecuteRotationAsync_UpdatesLastRotatedAt));
+
 		var scheduleId = Guid.NewGuid();
 		var policy = new RotationPolicy
 		{
@@ -166,6 +174,8 @@ public class RotationServiceTests
 		savedPolicy.Should().NotBeNull();
 		savedPolicy!.LastRotatedAt.Should().NotBeNull();
 		savedPolicy.LastRotatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+
+		_loggerMock.Object.LogInformation("Finished {Method}", nameof(ExecuteRotationAsync_UpdatesLastRotatedAt));
 	}
 
 	[Fact]
@@ -175,6 +185,8 @@ public class RotationServiceTests
 	/// </summary>
 	public async Task GetBackupsForRotationAsync_NoPolicyFound_ReturnsEmpty()
 	{
+		_loggerMock.Object.LogInformation("Starting {Method}", nameof(GetBackupsForRotationAsync_NoPolicyFound_ReturnsEmpty));
+
 		var scheduleId = Guid.NewGuid();
 		_repositoryMock
 			.Setup(r => r.GetRotationPolicyAsync(scheduleId))
@@ -186,6 +198,8 @@ public class RotationServiceTests
 		var result = await _sut.GetBackupsForRotationAsync(scheduleId);
 
 		result.Should().BeEmpty();
+
+		_loggerMock.Object.LogInformation("Finished {Method}", nameof(GetBackupsForRotationAsync_NoPolicyFound_ReturnsEmpty));
 	}
 
 	[Fact]
@@ -195,6 +209,8 @@ public class RotationServiceTests
 	/// </summary>
 	public async Task GetBackupsForRotationAsync_BelowMinimumCount_ReturnsEmpty()
 	{
+		_loggerMock.Object.LogInformation("Starting {Method}", nameof(GetBackupsForRotationAsync_BelowMinimumCount_ReturnsEmpty));
+
 		var scheduleId = Guid.NewGuid();
 		var policy = new RotationPolicy
 		{
@@ -222,6 +238,8 @@ public class RotationServiceTests
 		var result = await _sut.GetBackupsForRotationAsync(scheduleId);
 
 		result.Should().BeEmpty();
+
+		_loggerMock.Object.LogInformation("Finished {Method}", nameof(GetBackupsForRotationAsync_BelowMinimumCount_ReturnsEmpty));
 	}
 
 	[Fact]
@@ -231,6 +249,8 @@ public class RotationServiceTests
 	/// </summary>
 	public async Task GetBackupsForRotationAsync_DeleteFailedBackupsEnabled_IncludesFailedBackups()
 	{
+		_loggerMock.Object.LogInformation("Starting {Method}", nameof(GetBackupsForRotationAsync_DeleteFailedBackupsEnabled_IncludesFailedBackups));
+
 		var scheduleId = Guid.NewGuid();
 		var policy = new RotationPolicy
 		{
@@ -258,6 +278,8 @@ public class RotationServiceTests
 		var result = await _sut.GetBackupsForRotationAsync(scheduleId);
 
 		result.Should().OnlyContain(b => !b.IsSuccess);
+
+		_loggerMock.Object.LogInformation("Finished {Method}", nameof(GetBackupsForRotationAsync_DeleteFailedBackupsEnabled_IncludesFailedBackups));
 	}
 
 	[Fact]
@@ -267,6 +289,8 @@ public class RotationServiceTests
 	/// </summary>
 	public async Task SaveRotationPolicyAsync_InvalidPolicy_ThrowsValidationException()
 	{
+		_loggerMock.Object.LogInformation("Starting {Method}", nameof(SaveRotationPolicyAsync_InvalidPolicy_ThrowsValidationException));
+
 		var policy = new RotationPolicy
 		{
 			MaxBackupCount = 0,
@@ -275,6 +299,8 @@ public class RotationServiceTests
 
 		await _sut.Invoking(s => s.SaveRotationPolicyAsync(policy))
 			.Should().ThrowAsync<DockerSqliteBackup.Exceptions.ValidationException>();
+
+		_loggerMock.Object.LogInformation("Finished {Method}", nameof(SaveRotationPolicyAsync_InvalidPolicy_ThrowsValidationException));
 	}
 
 	[Fact]
@@ -284,6 +310,8 @@ public class RotationServiceTests
 	/// </summary>
 	public async Task SaveRotationPolicyAsync_ValidPolicy_SetsLastModifiedAt()
 	{
+		_loggerMock.Object.LogInformation("Starting {Method}", nameof(SaveRotationPolicyAsync_ValidPolicy_SetsLastModifiedAt));
+
 		var policy = new RotationPolicy
 		{
 			ScheduleId = Guid.NewGuid(),
@@ -302,6 +330,8 @@ public class RotationServiceTests
 		_repositoryMock.Verify(r => r.SaveRotationPolicyAsync(
 			It.Is<RotationPolicy>(p => p.LastModifiedAt > DateTime.UtcNow.AddSeconds(-5))),
 			Times.Once);
+
+		_loggerMock.Object.LogInformation("Finished {Method}", nameof(SaveRotationPolicyAsync_ValidPolicy_SetsLastModifiedAt));
 	}
 
 	[Fact]
@@ -311,6 +341,8 @@ public class RotationServiceTests
 	/// </summary>
 	public async Task CalculateDiskSpaceFreedAsync_WithBackupsToRotate_SumsSizes()
 	{
+		_loggerMock.Object.LogInformation("Starting {Method}", nameof(CalculateDiskSpaceFreedAsync_WithBackupsToRotate_SumsSizes));
+
 		var scheduleId = Guid.NewGuid();
 		var policy = new RotationPolicy
 		{
@@ -337,6 +369,8 @@ public class RotationServiceTests
 		var freed = await _sut.CalculateDiskSpaceFreedAsync(scheduleId);
 
 		freed.Should().BeGreaterThan(0);
+
+		_loggerMock.Object.LogInformation("Finished {Method}", nameof(CalculateDiskSpaceFreedAsync_WithBackupsToRotate_SumsSizes));
 	}
 
 	[Fact]
@@ -346,6 +380,8 @@ public class RotationServiceTests
 	/// </summary>
 	public async Task GetRotationPolicyAsync_ExistingPolicy_ReturnsPolicy()
 	{
+		_loggerMock.Object.LogInformation("Starting {Method}", nameof(GetRotationPolicyAsync_ExistingPolicy_ReturnsPolicy));
+
 		var scheduleId = Guid.NewGuid();
 		var policy = new RotationPolicy { ScheduleId = scheduleId };
 		_repositoryMock
@@ -356,5 +392,7 @@ public class RotationServiceTests
 
 		result.Should().NotBeNull();
 		result!.ScheduleId.Should().Be(scheduleId);
+
+		_loggerMock.Object.LogInformation("Finished {Method}", nameof(GetRotationPolicyAsync_ExistingPolicy_ReturnsPolicy));
 	}
 }
