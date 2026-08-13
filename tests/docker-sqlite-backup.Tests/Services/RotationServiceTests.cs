@@ -35,6 +35,15 @@ public class RotationServiceTests
 	/// Initializes a new instance of the <see cref="RotationServiceTests"/> class.
 	/// </summary>
 	public RotationServiceTests()
+        {
+            _loggerMock.Verify(l => l.LogInformation("RotationServiceTests initialized", It.IsAny<object[]>()), Times.Once);
+        }
+        {
+            _loggerMock.Verify(l => l.LogInformation("RotationServiceTests initialized", It.IsAny<object[]>()), Times.Once);
+        }
+        {
+            _loggerMock.Verify(l => l.LogInformation("RotationServiceTests initialized", It.IsAny<object[]>()), Times.Once);
+        }
 	{
 		_repositoryMock = new Mock<IBackupRepository>();
 		_loggerMock = new Mock<ILogger<RotationService>>();
