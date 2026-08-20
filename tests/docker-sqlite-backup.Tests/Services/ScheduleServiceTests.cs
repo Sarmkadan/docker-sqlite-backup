@@ -38,7 +38,9 @@ namespace DockerSqliteBackup.Tests.Services
         [Fact]
         public void ValidateCronExpression_ValidExpression_ReturnsTrue()
         {
+            _loggerMock.Object.LogInformation("Entering {MethodName}", nameof(ValidateCronExpression_ValidExpression_ReturnsTrue));
             _sut.ValidateCronExpression("0 2 * * *").Should().BeTrue();
+            _loggerMock.Object.LogInformation("Exiting {MethodName}", nameof(ValidateCronExpression_ValidExpression_ReturnsTrue));
         }
 
         /// <summary>
@@ -47,7 +49,9 @@ namespace DockerSqliteBackup.Tests.Services
         [Fact]
         public void ValidateCronExpression_InvalidExpression_ReturnsFalse()
         {
+            _loggerMock.Object.LogInformation("Entering {MethodName}", nameof(ValidateCronExpression_InvalidExpression_ReturnsFalse));
             _sut.ValidateCronExpression("not-a-cron").Should().BeFalse();
+            _loggerMock.Object.LogInformation("Exiting {MethodName}", nameof(ValidateCronExpression_InvalidExpression_ReturnsFalse));
         }
 
         /// <summary>
@@ -56,12 +60,14 @@ namespace DockerSqliteBackup.Tests.Services
         [Fact]
         public void GetNextExecutionTime_ValidSchedule_ReturnsDateInFuture()
         {
+            _loggerMock.Object.LogInformation("Entering {MethodName}", nameof(GetNextExecutionTime_ValidSchedule_ReturnsDateInFuture));
             var schedule = new BackupSchedule { CronExpression = "0 2 * * *" };
 
             var next = _sut.GetNextExecutionTime(schedule);
 
             next.Should().NotBeNull();
             next!.Value.Should().BeAfter(DateTime.UtcNow);
+            _loggerMock.Object.LogInformation("Exiting {MethodName}", nameof(GetNextExecutionTime_ValidSchedule_ReturnsDateInFuture));
         }
 
         /// <summary>
@@ -70,11 +76,13 @@ namespace DockerSqliteBackup.Tests.Services
         [Fact]
         public void GetNextExecutionTime_InvalidCronExpression_ReturnsNull()
         {
+            _loggerMock.Object.LogInformation("Entering {MethodName}", nameof(GetNextExecutionTime_InvalidCronExpression_ReturnsNull));
             var schedule = new BackupSchedule { CronExpression = "invalid-cron" };
 
             var next = _sut.GetNextExecutionTime(schedule);
 
             next.Should().BeNull();
+            _loggerMock.Object.LogInformation("Exiting {MethodName}", nameof(GetNextExecutionTime_InvalidCronExpression_ReturnsNull));
         }
 
         /// <summary>
@@ -83,6 +91,7 @@ namespace DockerSqliteBackup.Tests.Services
         [Fact]
         public async Task CreateScheduleAsync_ValidSchedule_DelegatesToRepository()
         {
+            _loggerMock.Object.LogInformation("Entering {MethodName}", nameof(CreateScheduleAsync_ValidSchedule_DelegatesToRepository));
             var schedule = new BackupSchedule
             {
                 Name = "Nightly Backup",
@@ -98,6 +107,7 @@ namespace DockerSqliteBackup.Tests.Services
             _repositoryMock.Verify(r => r.CreateScheduleAsync(It.IsAny<BackupSchedule>()), Times.Once);
             result.Should().NotBeNull();
             result.Name.Should().Be("Nightly Backup");
+            _loggerMock.Object.LogInformation("Exiting {MethodName}", nameof(CreateScheduleAsync_ValidSchedule_DelegatesToRepository));
         }
 
         /// <summary>
@@ -106,6 +116,7 @@ namespace DockerSqliteBackup.Tests.Services
         [Fact]
         public async Task CreateScheduleAsync_InvalidSchedule_ThrowsInvalidScheduleException()
         {
+            _loggerMock.Object.LogInformation("Entering {MethodName}", nameof(CreateScheduleAsync_InvalidSchedule_ThrowsInvalidScheduleException));
             var schedule = new BackupSchedule
             {
                 Name = "",
@@ -115,6 +126,7 @@ namespace DockerSqliteBackup.Tests.Services
 
             await _sut.Invoking(s => s.CreateScheduleAsync(schedule))
                 .Should().ThrowAsync<InvalidScheduleException>();
+            _loggerMock.Object.LogInformation("Exiting {MethodName}", nameof(CreateScheduleAsync_InvalidSchedule_ThrowsInvalidScheduleException));
         }
 
         /// <summary>
@@ -123,6 +135,7 @@ namespace DockerSqliteBackup.Tests.Services
         [Fact]
         public async Task CreateScheduleAsync_InvalidCronExpression_ThrowsInvalidCronExpressionException()
         {
+            _loggerMock.Object.LogInformation("Entering {MethodName}", nameof(CreateScheduleAsync_InvalidCronExpression_ThrowsInvalidCronExpressionException));
             var schedule = new BackupSchedule
             {
                 Name = "Nightly Backup",
@@ -132,6 +145,7 @@ namespace DockerSqliteBackup.Tests.Services
 
             await _sut.Invoking(s => s.CreateScheduleAsync(schedule))
                 .Should().ThrowAsync<InvalidCronExpressionException>();
+            _loggerMock.Object.LogInformation("Exiting {MethodName}", nameof(CreateScheduleAsync_InvalidCronExpression_ThrowsInvalidCronExpressionException));
         }
 
         /// <summary>
@@ -140,6 +154,7 @@ namespace DockerSqliteBackup.Tests.Services
         [Fact]
         public async Task GetScheduleAsync_ExistingId_ReturnsScheduleFromRepository()
         {
+            _loggerMock.Object.LogInformation("Entering {MethodName}", nameof(GetScheduleAsync_ExistingId_ReturnsScheduleFromRepository));
             var scheduleId = Guid.NewGuid();
             var schedule = new BackupSchedule { Id = scheduleId, Name = "Test" };
             _repositoryMock
@@ -150,6 +165,7 @@ namespace DockerSqliteBackup.Tests.Services
 
             result.Should().NotBeNull();
             result!.Id.Should().Be(scheduleId);
+            _loggerMock.Object.LogInformation("Exiting {MethodName}", nameof(GetScheduleAsync_ExistingId_ReturnsScheduleFromRepository));
         }
 
         /// <summary>
@@ -158,6 +174,7 @@ namespace DockerSqliteBackup.Tests.Services
         [Fact]
         public async Task GetScheduleAsync_NonExistingId_ReturnsNull()
         {
+            _loggerMock.Object.LogInformation("Entering {MethodName}", nameof(GetScheduleAsync_NonExistingId_ReturnsNull));
             _repositoryMock
                 .Setup(r => r.GetScheduleAsync(It.IsAny<Guid>()))
                 .ReturnsAsync((BackupSchedule?)null);
@@ -165,6 +182,7 @@ namespace DockerSqliteBackup.Tests.Services
             var result = await _sut.GetScheduleAsync(Guid.NewGuid());
 
             result.Should().BeNull();
+            _loggerMock.Object.LogInformation("Exiting {MethodName}", nameof(GetScheduleAsync_NonExistingId_ReturnsNull));
         }
 
         /// <summary>
@@ -173,6 +191,7 @@ namespace DockerSqliteBackup.Tests.Services
         [Fact]
         public async Task DeactivateScheduleAsync_ExistingSchedule_UpdatesIsActiveFalse()
         {
+            _loggerMock.Object.LogInformation("Entering {MethodName}", nameof(DeactivateScheduleAsync_ExistingSchedule_UpdatesIsActiveFalse));
             var scheduleId = Guid.NewGuid();
             var schedule = new BackupSchedule
             {
@@ -194,6 +213,7 @@ namespace DockerSqliteBackup.Tests.Services
             _repositoryMock.Verify(
                 r => r.UpdateScheduleAsync(It.Is<BackupSchedule>(s => !s.IsActive)),
                 Times.Once);
+            _loggerMock.Object.LogInformation("Exiting {MethodName}", nameof(DeactivateScheduleAsync_ExistingSchedule_UpdatesIsActiveFalse));
         }
     }
 }
