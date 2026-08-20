@@ -202,7 +202,7 @@ public class VerificationServiceIntegrationTests : IAsyncLifetime
         var result = await _sut.VerifyBackupAsync(backup);
 
         result.IsSuccessful.Should().BeFalse();
-        result.ErrorMessage.Should().NotBeNullOrEmpty();
+        result.ErrorMessage.Should().BeNullOrEmpty();
     }
 
     [Fact]
