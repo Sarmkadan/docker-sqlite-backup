@@ -50,6 +50,8 @@ namespace DockerSqliteBackup.Tests.Services
                 CronExpression = "0 2 * * *"
             };
 
+            _loggerMock.Object.LogInformation("Starting test for schedule {ScheduleName}", schedule.Name);
+
             // Act
             var nextRun = _sut.GetNextExecutionTime(schedule);
 
@@ -57,6 +59,8 @@ namespace DockerSqliteBackup.Tests.Services
             nextRun.Should().NotBeNull();
             nextRun!.Value.Should().BeAfter(DateTime.UtcNow);
             nextRun.Value.Should().BeBefore(DateTime.UtcNow.AddDays(2));
+
+            _loggerMock.Object.LogInformation("Test completed for schedule {ScheduleName}. Next run: {NextRun}", schedule.Name, nextRun.Value);
         }
 
         /// <summary>
