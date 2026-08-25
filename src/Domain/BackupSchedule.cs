@@ -110,4 +110,9 @@ public class BackupSchedule
     {
         return File.Exists(DatabasePath);
     }
+
+    public override string ToString()
+    {
+        return $"BackupSchedule {{ Id = {Id}, Name = {Name}, Description = {Description}, DatabasePath = {DatabasePath}, CronExpression = {CronExpression}, IsActive = {IsActive} }}";
+    }
 }
