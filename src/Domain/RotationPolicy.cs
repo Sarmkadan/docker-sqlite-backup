@@ -93,4 +93,6 @@ public class RotationPolicy
     {
         return (DateTime.UtcNow - backupDate).TotalDays > MaxAgeDays;
     }
+
+    public override string ToString() => $"RotationPolicy {{ Id = {Id}, ScheduleId = {ScheduleId}, Strategy = {Strategy}, MaxBackupCount = {MaxBackupCount}, MaxAgeDays = {MaxAgeDays}, VerifyBeforeDeletion = {VerifyBeforeDeletion} }}";
 }
