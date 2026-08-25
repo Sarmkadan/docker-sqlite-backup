@@ -53,6 +53,8 @@ public class AzureConfiguration : StorageConfiguration
     /// </summary>
     public int SoftDeleteRetentionDays { get; set; } = 0;
 
+    public override string ToString() => $"AzureConfiguration {{ ConnectionString = {ConnectionString}, SasUri = {SasUri}, ContainerName = {ContainerName}, BlobPrefix = {BlobPrefix}, AccessTier = {AccessTier}, EnableImmutability = {EnableImmutability} }}";
+
     /// <inheritdoc />
     public override bool IsValid()
     {
