@@ -96,4 +96,7 @@ public class BackupResult
         var endTime = CompletedAt ?? DateTime.UtcNow;
         return endTime - StartedAt;
     }
+
+    /// <inheritdoc />
+    public override string ToString() => $"BackupResult {{ Id = {Id}, ScheduleId = {ScheduleId}, BackupJobId = {BackupJobId}, Status = {Status}, BackupFilePath = {BackupFilePath}, BackupFileSizeBytes = {BackupFileSizeBytes} }}";
 }
