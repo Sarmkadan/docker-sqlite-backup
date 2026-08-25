@@ -82,4 +82,5 @@ public class BackupJob
     {
         RetryCount++;
     }
+    public override string ToString() => $"BackupJob {{ Id = {Id}, ScheduleId = {ScheduleId}, Status = {Status}, CreatedAt = {CreatedAt}, StartedAt = {StartedAt}, CompletedAt = {CompletedAt} }}";
 }
