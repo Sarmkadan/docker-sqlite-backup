@@ -43,17 +43,17 @@ public class S3Configuration : StorageConfiguration
     /// <summary>Gets or sets the number of days before transitioning to Glacier.</summary>
     public int? TransitionToGlacierDays { get; set; }
 
-	/// <summary>
-	/// Enables streaming uploads for this S3 configuration using multipart upload.
-	/// When true, large backups are uploaded in chunks to avoid loading the entire file into memory.
-	/// </summary>
-	public bool EnableStreamingUploads { get; set; } = true;
+    /// <summary>
+    /// Enables streaming uploads for this S3 configuration using multipart upload.
+    /// When true, large backups are uploaded in chunks to avoid loading the entire file into memory.
+    /// </summary>
+    public bool EnableStreamingUploads { get; set; } = true;
 
-	/// <summary>
-	/// The maximum size of each multipart upload part in bytes for this S3 configuration.
-	/// Default is 16MB (16 * 1024 * 1024), which is the recommended minimum for S3.
-	/// </summary>
-	public int MultipartPartSizeBytes { get; set; } = 16 * 1024 * 1024; // 16MB
+    /// <summary>
+    /// The maximum size of each multipart upload part in bytes for this S3 configuration.
+    /// Default is 16MB (16 * 1024 * 1024), which is the recommended minimum for S3.
+    /// </summary>
+    public int MultipartPartSizeBytes { get; set; } = 16 * 1024 * 1024; // 16MB
 
     /// <summary>
     /// Validates the S3 configuration.
@@ -119,4 +119,6 @@ public class S3Configuration : StorageConfiguration
         var validClasses = new[] { "STANDARD", "REDUCED_REDUNDANCY", "STANDARD_IA", "ONEZONE_IA", "INTELLIGENT_TIERING", "GLACIER", "DEEP_ARCHIVE" };
         return validClasses.Contains(storageClass, StringComparer.OrdinalIgnoreCase);
     }
+
+    public override string ToString() => $"S3Configuration {{ AccessKeyId = {AccessKeyId}, SecretAccessKey = {SecretAccessKey}, BucketName = {BucketName}, RegionName = {RegionName}, ObjectKeyPrefix = {ObjectKeyPrefix}, UseSSL = {UseSSL} }}";
 }
