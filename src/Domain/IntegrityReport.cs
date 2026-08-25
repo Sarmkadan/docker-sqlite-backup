@@ -81,6 +81,8 @@ public class IntegrityReport
     /// </summary>
     public bool IsHealthy => PassedQuickCheck && PassedFullCheck && PassedForeignKeyCheck;
 
+    public override string ToString() => $"IntegrityReport {{ Id = {Id}, DatabasePath = {DatabasePath}, CheckedAt = {CheckedAt}, Duration = {Duration}, PassedQuickCheck = {PassedQuickCheck}, QuickCheckErrors = {QuickCheckErrors} }}";
+
     /// <summary>
     /// Human-readable summary of the integrity report.
     /// </summary>
