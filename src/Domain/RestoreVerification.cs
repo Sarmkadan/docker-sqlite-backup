@@ -55,7 +55,7 @@ public class RestoreVerification
         IsSuccessful = successful;
         StatusMessage = statusMessage;
         CompletedAt = DateTime.UtcNow;
-        
+
         if (StartedAt != DateTime.MinValue)
         {
             DurationMilliseconds = (long)(CompletedAt.Value - StartedAt).TotalMilliseconds;
@@ -70,4 +70,6 @@ public class RestoreVerification
         var endTime = CompletedAt ?? DateTime.UtcNow;
         return endTime - StartedAt;
     }
+
+    public override string ToString() => $"RestoreVerification {{ Id = {Id}, BackupResultId = {BackupResultId}, IsSuccessful = {IsSuccessful}, StatusMessage = {StatusMessage}, StartedAt = {StartedAt}, CompletedAt = {CompletedAt} }}";
 }
