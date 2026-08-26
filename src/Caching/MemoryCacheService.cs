@@ -18,7 +18,7 @@ public class MemoryCacheService : ICacheService, IDisposable
     private readonly object _cleanupLock = new();
     private bool _disposed;
 
-    public override string ToString() => $"MemoryCacheService {{ Value = {_cache.Count}, ExpiresAt = {_cache.Where(kvp => !kvp.Value.IsExpired()).Select(kvp => kvp.Value.ExpiresAt).Where(exp => exp.HasValue).Select(exp => exp.Value).DefaultIfEmpty().Min()} }}";
+    public override string ToString() => $"MemoryCacheService {{ Value = {_cache.Count}, ExpiresAt = {_cache.Where(kvp => !kvp.Value.IsExpired() && kvp.Value.ExpiresAt.HasValue).Select(kvp => kvp.Value.ExpiresAt).DefaultIfEmpty().Min()} }}";
 
     public MemoryCacheService(TimeSpan? cleanupInterval = null)
     {
