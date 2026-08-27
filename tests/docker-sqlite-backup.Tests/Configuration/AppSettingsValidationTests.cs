@@ -9,8 +9,14 @@ using ArgumentException = System.ArgumentException;
 
 namespace DockerSqliteBackup.Tests.Configuration
 {
+    /// <summary>
+    /// Contains unit tests for the <see cref="AppSettings"/> validation logic.
+    /// </summary>
     public class AppSettingsValidationTests
     {
+        /// <summary>
+        /// Tests that calling Validate on null settings throws an ArgumentNullException.
+        /// </summary>
         [Fact]
         public void Validate_WithNullSettings_ThrowsArgumentNullException()
         {
@@ -24,6 +30,9 @@ namespace DockerSqliteBackup.Tests.Configuration
             act.Should().Throw<ArgumentNullException>();
         }
 
+        /// <summary>
+        /// Tests that calling IsValid on null settings throws an ArgumentNullException.
+        /// </summary>
         [Fact]
         public void Validate_WithNullSettings_IsValid_ThrowsArgumentNullException()
         {
@@ -37,6 +46,9 @@ namespace DockerSqliteBackup.Tests.Configuration
             act.Should().Throw<ArgumentNullException>();
         }
 
+        /// <summary>
+        /// Tests that calling EnsureValid on null settings throws an ArgumentNullException.
+        /// </summary>
         [Fact]
         public void Validate_WithNullSettings_EnsureValid_ThrowsArgumentNullException()
         {
@@ -50,6 +62,9 @@ namespace DockerSqliteBackup.Tests.Configuration
             act.Should().Throw<ArgumentNullException>();
         }
 
+        /// <summary>
+        /// Tests that IsValid returns true for valid settings.
+        /// </summary>
         [Fact]
         public void IsValid_WithValidSettings_ReturnsTrue()
         {
@@ -80,6 +95,9 @@ namespace DockerSqliteBackup.Tests.Configuration
             isValid.Should().BeTrue();
         }
 
+        /// <summary>
+        /// Tests that Validate returns an empty list for valid settings.
+        /// </summary>
         [Fact]
         public void Validate_WithValidSettings_ReturnsEmptyList()
         {
@@ -110,6 +128,9 @@ namespace DockerSqliteBackup.Tests.Configuration
             problems.Should().BeEmpty();
         }
 
+        /// <summary>
+        /// Tests that EnsureValid does not throw for valid settings.
+        /// </summary>
         [Fact]
         public void EnsureValid_WithValidSettings_DoesNotThrow()
         {
@@ -140,6 +161,9 @@ namespace DockerSqliteBackup.Tests.Configuration
             act.Should().NotThrow();
         }
 
+        /// <summary>
+        /// Tests that Validate throws ArgumentNullException when NotificationEmails is null.
+        /// </summary>
         [Fact]
         public void Validate_NotificationEmailsNull_ThrowsArgumentNullException()
         {
@@ -156,6 +180,9 @@ namespace DockerSqliteBackup.Tests.Configuration
             act.Should().Throw<ArgumentNullException>();
         }
 
+        /// <summary>
+        /// Tests that Validate returns a validation problem when NotificationEmails contains a whitespace-only entry.
+        /// </summary>
         [Fact]
         public void Validate_NotificationEmailsWithWhitespaceEntry_ReturnsValidationProblem()
         {
@@ -173,6 +200,9 @@ namespace DockerSqliteBackup.Tests.Configuration
                 .And.Contain(problem => problem.Contains("NotificationEmails"));
         }
 
+        /// <summary>
+        /// Tests that Validate returns a validation problem when NotificationEmails contains an invalid email format.
+        /// </summary>
         [Fact]
         public void Validate_NotificationEmailsWithInvalidEmailFormat_ReturnsValidationProblem()
         {
@@ -190,6 +220,9 @@ namespace DockerSqliteBackup.Tests.Configuration
                 .And.Contain(problem => problem.Contains("invalid email format"));
         }
 
+        /// <summary>
+        /// Tests that Validate returns an empty list when NotificationEmails contains valid email addresses.
+        /// </summary>
         [Fact]
         public void Validate_NotificationEmailsWithValidEmails_ReturnsEmptyList()
         {
@@ -206,6 +239,9 @@ namespace DockerSqliteBackup.Tests.Configuration
             problems.Should().BeEmpty();
         }
 
+        /// <summary>
+        /// Tests that Validate returns a validation problem when EnableEncryption is true but EncryptionKey is null.
+        /// </summary>
         [Fact]
         public void Validate_EnableEncryptionTrueWithNullEncryptionKey_ReturnsValidationProblem()
         {
@@ -225,6 +261,9 @@ namespace DockerSqliteBackup.Tests.Configuration
                 .And.Contain(problem => problem.Contains("must be provided"));
         }
 
+        /// <summary>
+        /// Tests that Validate returns a validation problem when EnableEncryption is true but EncryptionKey is empty or whitespace.
+        /// </summary>
         [Fact]
         public void Validate_EnableEncryptionTrueWithEmptyEncryptionKey_ReturnsValidationProblem()
         {
@@ -244,6 +283,9 @@ namespace DockerSqliteBackup.Tests.Configuration
                 .And.Contain(problem => problem.Contains("must be provided"));
         }
 
+        /// <summary>
+        /// Tests that Validate returns a validation problem when EncryptionKey is not a valid Base64-encoded string.
+        /// </summary>
         [Fact]
         public void Validate_EncryptionKeyInvalidBase64Format_ReturnsValidationProblem()
         {
