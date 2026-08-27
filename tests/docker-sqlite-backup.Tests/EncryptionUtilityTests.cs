@@ -6,6 +6,9 @@ using Xunit;
 
 namespace DockerSqliteBackup.Tests.Utilities;
 
+/// <summary>
+/// Tests for the <see cref="EncryptionUtility"/> class.
+/// </summary>
 public class EncryptionUtilityTests : IDisposable
 {
     private readonly string _testDirectory;
@@ -14,6 +17,10 @@ public class EncryptionUtilityTests : IDisposable
     private readonly string _decryptedFile;
     private readonly string _validKey;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EncryptionUtilityTests"/> class.
+    /// Sets up a temporary directory and files for testing.
+    /// </summary>
     public EncryptionUtilityTests()
     {
         _testDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
@@ -27,6 +34,9 @@ public class EncryptionUtilityTests : IDisposable
         _validKey = EncryptionUtility.GenerateBase64Key();
     }
 
+    /// <summary>
+    /// Cleans up the temporary directory and files created during testing.
+    /// </summary>
     public void Dispose()
     {
         try
@@ -39,6 +49,9 @@ public class EncryptionUtilityTests : IDisposable
         }
     }
 
+    /// <summary>
+    /// Tests that the EncryptFileAsync method encrypts a file when provided with a valid key.
+    /// </summary>
     [Fact]
     public async Task EncryptFileAsync_EncryptsFileWithValidKey()
     {
@@ -51,6 +64,9 @@ public class EncryptionUtilityTests : IDisposable
         fileInfo.Length.Should().BeGreaterThan(0);
     }
 
+    /// <summary>
+    /// Tests that the DecryptFileAsync method decrypts a file when provided with a valid key.
+    /// </summary>
     [Fact]
     public async Task DecryptFileAsync_DecryptsFileWithValidKey()
     {
@@ -66,6 +82,9 @@ public class EncryptionUtilityTests : IDisposable
         decryptedContent.Should().Be("Hello, World! This is a test file for encryption.");
     }
 
+    /// <summary>
+    /// Tests that encrypting and then decrypting a file returns the original content.
+    /// </summary>
     [Fact]
     public async Task EncryptThenDecrypt_RoundTrip_ReturnsOriginalContent()
     {
@@ -82,6 +101,9 @@ public class EncryptionUtilityTests : IDisposable
         decryptedContent.Should().Be(originalContent);
     }
 
+    /// <summary>
+    /// Tests that the DecryptFileAsync method throws a CryptographicException when provided with a wrong key.
+    /// </summary>
     [Fact]
     public async Task DecryptFileAsync_WithWrongKey_ThrowsCryptographicException()
     {
@@ -94,6 +116,9 @@ public class EncryptionUtilityTests : IDisposable
         await act.Should().ThrowAsync<CryptographicException>();
     }
 
+    /// <summary>
+    /// Tests that the DecryptFileAsync method throws an ArgumentException when provided with an invalid key.
+    /// </summary>
     [Fact]
     public async Task DecryptFileAsync_WithInvalidKey_ThrowsArgumentException()
     {
@@ -106,6 +131,9 @@ public class EncryptionUtilityTests : IDisposable
         await act.Should().ThrowAsync<ArgumentException>();
     }
 
+    /// <summary>
+    /// Tests that the DecryptFileAsync method throws an ArgumentException when provided with an empty key.
+    /// </summary>
     [Fact]
     public async Task DecryptFileAsync_WithEmptyKey_ThrowsArgumentException()
     {
@@ -118,6 +146,9 @@ public class EncryptionUtilityTests : IDisposable
         await act.Should().ThrowAsync<ArgumentException>();
     }
 
+    /// <summary>
+    /// Tests that the DecryptFileAsync method throws an ArgumentException when provided with a null key.
+    /// </summary>
     [Fact]
     public async Task DecryptFileAsync_WithNullKey_ThrowsArgumentException()
     {
@@ -129,6 +160,9 @@ public class EncryptionUtilityTests : IDisposable
         await act.Should().ThrowAsync<ArgumentException>();
     }
 
+    /// <summary>
+    /// Tests that the EncryptFileAsync method works correctly with an empty file.
+    /// </summary>
     [Fact]
     public async Task EncryptFileAsync_WithEmptyFile_Works()
     {
@@ -148,6 +182,9 @@ public class EncryptionUtilityTests : IDisposable
         decryptedContent.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Tests that the EncryptFileAsync method works correctly with a large file (1MB).
+    /// </summary>
     [Fact]
     public async Task EncryptFileAsync_WithLargeFile_Works()
     {
@@ -164,6 +201,9 @@ public class EncryptionUtilityTests : IDisposable
         decryptedContent.Should().Be(largeContent);
     }
 
+    /// <summary>
+    /// Tests that the EncryptFileAsync method produces different ciphertext for the same plaintext when called multiple times.
+    /// </summary>
     [Fact]
     public async Task EncryptFileAsync_ProducesDifferentCiphertextEachTime()
     {
@@ -185,6 +225,9 @@ public class EncryptionUtilityTests : IDisposable
         ciphertext1.Should().NotBeEquivalentTo(ciphertext2);
     }
 
+    /// <summary>
+    /// Tests that the IsValidKey method returns true for a valid Base64 key.
+    /// </summary>
     [Fact]
     public void IsValidKey_WithValidBase64Key_ReturnsTrue()
     {
@@ -195,6 +238,9 @@ public class EncryptionUtilityTests : IDisposable
         EncryptionUtility.IsValidKey(validKey).Should().BeTrue();
     }
 
+    /// <summary>
+    /// Tests that the IsValidKey method returns false for an invalid Base64 string.
+    /// </summary>
     [Fact]
     public void IsValidKey_WithInvalidBase64_ReturnsFalse()
     {
@@ -205,6 +251,9 @@ public class EncryptionUtilityTests : IDisposable
         EncryptionUtility.IsValidKey(invalidKey).Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that the IsValidKey method returns false for an empty string.
+    /// </summary>
     [Fact]
     public void IsValidKey_WithEmptyString_ReturnsFalse()
     {
@@ -212,6 +261,9 @@ public class EncryptionUtilityTests : IDisposable
         EncryptionUtility.IsValidKey(string.Empty).Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that the IsValidKey method returns false for a null reference.
+    /// </summary>
     [Fact]
     public void IsValidKey_WithNull_ReturnsFalse()
     {
@@ -219,6 +271,9 @@ public class EncryptionUtilityTests : IDisposable
         EncryptionUtility.IsValidKey(null).Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that the IsValidKey method returns false for a key with an incorrect length (not 32 bytes).
+    /// </summary>
     [Fact]
     public void IsValidKey_WithWrongLengthKey_ReturnsFalse()
     {
@@ -229,6 +284,9 @@ public class EncryptionUtilityTests : IDisposable
         EncryptionUtility.IsValidKey(wrongLengthKey).Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that the DecryptFileAsync method throws an InvalidDataException when provided with a file too short to contain an IV.
+    /// </summary>
     [Fact]
     public async Task DecryptFileAsync_WithShortFile_ThrowsInvalidDataException()
     {
