@@ -74,3 +74,37 @@ BackupManifest restored = JsonSerializer.Deserialize<BackupManifest>(json)!;
 
 Console.WriteLine($"Backup {restored.Id} achieved a compression ratio of {restored.CompressionRatio}");
 ```
+
+## LocalStorageBackend
+
+The `LocalStorageBackend` class provides a file-system-based implementation for storing and managing database backup files. It handles core storage operations such as uploading, downloading, and deleting backup files, while also offering utilities to list available backups, verify connectivity, and check disk space.
+
+### Usage Example
+
+```csharp
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+
+var backend = new LocalStorageBackend();
+
+// Verify the storage path is accessible and check available disk space
+bool isConnected = await backend.TestConnectionAsync();
+long availableSpace = await backend.GetAvailableSpaceAsync();
+
+// Upload a new backup file to the local storage
+string uploadedPath = await backend.UploadBackupAsync("appdb-2024-05-20.bak");
+
+// List all backups in the directory with their metadata
+var backups = await backend.ListBackupsAsync();
+foreach (var (path, size, modified) in backups)
+{
+    Console.WriteLine($"{path} - {size} bytes - {modified:yyyy-MM-dd}");
+}
+
+// Download a backup for local restoration
+string localCopy = await backend.DownloadBackupAsync("appdb-2024-05-20.bak");
+
+// Remove an outdated backup
+await backend.DeleteBackupAsync("appdb-2024-05-19.bak");
+```
