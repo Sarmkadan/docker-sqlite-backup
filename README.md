@@ -49,7 +49,7 @@ var manifest = new BackupManifest
     Version = "1.0",
     Id = Guid.NewGuid(),
     ScheduleId = Guid.Parse("0f8fad5b-d9cb-469f-a165-70867728950e"),
-    BackupJobId = Guid.Parse("7c9e6679-7425-40de-944b-e07fc1f90ae7"),
+    BackupJobId = Guid.Parse("7c9e6679-7425-425-40de-944b-e07fc1f90ae7"),
     CreatedAt = DateTime.UtcNow,
     CompletedAt = DateTime.UtcNow.AddMinutes(3),
     SourceDatabasePath = "/data/appdb.sqlite",
@@ -220,6 +220,7 @@ Console.WriteLine($"Downloaded backup to: {localCopy}");
 // Remove an outdated backup
 await backend.DeleteBackupAsync(uploadedKey, s3Config);
 Console.WriteLine($"Deleted backup from S3: {uploadedKey}");
+```
 
 // Helper class for demonstration purposes
 class DemoEventPublisher : IBackupEventPublisher
@@ -413,4 +414,21 @@ tests.GetNextExecutionTime_ComplexCronExpression_ReturnsValidDate();
 tests.GetNextExecutionTime_EmptyScheduleCron_ReturnsNull();
 tests.GetNextExecutionTime_EveryMinuteCron_ReturnsImmediateNextMinute();
 tests.GetNextExecutionTime_SpecificCronTime_ReturnsValidFutureTime();
+```
+
+## BackupResultExtensionsTests
+
+The BackupResultExtensionsTests class contains unit tests for the BackupResultExtensions class, which provides extension methods for the BackupResult entity. It tests methods that get the status message (Success/Failure), calculate duration from timestamps or milliseconds, and check for error conditions via ErrorMessage or StackTrace.
+
+### Usage Example
+
+```csharp
+var tests = new BackupResultExtensionsTests();
+tests.GetStatusMessage_ReturnsSuccess_WhenStatusIsZero();
+tests.GetStatusMessage_ReturnsFailure_WhenStatusIsNotZero();
+tests.GetDuration_ReturnsCalculatedDuration_WhenCompletedAtIsSet();
+tests.GetDuration_ReturnsDurationFromMilliseconds_WhenCompletedAtIsNotSet();
+tests.HasError_ReturnsTrue_WhenErrorMessageIsSet();
+tests.HasError_ReturnsTrue_WhenStackTraceIsSet();
+tests.HasError_ReturnsFalse_WhenNoErrorMessageOrStackTrace();
 ```
