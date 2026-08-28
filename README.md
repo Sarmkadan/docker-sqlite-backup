@@ -448,3 +448,16 @@ await tests.RestoreToTemporaryAsync_ValidBackup_ReturnsTempPath();
 await tests.CleanupTemporaryFilesAsync_RemovesDirectory();
 tests.Dispose();
 ```
+
+## AppSettingsValidationTests
+
+The AppSettingsValidationTests class contains unit tests for the validation logic of the AppSettings class. It verifies that validation methods correctly handle null settings, invalid notification emails, and encryption key requirements, ensuring that the application's configuration is properly validated before use.
+
+### Usage Example
+
+```csharp
+var tests = new AppSettingsValidationTests();
+tests.Validate_WithValidSettings_ReturnsEmptyList();
+tests.Validate_NotificationEmailsWithInvalidEmailFormat_ReturnsValidationProblem();
+tests.Validate_EnableEncryptionTrueWithNullEncryptionKey_ReturnsValidationProblem();
+```
