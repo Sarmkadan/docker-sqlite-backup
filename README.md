@@ -163,3 +163,71 @@ await webhookClient.SendScheduleNotificationAsync(
     "schedule.started"
 );
 ```
+
+## S3StorageBackend
+
+The `S3StorageBackend` class provides an AWS S3-based implementation for storing and managing database backup files. It handles core storage operations such as uploading, downloading, and deleting backup files, while also offering utilities to list available backups, verify connectivity, and check available space (which is considered unlimited for S3).
+
+### Usage Example
+
+```csharp
+using System;
+using System.Threading.Tasks;
+using DockerSqliteBackup.Services;
+using DockerSqliteBackup.Events;
+using DockerSqliteBackup.Domain; // For S3Configuration
+using Microsoft.Extensions.Logging;
+
+// For demonstration, we create a simple logger and event publisher.
+// In a real application, these would be provided by dependency injection.
+ILogger<S3StorageBackend> logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<S3StorageBackend>();
+IBackupEventPublisher eventPublisher = new DemoEventPublisher();
+
+var backend = new S3StorageBackend(logger, eventPublisher);
+
+// Configure S3 settings (typically from configuration or environment variables)
+var s3Config = new S3Configuration
+{
+    BucketName = "my-backup-bucket",
+    AccessKeyId = "my-access-key",
+    SecretAccessKey = "my-secret-key",
+    RegionName = "us-west-2"
+};
+
+// Verify the storage is accessible
+bool isConnected = await backend.TestConnectionAsync(s3Config);
+if (!isConnected)
+{
+    Console.WriteLine("Unable to connect to S3.");
+    return;
+}
+
+// Upload a new backup file to S3
+string uploadedKey = await backend.UploadBackupAsync("/path/to/local/backup.bak", s3Config);
+Console.WriteLine($"Uploaded backup to S3: {uploadedKey}");
+
+// List all backups in the bucket with their metadata
+var backups = await backend.ListBackupsAsync(s3Config);
+foreach (var (key, size, modified) in backups)
+{
+    Console.WriteLine($"{key} - {size} bytes - {modified:u}");
+}
+
+// Download a backup for local restoration
+string localCopy = await backend.DownloadBackupAsync(uploadedKey, s3Config);
+Console.WriteLine($"Downloaded backup to: {localCopy}");
+
+// Remove an outdated backup
+await backend.DeleteBackupAsync(uploadedKey, s3Config);
+Console.WriteLine($"Deleted backup from S3: {uploadedKey}");
+
+// Helper class for demonstration purposes
+class DemoEventPublisher : IBackupEventPublisher
+{
+    public Task PublishAsync(BackupEvent @event)
+    {
+        // In a real app, this would publish the event to a message broker or similar
+        return Task.CompletedTask;
+    }
+}
+```
