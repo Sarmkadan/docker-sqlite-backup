@@ -432,3 +432,19 @@ tests.HasError_ReturnsTrue_WhenErrorMessageIsSet();
 tests.HasError_ReturnsTrue_WhenStackTraceIsSet();
 tests.HasError_ReturnsFalse_WhenNoErrorMessageOrStackTrace();
 ```
+
+## VerificationServiceTests
+
+The VerificationServiceTests class contains unit tests for the VerificationService class, which handles backup verification, integrity checks, checksum validation, and temporary file management. It tests scenarios such as verifying valid and corrupted backups, checking checksums, performing integrity checks on databases, restoring backups to temporary locations, and cleaning up temporary files.
+
+### Usage Example
+
+```csharp
+var tests = new VerificationServiceTests();
+await tests.VerifyBackupAsync_ValidBackup_PassesVerification();
+await tests.VerifyChecksumAsync_MatchingChecksum_ReturnsTrue();
+await tests.PerformIntegrityCheckAsync_ValidDatabase_ReturnsTrue();
+await tests.RestoreToTemporaryAsync_ValidBackup_ReturnsTempPath();
+await tests.CleanupTemporaryFilesAsync_RemovesDirectory();
+tests.Dispose();
+```
