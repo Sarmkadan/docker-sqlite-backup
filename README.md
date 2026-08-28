@@ -348,3 +348,20 @@ tests.Constructor_WithParameterNameMessageAndInnerException_CreatesInstanceWithA
 tests.ParameterName_Getter_ReturnsCorrectValue();
 tests.Errors_Getter_ReturnsCorrectDictionary();
 ```
+
+## BackupJobExtensionsTests
+
+The BackupJobExtensionsTests class contains unit tests for the BackupJobExtensions class, which provides extension methods for the BackupJob entity. It tests methods that check the job status (success, failed, pending, in progress), formatted duration, retry count, and result retrieval.
+
+### Usage Example
+
+```csharp
+var tests = new BackupJobExtensionsTests();
+tests.IsSuccessful_ReturnsTrue_WhenStatusIsSuccess();
+tests.IsFailed_ReturnsTrue_WhenStatusIsFailed();
+tests.IsPending_ReturnsTrue_WhenStatusIsPendingAndNotStarted();
+tests.IsInProgress_ReturnsTrue_WhenStatusIsInProgressAndProcessing();
+tests.GetFormattedDuration_ReturnsExpectedFormat();
+tests.HasExceededRetries_ReturnsTrue_WhenRetryCountEqualsMaxRetries();
+tests.GetResult_ReturnsResult();
+```
