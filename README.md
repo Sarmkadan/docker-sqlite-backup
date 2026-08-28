@@ -365,3 +365,25 @@ tests.GetFormattedDuration_ReturnsExpectedFormat();
 tests.HasExceededRetries_ReturnsTrue_WhenRetryCountEqualsMaxRetries();
 tests.GetResult_ReturnsResult();
 ```
+
+## RotationPolicyTests
+
+The RotationPolicyTests class contains unit tests for the RotationPolicy service, which determines when backups should be rotated (deleted) based on policies such as maximum file count, maximum age, or a combination.
+These tests verify the rotation logic under various conditions, including file count limits, age thresholds, and combined strategies.
+
+### Usage Example
+
+```csharp
+var tests = new RotationPolicyTests();
+tests.ShouldRotate_MaxFileCountStrategy_ExceedsLimit_ReturnsTrue();
+tests.ShouldRotate_MaxFileCountStrategy_BelowMinimumCount_ReturnsFalse();
+tests.ShouldRotate_MaxAgeStrategy_OlderThanMaxAge_ReturnsTrue();
+tests.ShouldRotate_MaxAgeStrategy_BelowMinimumCount_ReturnsFalse();
+tests.ShouldRotate_CombinedStrategy_OrLogic_ReturnsTrue();
+tests.ShouldRotate_EmptyDirectory_ReturnsFalse();
+tests.ShouldRotate_ExactlyAtLimit_ReturnsFalse();
+tests.ShouldRotate_NoRotationStrategy_NeverReturnsTrue();
+tests.ShouldRotate_MinimumBackupCount_AlwaysKeepsMinimum();
+tests.ShouldRotate_IsFailedParameter_NotUsedInRotationLogic();
+tests.ShouldRotate_MaxBackupCountZero_UnlimitedNoRotation();
+```
