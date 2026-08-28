@@ -246,7 +246,7 @@ using DockerSqliteBackup.Domain; // For AzureConfiguration
 using Microsoft.Extensions.Logging;
 
 // For demonstration, we create a simple logger.
-// In a real application, this would be provided by dependency injection.
+// In a real application, these would be provided by dependency injection.
 ILogger<AzureStorageBackend> logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<AzureStorageBackend>();
 
 var backend = new AzureStorageBackend(logger);
@@ -329,4 +329,22 @@ await encryptionUtilityTests.EncryptFileAsync_EncryptsFileWithValidKey();
 await encryptionUtilityTests.DecryptFileAsync_DecryptsFileWithValidKey();
 await encryptionUtilityTests.EncryptThenDecrypt_RoundTrip_ReturnsOriginalContent();
 encryptionUtilityTests.IsValidKey_WithValidBase64Key_ReturnsTrue();
+```
+
+## ValidationExceptionTests
+
+The `ValidationExceptionTests` class contains unit tests for the `ValidationException` class. It verifies that the various constructors correctly initialize the exception's message, inner exception, parameter name, and validation errors dictionary. It also confirms that the `ParameterName` and `Errors` properties are accessible and return the expected values.
+
+### Usage Example
+
+```csharp
+var tests = new ValidationExceptionTests();
+tests.DefaultConstructor_CreatesInstance();
+tests.Constructor_WithMessage_CreatesInstanceWithMessage();
+tests.Constructor_WithMessageAndInnerException_CreatesInstanceWithBoth();
+tests.Constructor_WithParameterNameAndMessage_CreatesInstanceWithParameterName();
+tests.Constructor_WithErrorsDictionary_CreatesInstanceWithErrors();
+tests.Constructor_WithParameterNameMessageAndInnerException_CreatesInstanceWithAll();
+tests.ParameterName_Getter_ReturnsCorrectValue();
+tests.Errors_Getter_ReturnsCorrectDictionary();
 ```
