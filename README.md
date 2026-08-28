@@ -316,3 +316,17 @@ storageExceptionTests.AzureStorageException_StorageType_ShouldAlwaysBeAzure();
 storageExceptionTests.InsufficientStorageException_Constructor_WithRequiredAndAvailableBytes_ShouldSetMessageWithCorrectValues();
 storageExceptionTests.InsufficientStorageException_Constructor_WithZeroValues_ShouldSetMessageWithZeroValues();
 ```
+
+## EncryptionUtilityTests
+
+The EncryptionUtilityTests class contains unit tests for the EncryptionUtility class, which provides AES encryption and decryption functionality for files. It tests encryption and decryption with valid keys, round-trip integrity, handling of various key errors (wrong, invalid, empty, null), edge cases (empty and large files), ciphertext variability, and key validation.
+
+### Usage Example
+
+```csharp
+using var encryptionUtilityTests = new EncryptionUtilityTests();
+await encryptionUtilityTests.EncryptFileAsync_EncryptsFileWithValidKey();
+await encryptionUtilityTests.DecryptFileAsync_DecryptsFileWithValidKey();
+await encryptionUtilityTests.EncryptThenDecrypt_RoundTrip_ReturnsOriginalContent();
+encryptionUtilityTests.IsValidKey_WithValidBase64Key_ReturnsTrue();
+```
