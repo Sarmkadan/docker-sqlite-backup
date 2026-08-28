@@ -231,3 +231,58 @@ class DemoEventPublisher : IBackupEventPublisher
     }
 }
 ```
+
+## AzureStorageBackend
+
+The `AzureStorageBackend` class provides an Azure Blob Storage-based implementation for storing and managing database backup files. It handles core storage operations such as uploading, downloading, and deleting backup files, while also offering utilities to list available backups, verify connectivity, and check available space (which is considered unlimited for Azure Blob Storage).
+
+### Usage Example
+
+```csharp
+using System;
+using System.Threading.Tasks;
+using DockerSqliteBackup.Services;
+using DockerSqliteBackup.Domain; // For AzureConfiguration
+using Microsoft.Extensions.Logging;
+
+// For demonstration, we create a simple logger.
+// In a real application, this would be provided by dependency injection.
+ILogger<AzureStorageBackend> logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<AzureStorageBackend>();
+
+var backend = new AzureStorageBackend(logger);
+
+// Configure Azure settings (typically from configuration or environment variables)
+var azureConfig = new AzureConfiguration
+{
+    ConnectionString = "DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=mykey;EndpointSuffix=core.windows.net",
+    ContainerName = "my-backup-container",
+    BlobPrefix = "backups"
+};
+
+// Verify the storage is accessible
+bool isConnected = await backend.TestConnectionAsync(azureConfig);
+if (!isConnected)
+{
+    Console.WriteLine("Unable to connect to Azure Blob Storage.");
+    return;
+}
+
+// Upload a new backup file to Azure Blob Storage
+string uploadedBlob = await backend.UploadBackupAsync("/path/to/local/backup.bak", azureConfig);
+Console.WriteLine($"Uploaded backup to Azure: {uploadedBlob}");
+
+// List all backups in the container with their metadata
+var backups = await backend.ListBackupsAsync(azureConfig);
+foreach (var (blobName, size, modified) in backups)
+{
+    Console.WriteLine($"{blobName} - {size} bytes - {modified:u}");
+}
+
+// Download a backup for local restoration
+string localCopy = await backend.DownloadBackupAsync(uploadedBlob, azureConfig);
+Console.WriteLine($"Downloaded backup to: {localCopy}");
+
+// Remove an outdated backup
+await backend.DeleteBackupAsync(uploadedBlob, azureConfig);
+Console.WriteLine($"Deleted backup from Azure: {uploadedBlob}");
+```
