@@ -108,3 +108,58 @@ string localCopy = await backend.DownloadBackupAsync("appdb-2024-05-20.bak");
 // Remove an outdated backup
 await backend.DeleteBackupAsync("appdb-2024-05-19.bak");
 ```
+
+## WebhookClient
+
+The `WebhookClient` class sends HTTP POST notifications about backup events with HMAC-SHA256 payload signing and exponential-backoff retry logic. It supports secure webhook verification through shared secrets and handles both backup completion and schedule-related events.
+
+### Usage Example
+
+```csharp
+using System;
+using System.Threading.Tasks;
+using DockerSqliteBackup.Configuration;
+using DockerSqliteBackup.Domain;
+using Microsoft.Extensions.Logging;
+
+// Create logger and settings (typically from dependency injection)
+ILogger<WebhookClient> logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<WebhookClient>();
+AppSettings settings = new AppSettings { WebhookSecret = "my-shared-secret" };
+
+// Initialize webhook client
+var webhookClient = new WebhookClient(logger, settings);
+
+// Send backup completion notification
+var backupResult = new BackupResult
+{
+    Id = Guid.NewGuid(),
+    ScheduleId = Guid.NewGuid(),
+    Status = 1, // Success status code
+    BackupFilePath = "/backups/db-2026-08-28.bak",
+    BackupFileSizeBytes = 1024000,
+    Checksum = "abc123",
+    StartedAt = DateTime.UtcNow.AddMinutes(-5),
+    CompletedAt = DateTime.UtcNow
+};
+
+await webhookClient.SendBackupNotificationAsync(
+    "https://example.com/webhooks/backup",
+    backupResult
+);
+
+// Send schedule notification (e.g., for schedule start)
+var schedule = new BackupSchedule
+{
+    Id = Guid.NewGuid(),
+    Name = "daily-backup",
+    DatabasePath = "/data/app.db",
+    CronExpression = "0 2 * * *",
+    IsActive = true
+};
+
+await webhookClient.SendScheduleNotificationAsync(
+    "https://example.com/webhooks/backup",
+    schedule,
+    "schedule.started"
+);
+```
