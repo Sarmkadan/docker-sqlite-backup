@@ -387,3 +387,30 @@ tests.ShouldRotate_MinimumBackupCount_AlwaysKeepsMinimum();
 tests.ShouldRotate_IsFailedParameter_NotUsedInRotationLogic();
 tests.ShouldRotate_MaxBackupCountZero_UnlimitedNoRotation();
 ```
+
+## ScheduleServiceNextRunTests
+
+The ScheduleServiceNextRunTests class contains unit tests for the ScheduleService's GetNextExecutionTime method.
+It verifies the correctness of the next execution time calculation for various cron expressions, including standard
+(daily, hourly, weekly, monthly) and complex expressions, as well as handling of edge cases such as invalid, empty,
+or null cron expressions and schedules.
+
+### Usage Example
+
+```csharp
+var tests = new ScheduleServiceNextRunTests();
+tests.GetNextExecutionTime_DailyCronExpression_ReturnsFutureDate();
+tests.GetNextExecutionTime_HourlyCronExpression_ReturnsNearFutureDate();
+tests.GetNextExecutionTime_MinuteLevelCronExpression_ReturnsVeryNearFutureDate();
+tests.GetNextExecutionTime_WeeklyCronExpression_ReturnsFutureDate();
+tests.GetNextExecutionTime_MonthlyCronExpression_ReturnsFutureDate();
+tests.GetNextExecutionTime_SpecificMinuteHour_ReturnsCorrectBoundaryTime();
+tests.GetNextExecutionTime_PastScheduledTime_ReturnsNextDay();
+tests.GetNextExecutionTime_InvalidCronExpression_ReturnsNull();
+tests.GetNextExecutionTime_EmptyCronExpression_ReturnsNull();
+tests.GetNextExecutionTime_NullCronExpression_ReturnsNull();
+tests.GetNextExecutionTime_ComplexCronExpression_ReturnsValidDate();
+tests.GetNextExecutionTime_EmptyScheduleCron_ReturnsNull();
+tests.GetNextExecutionTime_EveryMinuteCron_ReturnsImmediateNextMinute();
+tests.GetNextExecutionTime_SpecificCronTime_ReturnsValidFutureTime();
+```
