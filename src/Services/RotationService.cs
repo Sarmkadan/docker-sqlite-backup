@@ -30,8 +30,8 @@ public sealed class RotationService : IRotationService
         IBackupRepository repository,
         ILogger<RotationService> logger)
     {
-        _repository = repository;
-        _logger = logger;
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
@@ -43,6 +43,11 @@ public sealed class RotationService : IRotationService
     /// </returns>
     public async Task<int> ExecuteRotationAsync(Guid scheduleId)
     {
+        if (scheduleId == Guid.Empty)
+        {
+            throw new System.ArgumentException("Schedule ID cannot be empty.", nameof(scheduleId));
+        }
+
         using var scope = _logger.BeginScope("Rotation for schedule {ScheduleId}", scheduleId);
         var stopwatch = Stopwatch.StartNew();
 
