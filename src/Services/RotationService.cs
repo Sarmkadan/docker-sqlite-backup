@@ -1,6 +1,8 @@
 #nullable enable
 // Author: Vladyslav Zaiets
 
+using System.Diagnostics;
+
 using DockerSqliteBackup.Constants;
 using DockerSqliteBackup.Data;
 using DockerSqliteBackup.Domain;
@@ -41,6 +43,9 @@ public sealed class RotationService : IRotationService
     /// </returns>
     public async Task<int> ExecuteRotationAsync(Guid scheduleId)
     {
+        using var scope = _logger.BeginScope("Rotation for schedule {ScheduleId}", scheduleId);
+        var stopwatch = Stopwatch.StartNew();
+
         var policy = await _repository.GetRotationPolicyAsync(scheduleId);
         if (policy  is null || policy.Strategy == (int)Constants.RotationStrategy.NoRotation)
         {
@@ -51,6 +56,11 @@ public sealed class RotationService : IRotationService
         var backups = await GetBackupsForRotationAsync(scheduleId);
         var backupsToDelete = backups.ToList();
 
+        _logger.LogDebug(
+            "Applying rotation policy strategy {PolicyStrategy} to {CandidateBackupCount} candidate backups",
+            policy.Strategy,
+            backupsToDelete.Count);
+
         int deletedCount = 0;
         foreach (var backup in backupsToDelete)
         {
@@ -59,23 +69,30 @@ public sealed class RotationService : IRotationService
                 if (!string.IsNullOrEmpty(backup.BackupFilePath) && File.Exists(backup.BackupFilePath))
                 {
                     File.Delete(backup.BackupFilePath);
-                    _logger.LogInformation("Deleted backup file during rotation: {FilePath}", backup.BackupFilePath);
                 }
 
                 await _repository.DeleteBackupResultAsync(backup.Id);
                 deletedCount++;
+                _logger.LogDebug(
+                    "Deleted backup {BackupId} at {BackupFilePath} with size {BackupFileSizeBytes} bytes",
+                    backup.Id,
+                    backup.BackupFilePath,
+                    backup.BackupFileSizeBytes);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to delete backup {BackupId} during rotation", backup.Id);
+                _logger.LogWarning(ex, "Failed to delete backup {BackupId} during rotation", backup.Id);
             }
         }
 
         policy.LastRotatedAt = DateTime.UtcNow;
         await _repository.SaveRotationPolicyAsync(policy);
 
-        _logger.LogInformation("Rotation completed for schedule {ScheduleId}. Deleted {DeletedCount} backups",
-            scheduleId, deletedCount);
+        stopwatch.Stop();
+        _logger.LogInformation(
+            "Rotation completed. Deleted {DeletedCount} backups in {ElapsedMilliseconds} ms",
+            deletedCount,
+            stopwatch.ElapsedMilliseconds);
 
         return deletedCount;
     }
