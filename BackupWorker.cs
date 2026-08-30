@@ -19,6 +19,9 @@ namespace DockerSqliteBackup;
 /// </summary>
 public class BackupWorker : BackgroundService
 {
+    private const int ErrorRetryDelayMilliseconds = 10000;
+    private const double BytesPerMegabyte = 1024.0 * 1024.0;
+
     private readonly IScheduleService _scheduleService;
     private readonly IBackupService _backupService;
     private readonly IVerificationService _verificationService;
@@ -79,7 +82,7 @@ public class BackupWorker : BackgroundService
 
                 // Wait before checking schedules again
                 await Task.Delay(
-                    _appSettings.ScheduleCheckIntervalSeconds * 1000,
+                    TimeSpan.FromSeconds(_appSettings.ScheduleCheckIntervalSeconds),
                     stoppingToken);
             }
             catch (OperationCanceledException)
@@ -90,7 +93,7 @@ public class BackupWorker : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in backup worker loop");
-                await Task.Delay(10000, stoppingToken);
+                await Task.Delay(ErrorRetryDelayMilliseconds, stoppingToken);
             }
         }
 
@@ -164,7 +167,7 @@ public class BackupWorker : BackgroundService
 
                 if (result.IsSuccess)
                 {
-                    var sizeMb = result.BackupFileSizeBytes / (1024.0 * 1024.0);
+                    var sizeMb = result.BackupFileSizeBytes / BytesPerMegabyte;
                     var durationSec = result.DurationMilliseconds / 1000.0;
                     _logger.LogInformation(
                         "Backup completed for {DatabaseName}: {SizeMb:F1} MB in {DurationSec:F1}s — {BackupPath}",
