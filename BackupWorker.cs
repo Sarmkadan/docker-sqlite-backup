@@ -158,94 +158,23 @@ public class BackupWorker : BackgroundService
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(_appSettings.BackupTimeoutSeconds));
 
-            BackupResult? result = null;
             try
             {
                 // Execute backup
-                result = await _backupService.ExecuteBackupAsync(schedule, cts.Token);
+                var result = await _backupService.ExecuteBackupAsync(schedule, cts.Token);
                 job.Result = result;
 
                 if (result.IsSuccess)
                 {
-                    var sizeMb = result.BackupFileSizeBytes / BytesPerMegabyte;
-                    var durationSec = result.DurationMilliseconds / 1000.0;
-                    _logger.LogInformation(
-                        "Backup completed for {DatabaseName}: {SizeMb:F1} MB in {DurationSec:F1}s — {BackupPath}",
-                        schedule.Name, sizeMb, durationSec, result.BackupFilePath);
-
-                    // Verify if enabled - verification must pass before rotation
-                    if (schedule.VerifyAfterBackup)
-                    {
-                        _logger.LogInformation("Starting verification for backup {BackupId}",
-                            result.Id);
-                        var verification = await _verificationService.VerifyBackupAsync(result, cts.Token);
-
-                        if (verification.IsSuccessful)
-                        {
-                            result.Status = (int)BackupStatus.VerifiedSuccess;
-                            result.IsVerified = true;
-                            result.VerifiedAt = DateTime.UtcNow;
-                            _logger.LogInformation("Verification successful for backup {BackupId}",
-                                result.Id);
-
-                            // Execute rotation only after successful verification
-                            var deletedCount = await _rotationService.ExecuteRotationAsync(schedule.Id);
-                            if (deletedCount > 0)
-                            {
-                                _logger.LogInformation("Rotation deleted {DeletedCount} old backups for schedule {ScheduleId}",
-                                    deletedCount, schedule.Id);
-                            }
-                        }
-                        else
-                        {
-                            result.Status = (int)BackupStatus.VerificationFailed;
-                            _logger.LogError("Verification failed for backup {BackupId}: {Reason}",
-                                result.Id, verification.StatusMessage);
-
-                            // Do NOT rotate when verification fails - preserve all existing backups
-                            _logger.LogWarning("Skipping rotation for schedule {ScheduleId} due to verification failure", schedule.Id);
-                        }
-
-                        await _eventPublisher.PublishAsync(new RestoreVerificationCompletedEvent
-                        {
-                            BackupResultId = result.Id,
-                            IsValid = verification.IsSuccessful,
-                            ValidationMessage = verification.StatusMessage
-                        }, cancellationToken);
-                    }
-                    else
-                    {
-                        // No verification, still execute rotation
-                        var deletedCount = await _rotationService.ExecuteRotationAsync(schedule.Id);
-                        if (deletedCount > 0)
-                        {
-                            _logger.LogInformation("Rotation deleted {DeletedCount} old backups for schedule {ScheduleId}",
-                                deletedCount, schedule.Id);
-                        }
-                    }
-
-                    // Update schedule's last backup time
-                    schedule.LastBackupAt = DateTime.UtcNow;
-                    await _scheduleService.UpdateScheduleAsync(schedule);
-
-                    job.MarkCompleted((int)BackupStatus.Success);
-
-                    await _eventPublisher.PublishAsync(new BackupCompletedEvent
-                    {
-                        Result = result,
-                        Duration = TimeSpan.FromMilliseconds(result.DurationMilliseconds),
-                        ScheduleCronExpression = schedule.CronExpression
-                    }, cancellationToken);
+                    await HandleSuccessfulBackupAsync(schedule, job, result, cts, cancellationToken);
                 }
                 else
                 {
                     job.MarkCompleted((int)BackupStatus.Failed);
-
-                    await _eventPublisher.PublishAsync(new BackupFailedEvent
-                    {
-                        ScheduleId = schedule.Id,
-                        ErrorMessage = result.ErrorMessage ?? "Backup did not complete successfully"
-                    }, cancellationToken);
+                    await PublishFailureAsync(
+                        schedule.Id,
+                        result.ErrorMessage ?? "Backup did not complete successfully",
+                        cancellationToken);
                 }
             }
             catch (OperationCanceledException)
@@ -255,11 +184,10 @@ public class BackupWorker : BackgroundService
                     _appSettings.BackupTimeoutSeconds);
                 job.MarkCompleted((int)BackupStatus.Failed);
 
-                await _eventPublisher.PublishAsync(new BackupFailedEvent
-                {
-                    ScheduleId = schedule.Id,
-                    ErrorMessage = $"Backup timed out after {_appSettings.BackupTimeoutSeconds} seconds"
-                }, cancellationToken);
+                await PublishFailureAsync(
+                    schedule.Id,
+                    $"Backup timed out after {_appSettings.BackupTimeoutSeconds} seconds",
+                    cancellationToken);
             }
             catch (Exception ex)
             {
@@ -267,11 +195,7 @@ public class BackupWorker : BackgroundService
                     schedule.Id);
                 job.MarkCompleted((int)BackupStatus.Failed);
 
-                await _eventPublisher.PublishAsync(new BackupFailedEvent
-                {
-                    ScheduleId = schedule.Id,
-                    ErrorMessage = ex.Message
-                }, cancellationToken);
+                await PublishFailureAsync(schedule.Id, ex.Message, cancellationToken);
             }
         }
         catch (Exception ex)
@@ -284,5 +208,98 @@ public class BackupWorker : BackgroundService
         {
             Interlocked.Decrement(ref _activeBackups);
         }
+    }
+
+    private async Task HandleSuccessfulBackupAsync(
+        BackupSchedule schedule,
+        BackupJob job,
+        BackupResult result,
+        CancellationTokenSource cts,
+        CancellationToken cancellationToken)
+    {
+        var sizeMb = result.BackupFileSizeBytes / BytesPerMegabyte;
+        var durationSec = result.DurationMilliseconds / 1000.0;
+        _logger.LogInformation(
+            "Backup completed for {DatabaseName}: {SizeMb:F1} MB in {DurationSec:F1}s — {BackupPath}",
+            schedule.Name, sizeMb, durationSec, result.BackupFilePath);
+
+        await VerifyAndRotateAsync(schedule, result, cts.Token);
+
+        // Update schedule's last backup time
+        schedule.LastBackupAt = DateTime.UtcNow;
+        await _scheduleService.UpdateScheduleAsync(schedule);
+
+        job.MarkCompleted((int)BackupStatus.Success);
+
+        await _eventPublisher.PublishAsync(new BackupCompletedEvent
+        {
+            Result = result,
+            Duration = TimeSpan.FromMilliseconds(result.DurationMilliseconds),
+            ScheduleCronExpression = schedule.CronExpression
+        }, cancellationToken);
+    }
+
+    private async Task<bool> VerifyAndRotateAsync(
+        BackupSchedule schedule,
+        BackupResult result,
+        CancellationToken cancellationToken)
+    {
+        if (!schedule.VerifyAfterBackup)
+        {
+            // No verification, still execute rotation
+            await RunRotationAsync(schedule.Id);
+            return true;
+        }
+
+        _logger.LogInformation("Starting verification for backup {BackupId}", result.Id);
+        var verification = await _verificationService.VerifyBackupAsync(result, cancellationToken);
+
+        if (verification.IsSuccessful)
+        {
+            result.Status = (int)BackupStatus.VerifiedSuccess;
+            result.IsVerified = true;
+            result.VerifiedAt = DateTime.UtcNow;
+            _logger.LogInformation("Verification successful for backup {BackupId}", result.Id);
+
+            // Execute rotation only after successful verification
+            await RunRotationAsync(schedule.Id);
+        }
+        else
+        {
+            result.Status = (int)BackupStatus.VerificationFailed;
+            _logger.LogError("Verification failed for backup {BackupId}: {Reason}",
+                result.Id, verification.StatusMessage);
+
+            // Do NOT rotate when verification fails - preserve all existing backups
+            _logger.LogWarning("Skipping rotation for schedule {ScheduleId} due to verification failure", schedule.Id);
+        }
+
+        await _eventPublisher.PublishAsync(new RestoreVerificationCompletedEvent
+        {
+            BackupResultId = result.Id,
+            IsValid = verification.IsSuccessful,
+            ValidationMessage = verification.StatusMessage
+        }, cancellationToken);
+
+        return verification.IsSuccessful;
+    }
+
+    private async Task RunRotationAsync(Guid scheduleId)
+    {
+        var deletedCount = await _rotationService.ExecuteRotationAsync(scheduleId);
+        if (deletedCount > 0)
+        {
+            _logger.LogInformation("Rotation deleted {DeletedCount} old backups for schedule {ScheduleId}",
+                deletedCount, scheduleId);
+        }
+    }
+
+    private Task PublishFailureAsync(Guid scheduleId, string message, CancellationToken cancellationToken)
+    {
+        return _eventPublisher.PublishAsync(new BackupFailedEvent
+        {
+            ScheduleId = scheduleId,
+            ErrorMessage = message
+        }, cancellationToken);
     }
 }
