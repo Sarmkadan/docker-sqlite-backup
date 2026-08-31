@@ -58,11 +58,14 @@ public class BackupWorker : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Backup Worker service started");
+        var inFlightBackups = new List<Task>();
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
+                inFlightBackups.RemoveAll(task => task.IsCompleted);
+
                 // Load all active schedules
                 var schedules = await _scheduleService.GetActiveSchedulesAsync();
 
@@ -76,7 +79,7 @@ public class BackupWorker : BackgroundService
                         // poll iteration, and so the dictionary is only ever touched by
                         // this thread.
                         _scheduleLastRun[schedule.Id] = DateTime.UtcNow;
-                        _ = ExecuteScheduleAsync(schedule, stoppingToken);
+                        inFlightBackups.Add(ExecuteScheduleAsync(schedule, stoppingToken));
                     }
                 }
 
@@ -93,7 +96,40 @@ public class BackupWorker : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in backup worker loop");
-                await Task.Delay(ErrorRetryDelayMilliseconds, stoppingToken);
+
+                try
+                {
+                    await Task.Delay(ErrorRetryDelayMilliseconds, stoppingToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogInformation("Backup Worker service is shutting down");
+                    break;
+                }
+            }
+        }
+
+        var remainingBackups = inFlightBackups.Where(task => !task.IsCompleted).ToArray();
+        _logger.LogInformation(
+            "Awaiting {BackupCount} in-flight backups during shutdown",
+            remainingBackups.Length);
+
+        if (remainingBackups.Length > 0)
+        {
+            var allBackups = Task.WhenAll(remainingBackups);
+            var gracePeriod = Task.Delay(TimeSpan.FromSeconds(_appSettings.BackupTimeoutSeconds));
+
+            if (await Task.WhenAny(allBackups, gracePeriod) != allBackups)
+            {
+                _logger.LogWarning(
+                    "Shutdown grace period of {TimeoutSeconds} seconds exceeded with {BackupCount} backups still running",
+                    _appSettings.BackupTimeoutSeconds,
+                    remainingBackups.Count(task => !task.IsCompleted));
+            }
+            else
+            {
+                await allBackups;
+                _logger.LogInformation("All in-flight backups completed within the shutdown grace period");
             }
         }
 
