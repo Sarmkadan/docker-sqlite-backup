@@ -171,16 +171,15 @@ public class BackupWorker : BackgroundService
     private async Task ExecuteScheduleAsync(BackupSchedule schedule, CancellationToken cancellationToken)
     {
         // Rate limiting: don't exceed max concurrent backups
-        if (_activeBackups >= _appSettings.MaxConcurrentBackups)
+        if (Interlocked.Increment(ref _activeBackups) > _appSettings.MaxConcurrentBackups)
         {
+            Interlocked.Decrement(ref _activeBackups);
             _logger.LogWarning(
                 "Skipping backup for schedule {ScheduleId} - max concurrent backups reached ({Count})",
                 schedule.Id,
                 _appSettings.MaxConcurrentBackups);
             return;
         }
-
-        Interlocked.Increment(ref _activeBackups);
 
         try
         {
