@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using DockerSqliteBackup.Domain;
 
 namespace DockerSqliteBackup.Events;
@@ -31,6 +32,17 @@ internal static class ValidationConstants
 /// <summary>
 /// Represents an event in the backup system. Base class for all domain events.
 /// </summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$eventType", UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+[JsonDerivedType(typeof(BackupStartedEvent), "backup.started")]
+[JsonDerivedType(typeof(BackupCompletedEvent), "backup.completed")]
+[JsonDerivedType(typeof(BackupFailedEvent), "backup.failed")]
+[JsonDerivedType(typeof(BackupRetryEvent), "backup.retry")]
+[JsonDerivedType(typeof(ScheduleCreatedEvent), "schedule.created")]
+[JsonDerivedType(typeof(ScheduleUpdatedEvent), "schedule.updated")]
+[JsonDerivedType(typeof(ScheduleDeletedEvent), "schedule.deleted")]
+[JsonDerivedType(typeof(RestoreVerificationCompletedEvent), "restore.verification.completed")]
+[JsonDerivedType(typeof(RestoreVerificationFailedEvent), "restore.verification.failed")]
+[JsonDerivedType(typeof(HealthCheckEvent), "health.check")]
 public abstract class BackupEvent
 {
     /// <summary>Gets the event type identifier.</summary>
