@@ -8,67 +8,52 @@ namespace DockerSqliteBackup.Tests
         [Fact]
         public void Constructor_WithMessage_ThrowsBackupException()
         {
-            // Arrange
-            string message = "Test message";
-
-            // Act and Assert
-            Assert.IsType<BackupException>(Assert.Throws<BackupException>(() => new BackupException(message)));
+            var exception = new BackupException("Test message");
+            Assert.IsType<BackupException>(exception);
+            Assert.Equal("Test message", exception.Message);
         }
 
         [Fact]
         public void Constructor_WithMessageAndBackupId_ThrowsBackupException()
         {
-            // Arrange
-            string message = "Test message";
             Guid backupId = Guid.NewGuid();
-
-            // Act and Assert
-            Assert.IsType<BackupException>(Assert.Throws<BackupException>(() => new BackupException(message, backupId)));
+            var exception = new BackupException("Test message", backupId);
+            Assert.IsType<BackupException>(exception);
+            Assert.Equal(backupId, exception.BackupId);
         }
 
         [Fact]
         public void Constructor_WithMessageAndScheduleIdAndBackupId_ThrowsBackupException()
         {
-            // Arrange
-            string message = "Test message";
             Guid scheduleId = Guid.NewGuid();
             Guid backupId = Guid.NewGuid();
-
-            // Act and Assert
-            Assert.IsType<BackupException>(Assert.Throws<BackupException>(() => new BackupException(message, scheduleId, backupId)));
+            var exception = new BackupException("Test message", scheduleId, backupId);
+            Assert.IsType<BackupException>(exception);
+            Assert.Equal(scheduleId, exception.ScheduleId);
+            Assert.Equal(backupId, exception.BackupId);
         }
 
         [Fact]
         public void DatabaseAccessException_ThrowsDatabaseAccessException()
         {
-            // Arrange
-            string databasePath = "Test database path";
             Exception innerException = new Exception("Test inner exception");
-
-            // Act and Assert
-            Assert.IsType<DatabaseAccessException>(Assert.Throws<DatabaseAccessException>(() => new DatabaseAccessException(databasePath, innerException)));
+            var exception = new DatabaseAccessException("Test database path", innerException);
+            Assert.IsType<DatabaseAccessException>(exception);
         }
 
         [Fact]
         public void BackupTimeoutException_ThrowsBackupTimeoutException()
         {
-            // Arrange
-            string message = "Test message";
-            TimeSpan timeout = TimeSpan.FromSeconds(10);
-
-            // Act and Assert
-            Assert.IsType<BackupTimeoutException>(Assert.Throws<BackupTimeoutException>(() => new BackupTimeoutException(message, timeout)));
+            var exception = new BackupTimeoutException("Test message", TimeSpan.FromSeconds(10));
+            Assert.IsType<BackupTimeoutException>(exception);
         }
 
         [Fact]
         public void BackupCorruptedException_ThrowsBackupCorruptedException()
         {
-            // Arrange
-            string message = "Test message";
             Guid backupId = Guid.NewGuid();
-
-            // Act and Assert
-            Assert.IsType<BackupCorruptedException>(Assert.Throws<BackupCorruptedException>(() => new BackupCorruptedException(message, backupId)));
+            var exception = new BackupCorruptedException("Test message", backupId);
+            Assert.IsType<BackupCorruptedException>(exception);
         }
     }
 }

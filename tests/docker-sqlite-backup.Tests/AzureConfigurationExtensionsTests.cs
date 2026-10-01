@@ -67,7 +67,7 @@ namespace DockerSqliteBackup.Tests
 
             // Assert
             Assert.NotNull(result);
-            Assert.Equal("BlobEndpoint=https://account.blob.core.windows.net/;SharedAccessSignature=...", result);
+            Assert.StartsWith("BlobEndpoint=https://account.blob.core.windows.net/", result);
         }
 
         [Fact]

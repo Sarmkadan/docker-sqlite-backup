@@ -97,7 +97,6 @@ namespace DockerSqliteBackup.Tests
         }
 
         [Theory]
-        [InlineData(null)]
         [InlineData("")]
         [InlineData("   ")]
         public void IsValid_WithNullOrEmptyName_ReturnsFalse(string? name)
@@ -105,7 +104,7 @@ namespace DockerSqliteBackup.Tests
             // Arrange
             var config = new LocalStorageConfiguration
             {
-                Name = name,
+                Name = name!,
                 BaseDirectory = @"/tmp/backups"
             };
 
@@ -114,6 +113,16 @@ namespace DockerSqliteBackup.Tests
 
             // Assert
             Assert.False(isValid);
+        }
+
+        [Fact]
+        public void IsValid_WithNullName_ThrowsArgumentNullException()
+        {
+            Assert.Throws<System.ArgumentNullException>(() => new LocalStorageConfiguration
+            {
+                Name = null!,
+                BaseDirectory = @"/tmp/backups"
+            });
         }
 
         [Theory]

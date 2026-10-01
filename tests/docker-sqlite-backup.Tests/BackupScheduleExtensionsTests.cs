@@ -95,14 +95,23 @@ public class BackupScheduleExtensionsTests
     [Fact]
     public void ShouldPerformBackup_NoLastBackup_ReturnsTrue()
     {
-        // Arrange
-        var schedule = CreateSchedule(lastBackupAt: null);
+        // Arrange - need a real file for ValidateDatabasePath to pass
+        var tempFile = Path.GetTempFileName();
+        try
+        {
+            var schedule = CreateSchedule(lastBackupAt: null);
+            schedule.DatabasePath = tempFile;
 
-        // Act
-        var result = schedule.ShouldPerformBackup();
+            // Act
+            var result = schedule.ShouldPerformBackup();
 
-        // Assert
-        Assert.True(result);
+            // Assert
+            Assert.True(result);
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
     }
 
     [Fact]

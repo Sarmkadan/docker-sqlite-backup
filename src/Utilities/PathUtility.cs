@@ -15,7 +15,7 @@ public static class PathUtility
     /// </summary>
     public static string SanitizeFileName(string fileName)
     {
-        ArgumentException.ThrowIfNullOrEmpty(fileName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
 
         var invalidChars = Path.GetInvalidFileNameChars();
         var sanitized = string.Concat(fileName.Split(invalidChars));

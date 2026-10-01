@@ -118,8 +118,12 @@ public class AuditLogger
     /// </summary>
     public void LogEntry(AuditEntry entry)
     {
+        if (entry is null)
+        {
+            return;
+        }
+
         _logger.LogInformation("LogEntry called for category {Category}", entry.Category);
-        ArgumentNullException.ThrowIfNull(entry);
         LogAuditEntry(entry);
         _logger.LogInformation("LogEntry completed for category {Category}", entry.Category);
     }

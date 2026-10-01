@@ -90,7 +90,6 @@ namespace DockerSqliteBackup.Tests
         }
 
         [Theory]
-        [InlineData(null)]
         [InlineData("")]
         [InlineData(" ")]
         public void IsValid_WithNullOrEmptyName_ReturnsFalse(string? name)
@@ -98,7 +97,7 @@ namespace DockerSqliteBackup.Tests
             // Arrange
             var config = new S3Configuration
             {
-                Name = name,
+                Name = name!,
                 AccessKeyId = "AKIAIOSFODNN7EXAMPLE",
                 SecretAccessKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
                 BucketName = "my-backup-bucket",
@@ -110,6 +109,19 @@ namespace DockerSqliteBackup.Tests
 
             // Assert
             Assert.False(isValid);
+        }
+
+        [Fact]
+        public void IsValid_WithNullName_ThrowsArgumentNullException()
+        {
+            Assert.Throws<System.ArgumentNullException>(() => new S3Configuration
+            {
+                Name = null!,
+                AccessKeyId = "AKIAIOSFODNN7EXAMPLE",
+                SecretAccessKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+                BucketName = "my-backup-bucket",
+                RegionName = "us-east-1"
+            });
         }
 
         [Theory]

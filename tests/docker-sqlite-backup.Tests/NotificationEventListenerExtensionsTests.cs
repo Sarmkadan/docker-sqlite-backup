@@ -249,7 +249,8 @@ namespace DockerSqliteBackup.Tests
                 "backup.failed",
                 "backup.retry",
                 "schedule.created",
-                "restore.verification.completed"
+                "restore.verification.completed",
+                "restore.verification.failed"
             });
         }
 
