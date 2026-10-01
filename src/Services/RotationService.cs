@@ -171,6 +171,7 @@ public sealed class RotationService : IRotationService
 
         var backupsList = history.OrderByDescending(b => b.StartedAt).ToList();
         var backupsToDelete = new List<BackupResult>();
+        int remainingCount = backupsList.Count;
 
         for (int i = policy.MinimumBackupCount; i < backupsList.Count; i++)
         {
@@ -180,11 +181,12 @@ public sealed class RotationService : IRotationService
             if (policy.DeleteFailedBackups && !backup.IsSuccess)
             {
                 backupsToDelete.Add(backup);
+                remainingCount--;
                 continue;
             }
 
             // Skip backups that don't meet rotation criteria
-            if (!policy.ShouldRotate(backupsList.Count, backup.StartedAt, !backup.IsSuccess))
+            if (!policy.ShouldRotate(remainingCount, backup.StartedAt, !backup.IsSuccess))
             {
                 continue;
             }
@@ -200,6 +202,7 @@ public sealed class RotationService : IRotationService
             }
 
             backupsToDelete.Add(backup);
+            remainingCount--;
         }
 
         return backupsToDelete;

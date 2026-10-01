@@ -11,8 +11,12 @@ namespace DockerSqliteBackup.Tests
             // Arrange
             string message = "Test message";
 
-            // Act and Assert
-            Assert.IsType<ScheduleException>(Assert.Throws<ScheduleException>(() => new ScheduleException(message)));
+            // Act
+            var exception = new ScheduleException(message);
+
+            // Assert
+            Assert.IsType<ScheduleException>(exception);
+            Assert.Equal(message, exception.Message);
         }
 
         [Fact]
@@ -22,8 +26,12 @@ namespace DockerSqliteBackup.Tests
             string message = "Test message";
             Guid scheduleId = Guid.NewGuid();
 
-            // Act and Assert
-            Assert.IsType<ScheduleException>(Assert.Throws<ScheduleException>(() => new ScheduleException(message, scheduleId)));
+            // Act
+            var exception = new ScheduleException(message, scheduleId);
+
+            // Assert
+            Assert.IsType<ScheduleException>(exception);
+            Assert.Equal(scheduleId, exception.ScheduleId);
         }
 
         [Fact]
@@ -32,8 +40,11 @@ namespace DockerSqliteBackup.Tests
             // Arrange
             string cronExpression = "Invalid cron expression";
 
-            // Act and Assert
-            Assert.IsType<InvalidCronExpressionException>(Assert.Throws<InvalidCronExpressionException>(() => new InvalidCronExpressionException(cronExpression)));
+            // Act
+            var exception = new InvalidCronExpressionException(cronExpression);
+
+            // Assert
+            Assert.IsType<InvalidCronExpressionException>(exception);
         }
 
         [Fact]
@@ -43,8 +54,11 @@ namespace DockerSqliteBackup.Tests
             string message = "Test message";
             Guid scheduleId = Guid.NewGuid();
 
-            // Act and Assert
-            Assert.IsType<InvalidScheduleException>(Assert.Throws<InvalidScheduleException>(() => new InvalidScheduleException(message, scheduleId)));
+            // Act
+            var exception = new InvalidScheduleException(message, scheduleId);
+
+            // Assert
+            Assert.IsType<InvalidScheduleException>(exception);
         }
 
         [Fact]

@@ -52,6 +52,8 @@ public class RestoreVerification
     /// </summary>
     public void MarkCompleted(bool successful, string statusMessage)
     {
+        ArgumentNullException.ThrowIfNull(statusMessage);
+
         IsSuccessful = successful;
         StatusMessage = statusMessage;
         CompletedAt = DateTime.UtcNow;
@@ -67,8 +69,10 @@ public class RestoreVerification
     /// </summary>
     public TimeSpan GetElapsedDuration()
     {
-        var endTime = CompletedAt ?? DateTime.UtcNow;
-        return endTime - StartedAt;
+        if (CompletedAt is null)
+            return TimeSpan.Zero;
+
+        return CompletedAt.Value - StartedAt;
     }
 
     public override string ToString() => $"RestoreVerification {{ Id = {Id}, BackupResultId = {BackupResultId}, IsSuccessful = {IsSuccessful}, StatusMessage = {StatusMessage}, StartedAt = {StartedAt}, CompletedAt = {CompletedAt} }}";

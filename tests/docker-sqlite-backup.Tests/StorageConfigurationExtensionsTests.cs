@@ -240,13 +240,18 @@ public class StorageConfigurationExtensionsTests
     }
 
     [Theory]
-    [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
     public void ValidateName_ReturnsFalseWhenNameIsInvalid(string? name)
     {
         var config = new LocalStorageConfiguration { Name = name! };
         Assert.False(config.ValidateName());
+    }
+
+    [Fact]
+    public void ValidateName_NullName_ThrowsArgumentNullException()
+    {
+        Assert.Throws<System.ArgumentNullException>(() => new LocalStorageConfiguration { Name = null! });
     }
 
     [Fact]

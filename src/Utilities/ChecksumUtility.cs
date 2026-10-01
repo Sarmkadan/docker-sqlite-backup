@@ -32,7 +32,7 @@ public static class ChecksumUtility
     /// </summary>
     public static string CalculateStringSha256(string input)
     {
-        ArgumentException.ThrowIfNullOrEmpty(input);
+        ArgumentNullException.ThrowIfNull(input);
         using var sha256 = SHA256.Create();
         var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
         return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();

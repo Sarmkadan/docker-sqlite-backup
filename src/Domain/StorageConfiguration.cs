@@ -12,7 +12,16 @@ public abstract class StorageConfiguration
     public Guid Id { get; set; } = Guid.NewGuid();
 
     /// <summary>Gets or sets the name of the storage configuration.</summary>
-    public string Name { get; set; } = string.Empty;
+    private string _name = string.Empty;
+    public string Name
+    {
+        get => _name;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _name = value;
+        }
+    }
 
     /// <summary>Gets or sets the storage type.</summary>
     public abstract int StorageType { get; }

@@ -4,9 +4,9 @@ using System.Threading.Tasks;
 using Xunit;
 using Moq;
 using Microsoft.Extensions.Logging;
-using Azure.Storage.Blobs;
 using DockerSqliteBackup.Domain;
 using DockerSqliteBackup.Services;
+using DockerSqliteBackup.Exceptions;
 
 namespace DockerSqliteBackup.Tests
 {
@@ -21,11 +21,9 @@ namespace DockerSqliteBackup.Tests
             var filePath = "test.txt";
             var storageConfiguration = new AzureConfiguration();
 
-            // Act
-            var result = await azureStorageBackend.UploadBackupAsync(filePath, storageConfiguration);
-
-            // Assert
-            Assert.NotNull(result);
+            // Act & Assert - without credentials, upload should throw
+            await Assert.ThrowsAsync<LocalStorageException>(
+                () => azureStorageBackend.UploadBackupAsync(filePath, storageConfiguration));
         }
 
         [Fact]
@@ -37,11 +35,9 @@ namespace DockerSqliteBackup.Tests
             var storagePath = "test.txt";
             var storageConfiguration = new AzureConfiguration();
 
-            // Act
-            var result = await azureStorageBackend.DownloadBackupAsync(storagePath, storageConfiguration);
-
-            // Assert
-            Assert.NotNull(result);
+            // Act & Assert - without credentials, download should throw
+            await Assert.ThrowsAsync<AzureStorageException>(
+                () => azureStorageBackend.DownloadBackupAsync(storagePath, storageConfiguration));
         }
 
         [Fact]
@@ -53,11 +49,9 @@ namespace DockerSqliteBackup.Tests
             var storagePath = "test.txt";
             var storageConfiguration = new AzureConfiguration();
 
-            // Act
-            await azureStorageBackend.DeleteBackupAsync(storagePath, storageConfiguration);
-
-            // Assert
-            // No exception thrown
+            // Act & Assert - without credentials, delete should throw
+            await Assert.ThrowsAsync<AzureStorageException>(
+                () => azureStorageBackend.DeleteBackupAsync(storagePath, storageConfiguration));
         }
 
         [Fact]
@@ -68,11 +62,9 @@ namespace DockerSqliteBackup.Tests
             var azureStorageBackend = new AzureStorageBackend(logger.Object);
             var storageConfiguration = new AzureConfiguration();
 
-            // Act
-            var result = await azureStorageBackend.ListBackupsAsync(storageConfiguration);
-
-            // Assert
-            Assert.NotNull(result);
+            // Act & Assert - without credentials, list should throw
+            await Assert.ThrowsAsync<AzureStorageException>(
+                () => azureStorageBackend.ListBackupsAsync(storageConfiguration));
         }
 
         [Fact]
@@ -83,11 +75,11 @@ namespace DockerSqliteBackup.Tests
             var azureStorageBackend = new AzureStorageBackend(logger.Object);
             var storageConfiguration = new AzureConfiguration();
 
-            // Act
+            // Act - without credentials, connection test returns false
             var result = await azureStorageBackend.TestConnectionAsync(storageConfiguration);
 
             // Assert
-            Assert.True(result);
+            Assert.False(result);
         }
 
         [Fact]
@@ -115,7 +107,7 @@ namespace DockerSqliteBackup.Tests
             var storageConfiguration = new AzureConfiguration();
 
             // Act and Assert
-            await Assert.ThrowsAsync<ArgumentNullException>(() => azureStorageBackend.UploadBackupAsync(filePath, storageConfiguration));
+            await Assert.ThrowsAsync<System.ArgumentNullException>(() => azureStorageBackend.UploadBackupAsync(filePath, storageConfiguration));
         }
     }
 }

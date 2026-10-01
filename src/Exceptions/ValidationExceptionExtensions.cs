@@ -21,12 +21,12 @@ namespace DockerSqliteBackup.Exceptions
         {
             if (ex == null)
             {
-                throw new ArgumentNullException(nameof(ex));
+                throw new System.ArgumentNullException(nameof(ex));
             }
 
-            if (string.IsNullOrEmpty(key))
+            if (string.IsNullOrWhiteSpace(key))
             {
-                throw new ArgumentException("Key cannot be null or empty.", nameof(key));
+                throw new System.ArgumentException("Key cannot be null or empty.", nameof(key));
             }
 
             return ex.Errors?.ContainsKey(key) ?? false;
@@ -44,12 +44,12 @@ namespace DockerSqliteBackup.Exceptions
         {
             if (ex == null)
             {
-                throw new ArgumentNullException(nameof(ex));
+                throw new System.ArgumentNullException(nameof(ex));
             }
 
-            if (string.IsNullOrEmpty(key))
+            if (string.IsNullOrWhiteSpace(key))
             {
-                throw new ArgumentException("Key cannot be null or empty.", nameof(key));
+                throw new System.ArgumentException("Key cannot be null or empty.", nameof(key));
             }
 
             return ex.Errors?.TryGetValue(key, out var value) is true ? value : null;
@@ -66,7 +66,7 @@ namespace DockerSqliteBackup.Exceptions
         {
             if (ex == null)
             {
-                throw new ArgumentNullException(nameof(ex));
+                throw new System.ArgumentNullException(nameof(ex));
             }
 
             var sb = new StringBuilder();

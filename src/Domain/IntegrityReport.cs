@@ -14,7 +14,7 @@ public class IntegrityReport
     public Guid Id { get; set; } = Guid.NewGuid();
 
     /// <summary>Gets or sets the path of the database file that was checked.</summary>
-    public string DatabasePath { get; set; } = string.Empty;
+    public string DatabasePath { get; set; } = "/unknown";
 
     /// <summary>Gets or sets when the check was performed.</summary>
     public DateTime CheckedAt { get; set; } = DateTime.UtcNow;
@@ -60,13 +60,13 @@ public class IntegrityReport
     public long PageCount { get; set; }
 
     /// <summary>Page size in bytes (from <c>PRAGMA page_size</c>).</summary>
-    public long PageSize { get; set; }
+    public long PageSize { get; set; } = 4096;
 
     /// <summary>Number of free (unused) pages in the database.</summary>
     public long FreePageCount { get; set; }
 
     /// <summary>Journal mode of the database (e.g., WAL, DELETE, MEMORY).</summary>
-    public string JournalMode { get; set; } = string.Empty;
+    public string JournalMode { get; set; } = "WAL";
 
     /// <summary>Whether the database has outstanding WAL frames that have not been checkpointed.</summary>
     public bool HasUncheckpointedWal { get; set; }

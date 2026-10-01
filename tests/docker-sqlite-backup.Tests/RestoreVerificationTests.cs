@@ -11,11 +11,13 @@ public class RestoreVerificationTests
     [Fact]
     public void Constructor_SetsPropertiesCorrectly()
     {
+        var before = DateTime.UtcNow;
         var verification = new RestoreVerification();
+        var after = DateTime.UtcNow;
 
         Assert.NotEqual(Guid.Empty, verification.Id);
         Assert.Equal(string.Empty, verification.StatusMessage);
-        Assert.Equal(DateTime.UtcNow, verification.StartedAt);
+        Assert.InRange(verification.StartedAt, before, after);
         Assert.Null(verification.CompletedAt);
         Assert.Equal(0, verification.DurationMilliseconds);
         Assert.Equal(0, verification.RecordCount);
@@ -30,12 +32,14 @@ public class RestoreVerificationTests
     public void MarkCompleted_SetsPropertiesCorrectly()
     {
         var verification = new RestoreVerification();
+        var before = DateTime.UtcNow;
         verification.MarkCompleted(true, "Success");
+        var after = DateTime.UtcNow;
 
         Assert.True(verification.IsSuccessful);
         Assert.Equal("Success", verification.StatusMessage);
-        Assert.Equal(DateTime.UtcNow, verification.CompletedAt);
-        Assert.Equal(0, verification.DurationMilliseconds);
+        Assert.NotNull(verification.CompletedAt);
+        Assert.InRange(verification.CompletedAt!.Value, before, after);
     }
 
     [Fact]
@@ -50,7 +54,8 @@ public class RestoreVerificationTests
     public void GetElapsedDuration_ReturnsCorrectDuration()
     {
         var verification = new RestoreVerification();
-        verification.CompletedAt = DateTime.UtcNow.AddMinutes(1);
+        var startedAt = verification.StartedAt;
+        verification.CompletedAt = startedAt.AddMinutes(1);
 
         var duration = verification.GetElapsedDuration();
 

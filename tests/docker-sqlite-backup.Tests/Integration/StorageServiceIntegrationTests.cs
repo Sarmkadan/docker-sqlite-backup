@@ -1,6 +1,7 @@
 // Author: Vladyslav Zaiets
 
 using DockerSqliteBackup.Domain;
+using DockerSqliteBackup.Events;
 using DockerSqliteBackup.Exceptions;
 using DockerSqliteBackup.Services;
 using FluentAssertions;
@@ -25,6 +26,7 @@ public class StorageServiceIntegrationTests : IDisposable
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton<LocalStorageBackend>();
+        services.AddSingleton<IBackupEventPublisher, BackupEventPublisher>();
         services.AddSingleton<S3StorageBackend>();
         services.AddSingleton<AzureStorageBackend>();
         var serviceProvider = services.BuildServiceProvider();
