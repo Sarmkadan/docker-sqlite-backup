@@ -1,149 +1,134 @@
 # RotationService
 
-`RotationService` manages the lifecycle of backup rotation policies and their execution within the `docker-sqlite-backup` system. It provides methods to retrieve, persist, and evaluate rotation rules, enumerate backups eligible for rotation, execute the rotation process itself, and estimate the disk space that would be reclaimed by applying a given policy.
+`RotationService` (`src/Services/RotationService.cs`) implements `IRotationService`. It stores and retrieves the rotation policy for a backup schedule, computes which backups the policy would delete, executes the deletion, and previews the disk space that would be freed.
+
+Backup candidates come from the backup metadata history in `IBackupRepository`, not from a directory scan. Each deletion removes the backup file (if it still exists on disk) and then the metadata record.
+
+## Dependencies
+
+| Dependency | Purpose |
+|---|---|
+| `IBackupRepository` | Reads and writes `RotationPolicy` and backup history (`GetBackupHistoryAsync`, `DeleteBackupResultAsync`). |
+| `ILogger<RotationService>` | Logs policy evaluation, deletions, and failures. |
+
+Both constructor arguments are required. Passing `null` throws `ArgumentNullException` (the project's `DockerSqliteBackup.Exceptions.ArgumentNullException`).
+
+## Rotation policy
+
+The policy is a `RotationPolicy` (`src/Domain/RotationPolicy.cs`). The fields that `RotationService` reads:
+
+| Field | Effect in `RotationService` |
+|---|---|
+| `Strategy` | Mapped to `Constants.RotationStrategy`. `NoRotation` disables rotation in `ExecuteRotationAsync` and `PreviewRotationAsync`. Other values are evaluated by `ShouldRotate`. |
+| `MinimumBackupCount` | The newest N backups (by `StartedAt`, descending) are never candidates. |
+| `MaxBackupCount`, `MaxAgeDays` | Thresholds used by `RotationPolicy.ShouldRotate`. |
+| `DeleteFailedBackups` | Failed backups beyond the minimum count are deleted directly (see the candidate rules below). |
+| `VerifyBeforeDeletion` | Non-failed candidates are kept unless `Status` equals `BackupStatus.VerifiedSuccess`. |
+| `LastRotatedAt` | Set to the current UTC time after `ExecuteRotationAsync` runs past the `NoRotation` check. |
+| `LastModifiedAt` | Set to the current UTC time by `SaveRotationPolicyAsync`. |
 
 ## API
 
-### RotationService
+### `RotationService(IBackupRepository repository, ILogger<RotationService> logger)`
 
-```csharp
-public RotationService
-```
-
-Instantiates the service. Construction details are internal to the project assembly; the service is typically obtained through dependency injection.
+Constructor. Stores both dependencies.
 
 ---
 
-### ExecuteRotationAsync
+### `Task<int> ExecuteRotationAsync(Guid scheduleId)`
 
-```csharp
-public async Task<int> ExecuteRotationAsync
-```
+Applies the policy for `scheduleId` and deletes the matching backups.
 
-Applies the currently active rotation policy to the set of stored backups. Identifies backups that fall outside the retention criteria and deletes them.
+**Steps**
+1. Throws `System.ArgumentException` if `scheduleId` is `Guid.Empty`.
+2. Loads the policy. If there is no policy, or `Strategy` is `NoRotation`, logs and returns `0`. `LastRotatedAt` is not updated in this case.
+3. Gets candidates from `GetBackupsForRotationAsync(scheduleId)`.
+4. For each candidate, deletes the file if `BackupFilePath` is set and the file exists, then calls `DeleteBackupResultAsync`. The count increments only after both steps succeed.
+5. If a single candidate fails (any exception), logs a warning and continues with the next one. Failures do not propagate.
+6. Sets `LastRotatedAt` to `DateTime.UtcNow` and saves the policy through `IBackupRepository.SaveRotationPolicyAsync`. This happens even if nothing was deleted, and it bypasses the validation in `SaveRotationPolicyAsync`.
 
-**Returns**  
-`Task<int>` — the number of backup files actually removed during execution.
-
-**Throws**  
-- `InvalidOperationException` when no rotation policy has been saved prior to calling this method.  
-- `IOException` or `UnauthorizedAccessException` when the backup storage location cannot be read or modified.
-
----
-
-### GetRotationPolicyAsync
-
-```csharp
-public async Task<RotationPolicy?> GetRotationPolicyAsync
-```
-
-Retrieves the persisted rotation policy, if one exists.
-
-**Returns**  
-`Task<RotationPolicy?>` — the current `RotationPolicy` object, or `null` when no policy has been saved.
+**Returns** the number of backups successfully deleted.
 
 ---
 
-### SaveRotationPolicyAsync
+### `Task<RotationPolicy?> GetRotationPolicyAsync(Guid scheduleId)`
 
-```csharp
-public async Task<RotationPolicy> SaveRotationPolicyAsync
-```
-
-Persists a rotation policy for future use by `ExecuteRotationAsync` and `CalculateDiskSpaceFreedAsync`.
-
-**Parameters**  
-A `RotationPolicy` instance describing retention rules (e.g., maximum backup count, age thresholds).
-
-**Returns**  
-`Task<RotationPolicy>` — the same policy object that was saved, allowing fluent chaining or immediate inspection.
-
-**Throws**  
-- `ArgumentNullException` when the supplied policy is `null`.  
-- `ArgumentException` when the policy contains invalid or contradictory retention parameters.
+Returns the policy stored for the schedule, or `null` if none exists. Passes straight through to the repository.
 
 ---
 
-### GetBackupsForRotationAsync
+### `Task<RotationPolicy> SaveRotationPolicyAsync(RotationPolicy policy)`
 
-```csharp
-public async Task<IEnumerable<BackupResult>> GetBackupsForRotationAsync
-```
+Validates and saves a policy.
 
-Enumerates all backups currently present in the storage location, ordered by creation date descending. This list represents the candidate set that a rotation policy would evaluate.
+**Steps**
+1. `policy == null` throws `DockerSqliteBackup.Exceptions.ArgumentNullException`.
+2. `policy.IsValid()` returning `false` throws `ValidationException` (the field name is `policy`). Nothing is saved.
+3. Sets `LastModifiedAt` to `DateTime.UtcNow`.
+4. Saves through the repository. On success, logs and returns the saved policy. Any exception from the repository is wrapped in `RotationException` with the original as the inner exception.
 
-**Returns**  
-`Task<IEnumerable<BackupResult>>` — a collection of `BackupResult` objects, each describing a single backup file with metadata such as file name, size, and timestamp.
-
-**Throws**  
-- `DirectoryNotFoundException` when the backup storage directory does not exist.  
-- `IOException` when the directory cannot be enumerated.
+`RotationPolicy.IsValid()` rules: `MaxBackupCount` must not be negative, `MaxAgeDays` must be at least 1, and `MinimumBackupCount` must be at least 1. When `MaxBackupCount` is greater than 0, `MinimumBackupCount` must not exceed it. `MaxBackupCount == 0` means unlimited by count.
 
 ---
 
-### CalculateDiskSpaceFreedAsync
+### `Task<IEnumerable<BackupResult>> GetBackupsForRotationAsync(Guid scheduleId)`
 
-```csharp
-public async Task<long> CalculateDiskSpaceFreedAsync
-```
+Returns the backups that the current policy would delete. This method does not delete anything. It is the candidate logic shared by execution, the disk space calculation, and preview.
 
-Simulates the application of the currently saved rotation policy against the existing backups and computes the total disk space that would be reclaimed, without performing any actual deletions.
+**Candidate rules**
 
-**Returns**  
-`Task<long>` — the number of bytes that would be freed if `ExecuteRotationAsync` were called immediately under the same conditions.
+1. Loads the full history for the schedule (`GetBackupHistoryAsync(scheduleId, int.MaxValue)`) and the policy. If there is no policy, returns an empty sequence.
+2. Sorts the history by `StartedAt`, newest first.
+3. Walks the list starting at index `MinimumBackupCount`, so the newest `MinimumBackupCount` backups are always kept. `remainingCount` starts at the total history count and decreases by one for each backup added.
+4. For each backup:
+   - If `DeleteFailedBackups` is true and the backup is not successful, it is added. `ShouldRotate` and `VerifyBeforeDeletion` are not checked for this case.
+   - Otherwise, it is added only if `policy.ShouldRotate(remainingCount, StartedAt, isFailed)` is true.
+   - If `VerifyBeforeDeletion` is true and `Status` is not `VerifiedSuccess`, it is skipped and an information log entry is written.
 
-**Throws**  
-- `InvalidOperationException` when no rotation policy has been saved.  
-- `IOException` when backup metadata cannot be read.
+Note that the failed-backup branch runs before the `NoRotation` check in `ExecuteRotationAsync`. See the notes below.
+
+---
+
+### `Task<long> CalculateDiskSpaceFreedAsync(Guid scheduleId)`
+
+Returns the sum of `BackupFileSizeBytes` over `GetBackupsForRotationAsync(scheduleId)`. Does not check `NoRotation` (see notes).
+
+---
+
+### `Task<(IEnumerable<BackupResult> backupsToDelete, long diskSpaceFreed)> PreviewRotationAsync(Guid scheduleId)`
+
+Dry run. If there is no policy or `Strategy` is `NoRotation`, returns an empty list and `0`. Otherwise returns the same candidates as `GetBackupsForRotationAsync` and their total size, and logs the result. Nothing is deleted.
 
 ## Usage
 
-### Example 1: Save a policy, preview impact, then execute
-
 ```csharp
-var rotationService = serviceProvider.GetRequiredService<RotationService>();
-
-// Define a policy: keep the 7 most recent backups
-var policy = new RotationPolicy { MaxBackupCount = 7 };
+// Save a policy: keep at least 3 backups, at most 10 by count, 30 days by age
+var policy = new RotationPolicy
+{
+    ScheduleId = scheduleId,
+    Strategy = (int)RotationStrategy.Combined,
+    MaxBackupCount = 10,
+    MaxAgeDays = 30,
+    MinimumBackupCount = 3,
+    VerifyBeforeDeletion = true,
+    DeleteFailedBackups = true
+};
 await rotationService.SaveRotationPolicyAsync(policy);
 
-// Preview how much space rotation would free
-long freedBytes = await rotationService.CalculateDiskSpaceFreedAsync();
-Console.WriteLine($"Rotation would reclaim {freedBytes / 1024.0 / 1024.0:F2} MB");
+// Preview before deleting anything
+var (candidates, bytes) = await rotationService.PreviewRotationAsync(scheduleId);
+logger.LogInformation("Would delete {Count} backups, freeing {Bytes} bytes", candidates.Count(), bytes);
 
-// Execute rotation and report results
-int removedCount = await rotationService.ExecuteRotationAsync();
-Console.WriteLine($"Removed {removedCount} backup(s)");
-```
-
-### Example 2: Inspect backups before deciding on a policy
-
-```csharp
-var rotationService = serviceProvider.GetRequiredService<RotationService>();
-
-// Check whether a policy already exists
-RotationPolicy? existingPolicy = await rotationService.GetRotationPolicyAsync();
-if (existingPolicy is null)
-{
-    Console.WriteLine("No rotation policy configured.");
-}
-
-// List all backups to inform policy decisions
-IEnumerable<BackupResult> backups = await rotationService.GetBackupsForRotationAsync();
-foreach (var backup in backups)
-{
-    Console.WriteLine($"{backup.FileName} — {backup.CreationTimestamp:O} — {backup.SizeBytes} bytes");
-}
-
-// Save a new policy based on observed backup count
-var newPolicy = new RotationPolicy { MaxBackupAgeDays = 30 };
-await rotationService.SaveRotationPolicyAsync(newPolicy);
+// Apply the policy
+int deleted = await rotationService.ExecuteRotationAsync(scheduleId);
 ```
 
 ## Notes
 
-- **Null policy state**: Calling `ExecuteRotationAsync` or `CalculateDiskSpaceFreedAsync` without first saving a policy throws `InvalidOperationException`. Always guard these calls with a check via `GetRotationPolicyAsync` or ensure a policy is saved during application startup.
-- **Atomicity**: `ExecuteRotationAsync` performs deletions sequentially. If the process is interrupted (e.g., application crash), some eligible backups may remain undeleted. The method does not wrap all deletions in a single transaction.
-- **Concurrent modifications**: The service does not lock the backup directory. If external processes add or remove backup files between a call to `GetBackupsForRotationAsync` and `ExecuteRotationAsync`, the rotation outcome may differ from the preview provided by `CalculateDiskSpaceFreedAsync`.
-- **Thread safety**: The service itself maintains no mutable instance state beyond the persisted policy reference. Multiple calls from different threads are safe, but concurrent calls to `SaveRotationPolicyAsync` and `ExecuteRotationAsync` may race — the policy in effect during execution is the one most recently saved.
-- **Policy validation**: `SaveRotationPolicyAsync` validates the policy object synchronously before persisting. Invalid combinations (e.g., both `MaxBackupCount` and `MaxBackupAgeDays` set to zero) cause an `ArgumentException` at save time rather than during execution.
+- **Partial failures.** `ExecuteRotationAsync` deletes candidates one by one. A failure on one backup is logged and skipped, so the method can return a count lower than the number of candidates without throwing. A crash mid-loop leaves the remaining candidates in place. There is no transaction.
+- **`NoRotation` is inconsistent across methods.** `ExecuteRotationAsync` and `PreviewRotationAsync` return early for `NoRotation`. `GetBackupsForRotationAsync` and `CalculateDiskSpaceFreedAsync` do not. With `NoRotation` and `DeleteFailedBackups` enabled, `CalculateDiskSpaceFreedAsync` can report a non-zero value for failed backups that `ExecuteRotationAsync` will not delete.
+- **Failed backups bypass verification.** When `DeleteFailedBackups` is true, failed backups beyond `MinimumBackupCount` are deleted even if `VerifyBeforeDeletion` is enabled.
+- **Policy saved during execution.** `ExecuteRotationAsync` writes `LastRotatedAt` through the repository without re-validating the policy.
+- **No directory locking.** The method does not lock the backup directory. Files changed between the preview and the execution can make the results differ.
+- **Repeated reads.** `ExecuteRotationAsync` loads the policy in step 2, and `GetBackupsForRotationAsync` loads it again. The two reads are not atomic.
+- **Concurrency.** The service holds no mutable state of its own. Concurrent `SaveRotationPolicyAsync` and `ExecuteRotationAsync` calls for the same schedule can race, and execution uses whichever policy the repository returns when it reads it.
