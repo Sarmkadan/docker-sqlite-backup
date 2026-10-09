@@ -1,125 +1,116 @@
 # EncryptionService
 
-The `EncryptionService` class provides core cryptographic operations for securing SQLite database backup files within the `docker-sqlite-backup` project. It manages the lifecycle of encryption keys and facilitates asynchronous file-level encryption and decryption, ensuring that backup artifacts remain confidential both at rest and during transit. The service exposes state inspection capabilities to verify configuration status and key validity before performing sensitive operations.
+`EncryptionService` (`src/Services/EncryptionService.cs`) encrypts and decrypts backup files with AES-256-CBC. It implements `IEncryptionService`, resolves the key from the environment or application settings, and reports the encryption configuration through `EncryptionStatus`.
 
-## API
+The actual file I/O is delegated to `EncryptionUtility` (`src/Utilities`). This class adds key resolution, configuration checks, logging, and cancellation checks on top of it.
 
-### `public EncryptionService`
-Initializes a new instance of the `EncryptionService` class. This constructor sets up the internal cryptographic providers and loads configuration settings required for subsequent operations.
+## Dependencies
 
-### `public async Task<string> EncryptFileAsync`
-Encrypts a specified source file and writes the encrypted content to a new destination file.
-*   **Parameters**: Accepts the path to the source file and the destination path (specific parameter names depend on implementation, but logically represent input/output paths).
-*   **Return Value**: Returns a `Task<string>` representing the asynchronous operation. The result is the absolute path to the newly created encrypted file.
-*   **Exceptions**: Throws an exception if the source file does not exist, if the destination path is invalid, if `IsEncryptionEnabled` is false, or if the active key is missing or invalid.
+| Dependency | Purpose |
+|---|---|
+| `AppSettings` | Provides `EnableEncryption` and `EncryptionKey` (bound from `appsettings.json` or `BACKUP_` env vars). |
+| `ILogger<EncryptionService>` | Logs warnings, errors, and success messages. |
+| `EncryptionUtility` | Performs the AES-256-CBC stream operations, key generation, and key validation. |
 
-### `public async Task<string> DecryptFileAsync`
-Decrypts a specified encrypted source file and writes the plaintext content to a new destination file.
-*   **Parameters**: Accepts the path to the encrypted source file and the desired destination path.
-*   **Return Value**: Returns a `Task<string>` representing the asynchronous operation. The result is the absolute path to the newly created decrypted file.
-*   **Exceptions**: Throws an exception if the source file is not found, if the decryption key is incorrect, if the file format is invalid, or if `IsEncryptionEnabled` is false.
+## Constructor
 
-### `public string GenerateKey`
-Generates a new, cryptographically secure encryption key.
-*   **Return Value**: Returns a `string` containing the newly generated key, typically formatted as a base64-encoded string or hex string depending on internal configuration.
-*   **Remarks**: This method is synchronous and should be called to provision keys before enabling encryption.
+```csharp
+public EncryptionService(AppSettings settings, ILogger<EncryptionService> logger)
+```
 
-### `public bool ValidateKey`
-Validates the format and usability of a provided encryption key string.
-*   **Parameters**: Takes the key string to validate.
-*   **Return Value**: Returns `true` if the key matches the expected format and length requirements; otherwise, returns `false`.
-*   **Remarks**: This method does not verify if the key can successfully decrypt specific data, only that the key structure is valid for the service.
+Registered through dependency injection. The constructor only stores its arguments. It does not read the key.
 
-### `public bool IsEncryptionEnabled`
-Gets a value indicating whether the encryption service is currently active and configured.
-*   **Return Value**: Returns `true` if a valid key is loaded and encryption features are enabled in the configuration; otherwise, `false`.
+## Key resolution
 
-### `public string? GetActiveKey`
-Retrieves the currently loaded encryption key.
-*   **Return Value**: Returns the active key as a `string`, or `null` if no key is currently loaded or if encryption is disabled.
-*   **Security Note**: Care should be taken when handling the returned string to prevent leakage into logs or unsecured memory.
+The key is read on each call, not cached at construction time.
 
-### `public EncryptionStatus GetStatus`
-Retrieves the current operational status of the encryption subsystem.
-*   **Return Value**: Returns an `EncryptionStatus` enum value indicating the state (e.g., `Ready`, `MissingKey`, `Disabled`, `Error`).
+1. Environment variable `BACKUP_ENCRYPTION_KEY`.
+2. Otherwise `AppSettings.EncryptionKey` (env equivalent: `AppSettings__EncryptionKey`).
+
+`ResolveKey()` returns `null` (and logs) in these cases:
+
+- `AppSettings.EnableEncryption` is `false`. No warning is logged in this case.
+- No key is set (empty or whitespace). Logs a warning.
+- The key is not a valid Base64 value that decodes to 32 bytes. Logs an error. The key itself is never logged.
+
+## Members
+
+### `Task<string> EncryptFileAsync(string sourcePath, string destinationPath, CancellationToken ct = default)`
+
+1. Throws `ArgumentException` if either path is null or whitespace.
+2. If the source does not exist, logs a warning and throws `FileNotFoundException`.
+3. Resolves the key. If there is none, throws `InvalidOperationException` ("Encryption key is not configured...").
+4. Checks `ct`.
+5. Calls `EncryptionUtility.EncryptFileAsync`. On success, logs at Information level. On failure, logs an error and rethrows.
+
+Returns `destinationPath`.
+
+Output format: `[16-byte random IV][AES-256-CBC ciphertext]`. A new IV is generated for each call.
+
+### `Task<string> DecryptFileAsync(string sourcePath, string destinationPath, CancellationToken ct = default)`
+
+1. Throws `ArgumentException` if either path is null or whitespace.
+2. If the source does not exist, throws `FileNotFoundException`. Unlike encryption, it does not log a warning here.
+3. Resolves the key. If there is none, throws `InvalidOperationException` ("Decryption key is not configured...").
+4. Checks `ct`, then calls `EncryptionUtility.DecryptFileAsync`.
+5. Logs at Information level.
+
+Returns `destinationPath`.
+
+Errors from `EncryptionUtility` propagate unchanged. For example, a file shorter than the 16-byte IV throws `InvalidDataException`. A wrong key or corrupted data typically surfaces as `CryptographicException` from the padding check. This method does not log failures.
+
+### `string GenerateKey()`
+
+Returns a new random 32-byte AES-256 key, Base64-encoded, via `EncryptionUtility.GenerateBase64Key()`. It does not store the key anywhere.
+
+### `bool ValidateKey(string? base64Key)`
+
+Returns `true` when the input is Base64 and decodes to exactly 32 bytes. Does not check whether the key matches any particular file.
+
+### `bool IsEncryptionEnabled()`
+
+Returns `AppSettings.EnableEncryption`. It does not check whether a key is present. Use `GetStatus()` for that.
+
+### `string? GetActiveKey()`
+
+Returns the resolved key, or `null` if encryption is disabled, no key is set, or the key is invalid.
+
+Security note: this returns raw key material. Do not log it or include it in exception messages.
+
+### `EncryptionStatus GetStatus()`
+
+Builds a snapshot without throwing and without logging the key:
+
+| Property | Meaning |
+|---|---|
+| `IsEnabled` | Value of `EnableEncryption`. |
+| `HasValidKey` | `true` when the active key passes `ValidateKey`. |
+| `KeyFingerprint` | First 8 hex characters (lowercase) of SHA-256 over the decoded key bytes. `null` when there is no valid key. |
+| `KeySource` | `"Environment"`, `"Configuration"`, or `"None"`. |
+| `Summary` | Human-readable text built from the other properties. |
+
+Source precedence in `GetStatus()` matches `ResolveKey()`, with one difference. `GetStatus()` treats a whitespace-only env var as absent, but `ResolveKey()` uses `??`, so a whitespace-only `BACKUP_ENCRYPTION_KEY` makes `ResolveKey()` return `null` and does not fall back to the config key. `GetStatus()` would report the config key as the source.
 
 ## Usage
 
-### Example 1: Initializing and Encrypting a Backup
-This example demonstrates generating a key, validating it, and encrypting a SQLite backup file.
-
 ```csharp
-var encryptionService = new EncryptionService();
+// Generate a key once and store it as BACKUP_ENCRYPTION_KEY
+var key = encryptionService.GenerateKey();
 
-// Generate and validate a new key
-string newKey = encryptionService.GenerateKey();
-if (!encryptionService.ValidateKey(newKey))
-{
-    throw new InvalidOperationException("Generated key failed validation.");
-}
+// Encrypt a backup
+await encryptionService.EncryptFileAsync("/data/backups/db.sqlite", "/data/backups/db.sqlite.enc");
 
-// Ensure encryption is enabled before proceeding
-if (!encryptionService.IsEncryptionEnabled)
-{
-    // Logic to load/configure the key would go here based on project specifics
-    Console.WriteLine("Encryption is not currently enabled.");
-    return;
-}
-
-// Perform asynchronous encryption
-string sourcePath = "/backups/db.sqlite";
-string destPath = "/backups/db.sqlite.enc";
-
-try 
-{
-    string encryptedFilePath = await encryptionService.EncryptFileAsync(sourcePath, destPath);
-    Console.WriteLine($"Backup encrypted successfully: {encryptedFilePath}");
-}
-catch (Exception ex)
-{
-    Console.Error.WriteLine($"Encryption failed: {ex.Message}");
-}
-```
-
-### Example 2: Status Check and Decryption
-This example checks the service status and decrypts a file only if the system is ready.
-
-```csharp
-var encryptionService = new EncryptionService();
-
-// Check system status
+// Check configuration before a restore
 var status = encryptionService.GetStatus();
-if (status != EncryptionStatus.Ready)
-{
-    Console.WriteLine($"Cannot decrypt: Service status is {status}");
-    return;
-}
+if (!status.HasValidKey)
+    throw new InvalidOperationException(status.Summary);
 
-string? activeKey = encryptionService.GetActiveKey();
-if (string.IsNullOrEmpty(activeKey))
-{
-    Console.WriteLine("No active key found.");
-    return;
-}
-
-try 
-{
-    string encryptedPath = "/backups/db.sqlite.enc";
-    string restoredPath = "/restored/db.sqlite";
-    
-    string decryptedFilePath = await encryptionService.DecryptFileAsync(encryptedPath, restoredPath);
-    Console.WriteLine($"Database restored to: {decryptedFilePath}");
-}
-catch (CryptographicException)
-{
-    Console.Error.WriteLine("Decryption failed: Invalid key or corrupted file.");
-}
+await encryptionService.DecryptFileAsync("/data/backups/db.sqlite.enc", "/restore/db.sqlite");
 ```
 
 ## Notes
 
-*   **Thread Safety**: The asynchronous methods (`EncryptFileAsync`, `DecryptFileAsync`) are designed to be non-blocking, but the internal state management regarding the active key may not be fully thread-safe for concurrent modification. It is recommended to initialize and configure the key during application startup before invoking concurrent encryption tasks.
-*   **Key Management**: The `GetActiveKey` method returns the raw key material. Callers must ensure this value is not logged or exposed in exception messages.
-*   **File Overwrites**: The encryption and decryption methods typically assume the destination path does not exist or is intended to be overwritten. Implementations should handle `IOException` if the destination file is locked or read-only.
-*   **Validation vs. Decryption**: `ValidateKey` only checks syntactic correctness. A key can be valid according to this method but still fail to decrypt a specific file if it was not the key used for encryption.
-*   **Disabled State**: If `IsEncryptionEnabled` returns `false`, calls to `EncryptFileAsync` or `DecryptFileAsync` will immediately throw an exception without attempting file I/O.
+- **File format**: `[16-byte IV][ciphertext]`. Files encrypted by other tools must use the same layout and key.
+- **Destination overwrites**: the destination file is created or overwritten. An `IOException` is possible if it is locked or read-only.
+- **Validation vs. decryption**: `ValidateKey` checks format only. A syntactically valid key can still fail to decrypt a file encrypted with a different key.
+- **Thread safety**: the class holds no mutable state. Key resolution reads the environment and settings on each call.
