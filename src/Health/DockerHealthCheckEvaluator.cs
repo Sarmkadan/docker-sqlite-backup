@@ -70,6 +70,9 @@ public static class DockerHealthCheckEvaluator
     /// back to the configured schedule polling interval when the cron expression is unavailable
     /// or unparseable.
     /// </summary>
+    /// <param name="cronExpression">The cron expression of the last successful backup, or <see langword="null"/> when none was recorded.</param>
+    /// <param name="appSettings">The application settings providing the fallback polling interval.</param>
+    /// <returns>The gap between two consecutive scheduled runs, or the fallback interval.</returns>
     private static TimeSpan ResolveExpectedInterval(string? cronExpression, AppSettings appSettings)
     {
         if (!string.IsNullOrWhiteSpace(cronExpression))
