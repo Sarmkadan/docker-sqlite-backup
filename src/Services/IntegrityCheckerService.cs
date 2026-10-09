@@ -27,6 +27,7 @@ public sealed class IntegrityCheckerService : IIntegrityCheckerService
     /// </summary>
     public IntegrityCheckerService(ILogger<IntegrityCheckerService> logger)
     {
+        ArgumentNullException.ThrowIfNull(logger);
         _logger = logger;
     }
 
@@ -36,6 +37,7 @@ public sealed class IntegrityCheckerService : IIntegrityCheckerService
         bool fullCheck = true,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(databasePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
         if (!File.Exists(databasePath))
         {
@@ -130,6 +132,7 @@ public sealed class IntegrityCheckerService : IIntegrityCheckerService
     /// <inheritdoc />
     public async Task<bool> QuickCheckAsync(string databasePath, CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(databasePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
         if (!File.Exists(databasePath))
             throw new FileNotFoundException($"Database file not found: {databasePath}", databasePath);
@@ -147,6 +150,7 @@ public sealed class IntegrityCheckerService : IIntegrityCheckerService
         string backupFilePath,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(backupFilePath);
         return await CheckDatabaseAsync(backupFilePath, fullCheck: true, ct);
     }
 
