@@ -41,6 +41,10 @@ public sealed class VerificationService : IVerificationService
         ILogger<VerificationService> logger,
         IBackupEventPublisher? eventPublisher = null)
     {
+        System.ArgumentNullException.ThrowIfNull(repository);
+        System.ArgumentNullException.ThrowIfNull(appSettings);
+        System.ArgumentNullException.ThrowIfNull(logger);
+
         _repository = repository;
         _appSettings = appSettings;
         _logger = logger;
@@ -55,6 +59,8 @@ public sealed class VerificationService : IVerificationService
     /// <returns>A task representing the verification operation. Returns the verification result.</returns>
     public async Task<RestoreVerification> VerifyBackupAsync(BackupResult backup, CancellationToken cancellationToken = default)
     {
+        System.ArgumentNullException.ThrowIfNull(backup);
+
         var verification = new RestoreVerification
         {
             BackupResultId = backup.Id,
@@ -233,6 +239,8 @@ public sealed class VerificationService : IVerificationService
     /// </summary>
     public async Task<string> RestoreToTemporaryAsync(BackupResult backup)
     {
+        System.ArgumentNullException.ThrowIfNull(backup);
+
         var tempDir = Path.Combine(Path.GetTempPath(), $"sqlite-verify-{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
 
@@ -277,6 +285,8 @@ public sealed class VerificationService : IVerificationService
     /// </summary>
     public async Task CleanupTemporaryFilesAsync(string tempDirectory)
     {
+        System.ArgumentNullException.ThrowIfNull(tempDirectory);
+
         await Task.Run(() =>
         {
             if (Directory.Exists(tempDirectory))

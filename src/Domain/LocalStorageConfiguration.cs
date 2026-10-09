@@ -32,6 +32,10 @@ public class LocalStorageConfiguration : StorageConfiguration
     /// <summary>
     /// Validates the local storage configuration.
     /// </summary>
+    /// <returns>
+    /// <c>true</c> if the name and base directory are set, the file permissions are valid Unix octal
+    /// and the minimum free space is non-negative; otherwise <c>false</c>.
+    /// </returns>
     public override bool IsValid()
     {
         if (string.IsNullOrWhiteSpace(Name))
@@ -52,6 +56,14 @@ public class LocalStorageConfiguration : StorageConfiguration
     /// <summary>
     /// Tests the local storage by checking directory access and free space.
     /// </summary>
+    /// <remarks>
+    /// Creates <see cref="BaseDirectory"/> if it does not exist, then writes and deletes a temporary file.
+    /// Any exception is caught and reported as a failure.
+    /// </remarks>
+    /// <returns>
+    /// <c>true</c> if the directory is writable and has at least <see cref="MinimumFreeSpaceBytes"/>
+    /// available; otherwise <c>false</c>.
+    /// </returns>
     public override async Task<bool> TestConnectionAsync()
     {
         try
@@ -81,6 +93,11 @@ public class LocalStorageConfiguration : StorageConfiguration
     /// <summary>
     /// Gets the full path for a backup file based on the schedule and timestamp.
     /// </summary>
+    /// <param name="scheduleName">The backup schedule name, used as the subdirectory and in the file name.</param>
+    /// <param name="timestamp">The backup timestamp, formatted as <c>yyyy-MM-dd_HH-mm-ss</c> in the file name.</param>
+    /// <returns>
+    /// The full path under <see cref="BaseDirectory"/>. Appends <c>.gz</c> when <see cref="CompressBackups"/> is set.
+    /// </returns>
     public string GetBackupPath(string scheduleName, DateTime timestamp)
     {
         var path = BaseDirectory;
@@ -102,6 +119,11 @@ public class LocalStorageConfiguration : StorageConfiguration
     /// <summary>
     /// Validates Unix-style file permissions.
     /// </summary>
+    /// <param name="permissions">The permission string, e.g. <c>0640</c> or <c>640</c>.</param>
+    /// <returns>
+    /// <c>true</c> if every character is an octal digit (0-7) and the value has at least four digits
+    /// after a leading zero is added when missing; otherwise <c>false</c>.
+    /// </returns>
     private static bool IsValidUnixPermissions(string permissions)
     {
         if (string.IsNullOrWhiteSpace(permissions))
@@ -114,6 +136,8 @@ public class LocalStorageConfiguration : StorageConfiguration
     /// <summary>
     /// Sanitizes a string to be used as a file/folder name.
     /// </summary>
+    /// <param name="fileName">The raw name to sanitize.</param>
+    /// <returns>The name with all characters invalid for file names removed.</returns>
     private static string SanitizeFileName(string fileName)
     {
         var invalidChars = Path.GetInvalidFileNameChars();
@@ -123,6 +147,7 @@ public class LocalStorageConfiguration : StorageConfiguration
     /// <summary>
     /// Returns a concise string representation of the configuration.
     /// </summary>
+    /// <returns>A string listing the key configuration values.</returns>
     public override string ToString()
     {
         return $"LocalStorageConfiguration {{ BaseDirectory = {BaseDirectory}, CreateSubdirectoriesBySchedule = {CreateSubdirectoriesBySchedule}, FilePermissions = {FilePermissions}, CompressBackups = {CompressBackups}, MinimumFreeSpaceBytes = {MinimumFreeSpaceBytes}, PreserveFileTimestamp = {PreserveFileTimestamp} }}";
