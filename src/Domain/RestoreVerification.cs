@@ -48,8 +48,12 @@ public class RestoreVerification
     public string? ErrorMessage { get; set; }
 
     /// <summary>
-    /// Marks the verification as completed.
+    /// Marks the verification as completed, records the outcome, and computes the duration
+    /// from <see cref="StartedAt"/> to the current UTC time.
     /// </summary>
+    /// <param name="successful">Whether the verification succeeded.</param>
+    /// <param name="statusMessage">The status message describing the outcome.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="statusMessage"/> is <c>null</c>.</exception>
     public void MarkCompleted(bool successful, string statusMessage)
     {
         ArgumentNullException.ThrowIfNull(statusMessage);
@@ -67,6 +71,10 @@ public class RestoreVerification
     /// <summary>
     /// Gets the elapsed duration of the verification.
     /// </summary>
+    /// <returns>
+    /// The time between <see cref="StartedAt"/> and <see cref="CompletedAt"/>,
+    /// or <see cref="TimeSpan.Zero"/> if the verification has not completed.
+    /// </returns>
     public TimeSpan GetElapsedDuration()
     {
         if (CompletedAt is null)
@@ -75,5 +83,9 @@ public class RestoreVerification
         return CompletedAt.Value - StartedAt;
     }
 
+    /// <summary>
+    /// Returns a string representation of the verification, including its identifiers, outcome, and timestamps.
+    /// </summary>
+    /// <returns>A formatted string describing this verification.</returns>
     public override string ToString() => $"RestoreVerification {{ Id = {Id}, BackupResultId = {BackupResultId}, IsSuccessful = {IsSuccessful}, StatusMessage = {StatusMessage}, StartedAt = {StartedAt}, CompletedAt = {CompletedAt} }}";
 }
