@@ -11,8 +11,10 @@ public abstract class StorageConfiguration
     /// <summary>Gets or sets the unique identifier for this configuration.</summary>
     public Guid Id { get; set; } = Guid.NewGuid();
 
-    /// <summary>Gets or sets the name of the storage configuration.</summary>
+    /// <summary>Backing field for <see cref="Name"/>.</summary>
     private string _name = string.Empty;
+
+    /// <summary>Gets or sets the name of the storage configuration. Setting <c>null</c> throws <see cref="ArgumentNullException"/>.</summary>
     public string Name
     {
         get => _name;
@@ -23,7 +25,7 @@ public abstract class StorageConfiguration
         }
     }
 
-    /// <summary>Gets or sets the storage type.</summary>
+    /// <summary>Gets the storage type identifier. Implemented by each derived configuration.</summary>
     public abstract int StorageType { get; }
 
     /// <summary>Gets or sets whether this is the default configuration.</summary>
