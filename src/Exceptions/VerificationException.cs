@@ -33,8 +33,17 @@ public class VerificationException : DockerSqliteBackupException
 /// </summary>
 public class IntegrityCheckFailedException : VerificationException
 {
+    /// <summary>
+    /// Gets the raw error output reported by the integrity check, or <c>null</c> if none was captured.
+    /// </summary>
     public string? Errors { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the IntegrityCheckFailedException class.
+    /// </summary>
+    /// <param name="message">The error message describing the failure.</param>
+    /// <param name="backupId">The identifier of the backup that failed the integrity check.</param>
+    /// <param name="errors">The raw error output from the integrity check, if available.</param>
     public IntegrityCheckFailedException(string message, Guid backupId, string? errors = null)
         : base(message, backupId)
     {
@@ -47,6 +56,11 @@ public class IntegrityCheckFailedException : VerificationException
 /// </summary>
 public class RestoreVerificationFailedException : VerificationException
 {
+    /// <summary>
+    /// Initializes a new instance of the RestoreVerificationFailedException class.
+    /// </summary>
+    /// <param name="message">The error message describing the failed restore verification.</param>
+    /// <param name="backupId">The identifier of the backup whose restore verification failed.</param>
     public RestoreVerificationFailedException(string message, Guid backupId)
         : base(message, backupId) { }
 }
