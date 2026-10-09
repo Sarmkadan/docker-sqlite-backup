@@ -19,6 +19,12 @@ public class HealthCheckService
     private readonly ILogger<HealthCheckService> _logger;
     private readonly AppSettings? _appSettings;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HealthCheckService"/> class.
+    /// </summary>
+    /// <param name="logger">Logger used to report the progress and outcome of each check.</param>
+    /// <param name="eventPublisher">Optional publisher for health check events. When <c>null</c>, no event is published.</param>
+    /// <param name="appSettings">Optional application settings used to locate the backup database. Defaults to <c>backups.sqlite</c> when <c>null</c>.</param>
     public HealthCheckService(
         ILogger<HealthCheckService> logger,
         IBackupEventPublisher? eventPublisher = null,
@@ -31,7 +37,14 @@ public class HealthCheckService
 
     /// <summary>
     /// Performs a comprehensive health check across all components.
+    /// Each component (storage, disk, database) is checked independently, so a failure in one
+    /// does not prevent the others from being evaluated.
     /// </summary>
+    /// <param name="cancellationToken">Token used to cancel the event publishing step.</param>
+    /// <returns>
+    /// A <see cref="HealthCheckResult"/> with the per-component results and an overall status
+    /// of <c>"healthy"</c> or <c>"degraded"</c>.
+    /// </returns>
     public async Task<HealthCheckResult> PerformHealthCheckAsync(CancellationToken cancellationToken = default)
     {
         var result = new HealthCheckResult();
@@ -86,8 +99,11 @@ public class HealthCheckService
     }
 
     /// <summary>
-    /// Checks if storage is accessible and writable.
+    /// Checks if storage is accessible and writable by creating and deleting a temporary file
+    /// in the backups directory.
     /// </summary>
+    /// <returns>A <see cref="ComponentHealth"/> describing the storage state.</returns>
+    /// <remarks>Exceptions are caught and reported as an unhealthy component rather than thrown.</remarks>
     private ComponentHealth CheckStorageHealth()
     {
         try
@@ -118,8 +134,10 @@ public class HealthCheckService
     }
 
     /// <summary>
-    /// Checks available disk space.
+    /// Checks available disk space. The component is unhealthy when free space is at or below 1 GB.
     /// </summary>
+    /// <returns>A <see cref="ComponentHealth"/> describing the disk state.</returns>
+    /// <remarks>Exceptions are caught and reported as an unhealthy component rather than thrown.</remarks>
     private ComponentHealth CheckDiskSpace()
     {
         try
@@ -155,6 +173,10 @@ public class HealthCheckService
     /// Checks if the backup metadata database is accessible by opening a read-only
     /// connection and running a fast structural scan (<c>PRAGMA quick_check</c>).
     /// </summary>
+    /// <returns>
+    /// A <see cref="ComponentHealth"/> that is healthy only when <c>quick_check</c> returns <c>ok</c>.
+    /// </returns>
+    /// <remarks>Exceptions are caught and reported as an unhealthy component rather than thrown.</remarks>
     private ComponentHealth CheckDatabaseHealth()
     {
         try
@@ -203,6 +225,12 @@ public class HealthCheckService
         }
     }
 
+    /// <summary>
+    /// Publishes a system-level health check event, if an event publisher is configured.
+    /// </summary>
+    /// <param name="result">The health check result whose overall status is published.</param>
+    /// <param name="cancellationToken">Token used to cancel the publish operation.</param>
+    /// <returns>A task that completes when the event has been published or skipped.</returns>
     private async Task PublishHealthCheckEventAsync(
         HealthCheckResult result,
         CancellationToken cancellationToken)
@@ -226,9 +254,16 @@ public class HealthCheckService
 /// </summary>
 public class ComponentHealth
 {
+    /// <summary>Gets or sets the component identifier, such as <c>storage</c>, <c>disk</c> or <c>database</c>.</summary>
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets a value indicating whether the component is healthy.</summary>
     public bool IsHealthy { get; set; }
+
+    /// <summary>Gets or sets a human-readable description of the component state.</summary>
     public string Message { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the UTC time at which the component was checked.</summary>
     public DateTime CheckedAt { get; set; } = DateTime.UtcNow;
 }
 
@@ -237,13 +272,21 @@ public class ComponentHealth
 /// </summary>
 public class HealthCheckResult
 {
+    /// <summary>Gets or sets the overall status: <c>"healthy"</c>, <c>"degraded"</c>, or <c>"unknown"</c> before a check has run.</summary>
     public string Status { get; set; } = "unknown";
+
+    /// <summary>Gets or sets the UTC time at which the health check was performed.</summary>
     public DateTime CheckedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Gets or sets the individual component results, keyed by component name.</summary>
     public Dictionary<string, ComponentHealth> Components { get; set; } = [];
 
     /// <summary>
     /// Gets a summary of the health check result.
     /// </summary>
+    /// <returns>
+    /// The overall status, followed by the name and message of each unhealthy component when any exist.
+    /// </returns>
     public override string ToString()
     {
         var unhealthyComponents = Components.Values.Where(c => !c.IsHealthy).ToList();
