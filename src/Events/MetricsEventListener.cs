@@ -23,6 +23,7 @@ public class MetricsEventListener : IBackupEventListener
 
     public MetricsEventListener(ILogger<MetricsEventListener> logger)
     {
+        ArgumentNullException.ThrowIfNull(logger);
         _logger = logger;
     }
 
@@ -47,6 +48,8 @@ public class MetricsEventListener : IBackupEventListener
     /// </summary>
     public async Task HandleAsync(BackupEvent @event, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(@event);
+
         switch (@event)
         {
             case BackupCompletedEvent completedEvent:
@@ -78,6 +81,7 @@ public class MetricsEventListener : IBackupEventListener
     /// </summary>
     public bool CanHandle(string eventType)
     {
+        ArgumentNullException.ThrowIfNull(eventType);
         return GetSupportedEventTypes().Contains(eventType);
     }
 
