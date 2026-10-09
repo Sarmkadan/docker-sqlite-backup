@@ -25,15 +25,9 @@ public sealed class AzureStorageBackend : IStorageBackend
 
     public async Task<string> UploadBackupAsync(string filePath, StorageConfiguration config)
     {
-        if (filePath == null)
-        {
-            throw new ArgumentNullException(nameof(filePath));
-        }
+        ArgumentNullException.ThrowIfNull(filePath);
 
-        if (config == null)
-        {
-            throw new ArgumentNullException(nameof(config));
-        }
+        ArgumentNullException.ThrowIfNull(config);
 
         if (string.IsNullOrWhiteSpace(filePath))
         {
@@ -65,15 +59,9 @@ public sealed class AzureStorageBackend : IStorageBackend
 
     public async Task<string> DownloadBackupAsync(string storagePath, StorageConfiguration config)
     {
-        if (storagePath == null)
-        {
-            throw new ArgumentNullException(nameof(storagePath));
-        }
+        ArgumentNullException.ThrowIfNull(storagePath);
 
-        if (config == null)
-        {
-            throw new ArgumentNullException(nameof(config));
-        }
+        ArgumentNullException.ThrowIfNull(config);
 
         if (string.IsNullOrWhiteSpace(storagePath))
         {
@@ -101,15 +89,9 @@ public sealed class AzureStorageBackend : IStorageBackend
 
     public async Task DeleteBackupAsync(string storagePath, StorageConfiguration config)
     {
-        if (storagePath == null)
-        {
-            throw new ArgumentNullException(nameof(storagePath));
-        }
+        ArgumentNullException.ThrowIfNull(storagePath);
 
-        if (config == null)
-        {
-            throw new ArgumentNullException(nameof(config));
-        }
+        ArgumentNullException.ThrowIfNull(config);
 
         if (config is not AzureConfiguration azureConfig)
         {
@@ -129,10 +111,7 @@ public sealed class AzureStorageBackend : IStorageBackend
 
     public async Task<IEnumerable<(string Path, long Size, DateTime Modified)>> ListBackupsAsync(StorageConfiguration config)
     {
-        if (config == null)
-        {
-            throw new ArgumentNullException(nameof(config));
-        }
+        ArgumentNullException.ThrowIfNull(config);
 
         if (config is not AzureConfiguration azureConfig)
         {
@@ -151,10 +130,7 @@ public sealed class AzureStorageBackend : IStorageBackend
 
     public async Task<bool> TestConnectionAsync(StorageConfiguration config)
     {
-        if (config == null)
-        {
-            throw new ArgumentNullException(nameof(config));
-        }
+        ArgumentNullException.ThrowIfNull(config);
 
         if (config is not AzureConfiguration azureConfig)
         {
