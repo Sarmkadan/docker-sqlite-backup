@@ -30,8 +30,11 @@ public sealed class RotationService : IRotationService
         IBackupRepository repository,
         ILogger<RotationService> logger)
     {
-        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        System.ArgumentNullException.ThrowIfNull(repository);
+        System.ArgumentNullException.ThrowIfNull(logger);
+
+        _repository = repository;
+        _logger = logger;
     }
 
     /// <summary>
@@ -127,10 +130,7 @@ public sealed class RotationService : IRotationService
     /// <exception cref="RotationException">Thrown when saving the policy fails.</exception>
     public async Task<RotationPolicy> SaveRotationPolicyAsync(RotationPolicy policy)
     {
-        if (policy == null)
-        {
-            throw new ArgumentNullException(nameof(policy));
-        }
+        System.ArgumentNullException.ThrowIfNull(policy);
 
         if (!policy.IsValid())
         {
