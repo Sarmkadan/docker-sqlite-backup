@@ -41,6 +41,9 @@ public class ConsoleNotificationClient : INotificationClient
     /// <returns>A completed task.</returns>
     public Task SendAsync(string title, string message, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(title);
+        ArgumentNullException.ThrowIfNull(message);
+
         Console.ForegroundColor = ConsoleColor.Yellow;
         Console.WriteLine($"[{title}] {message}");
         Console.ResetColor();
