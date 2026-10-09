@@ -26,6 +26,9 @@ public class EncryptionService : IEncryptionService
     /// </summary>
     public EncryptionService(AppSettings settings, ILogger<EncryptionService> logger)
     {
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(logger);
+
         _settings = settings;
         _logger = logger;
     }
