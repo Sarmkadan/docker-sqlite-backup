@@ -21,6 +21,8 @@ public interface IBackupEventListener
     /// <summary>
     /// Determines if this listener can handle the given event type.
     /// </summary>
+    /// <param name="eventType">The event type name to check, as returned by <see cref="BackupEvent.EventType"/>.</param>
+    /// <returns><c>true</c> if this listener handles the event type; otherwise, <c>false</c>.</returns>
     bool CanHandle(string eventType);
 }
 
@@ -29,6 +31,13 @@ public interface IBackupEventListener
 /// </summary>
 public abstract class EventListener<TEvent> : IBackupEventListener where TEvent : BackupEvent
 {
+    /// <summary>
+    /// Passes the event to <see cref="OnEventAsync"/> when it is of type <typeparamref name="TEvent"/>;
+    /// otherwise, ignores it.
+    /// </summary>
+    /// <param name="event">The backup event to handle.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>A task that completes when the event has been handled or ignored.</returns>
     public virtual Task HandleAsync(BackupEvent @event, CancellationToken cancellationToken = default)
     {
         if (@event is TEvent typedEvent)
@@ -37,12 +46,27 @@ public abstract class EventListener<TEvent> : IBackupEventListener where TEvent 
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Gets the event type of <typeparamref name="TEvent"/>.
+    /// </summary>
+    /// <remarks>
+    /// Creates a temporary instance of <typeparamref name="TEvent"/> to read its <see cref="BackupEvent.EventType"/>.
+    /// Falls back to the CLR type name when that value is unavailable.
+    /// Requires <typeparamref name="TEvent"/> to have a public parameterless constructor;
+    /// otherwise <see cref="Activator.CreateInstance(Type)"/> throws.
+    /// </remarks>
+    /// <returns>A sequence containing the single event type this listener handles.</returns>
     public virtual IEnumerable<string> GetSupportedEventTypes()
     {
         var eventType = Activator.CreateInstance(typeof(TEvent)) as BackupEvent;
         yield return eventType?.EventType ?? typeof(TEvent).Name;
     }
 
+    /// <summary>
+    /// Determines if this listener can handle the given event type.
+    /// </summary>
+    /// <param name="eventType">The event type name to check.</param>
+    /// <returns><c>true</c> if <paramref name="eventType"/> matches a supported event type; otherwise, <c>false</c>.</returns>
     public virtual bool CanHandle(string eventType)
     {
         return GetSupportedEventTypes().Contains(eventType);
