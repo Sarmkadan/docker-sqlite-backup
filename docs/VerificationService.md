@@ -1,70 +1,107 @@
 # VerificationService
 
-Provides functionality to verify the integrity and correctness of SQLite database backups, including checksum validation, restore verification, and temporary file management.
+Implements `IVerificationService`. Checks that a backup is usable: it verifies the file checksum, restores the backup to a temporary database, runs a SQLite integrity check, counts records, persists the result through `IBackupRepository`, and publishes a verification event.
 
-## API
+Source: `src/Services/VerificationService.cs`
+Interface: `src/Services/IVerificationService.cs`
 
-### `VerificationService`
+## Constructor
 
-Initializes a new instance of the `VerificationService` class.
+```csharp
+public VerificationService(
+    IBackupRepository repository,
+    AppSettings appSettings,
+    ILogger<VerificationService> logger,
+    IBackupEventPublisher? eventPublisher = null)
+```
 
-### `async Task<RestoreVerification> VerifyBackupAsync`
+- `repository`: stores `RestoreVerification` records and reads verification history.
+- `appSettings`: supplies `EncryptionKey` as a fallback for decrypting `.enc` backups.
+- `logger`: receives progress and failure logs.
+- `eventPublisher`: optional. When set, a `RestoreVerificationCompletedEvent` or `RestoreVerificationFailedEvent` is published after each run.
 
-Verifies a backup archive by extracting it to a temporary location and validating its contents.
+The class is `sealed`. It is registered as a singleton in `src/Configuration/ServiceCollectionExtensions.cs`.
 
-- **Parameters**:
-  - `backupPath`: Path to the backup archive file to verify.
-  - `expectedChecksum`: Optional expected SHA256 checksum of the backup archive.
-- **Return value**: A `RestoreVerification` object containing verification results.
-- **Throws**: `ArgumentNullException` if `backupPath` is null.
-- **Throws**: `FileNotFoundException` if the backup file does not exist.
+## Methods
 
-### `async Task<IEnumerable<RestoreVerification>> GetVerificationHistoryAsync`
+### `Task<RestoreVerification> VerifyBackupAsync(BackupResult backup, CancellationToken cancellationToken = default)`
 
-Retrieves the history of all backup verifications performed by this service.
+Runs the full verification pipeline for one backup:
 
-- **Return value**: An enumerable collection of `RestoreVerification` objects representing past verifications.
-- **Throws**: `InvalidOperationException` if the verification history cannot be read.
+1. Verifies the checksum of `backup.BackupFilePath` against `backup.Checksum`. On mismatch it throws `BackupCorruptedException`.
+2. Restores the backup to a temporary database with `RestoreToTemporaryAsync`.
+3. Runs `PerformIntegrityCheckAsync` on the restored file. On failure it throws `IntegrityCheckFailedException`.
+4. Records database size in bytes and the total record count.
+5. Marks the verification as completed and publishes a completion event, if a publisher is configured.
+6. In `finally`, deletes the temporary directory.
+7. Saves the `RestoreVerification` through the repository and returns it.
 
-### `async Task<(bool IsValid, string? Errors)> PerformIntegrityCheckAsync`
+Errors are not rethrown. Any exception is caught, logged, and stored on the result: `verification.ErrorMessage` is set and the status is marked as failed. A failure event is published with a failure stage:
 
-Performs an integrity check on a SQLite database file to ensure it is not corrupted.
+| Exception | `RestoreVerificationFailureStage` |
+|---|---|
+| `IntegrityCheckFailedException` | `IntegrityCheckFailed` |
+| `RestoreVerificationFailedException` | `RestoreFailed` |
+| `BackupCorruptedException` | `ChecksumMismatch` |
+| anything else | `Unknown` |
 
-- **Parameters**:
-  - `databasePath`: Path to the SQLite database file to check.
-- **Return value**: A tuple where `IsValid` indicates whether the database is valid, and `Errors` contains any error messages (null if no errors).
-- **Throws**: `ArgumentNullException` if `databasePath` is null.
-- **Throws**: `FileNotFoundException` if the database file does not exist.
+Callers must check the returned object's status. They will not see an exception for a failed verification.
 
-### `async Task<bool> VerifyChecksumAsync`
+The `cancellationToken` is passed only to the event publisher. It does not cancel the checksum, restore, or integrity steps.
 
-Computes and compares the SHA256 checksum of a file against an expected value.
+### `Task<IEnumerable<RestoreVerification>> GetVerificationHistoryAsync(Guid backupResultId)`
 
-- **Parameters**:
-  - `filePath`: Path to the file to verify.
-  - `expectedChecksum`: Expected SHA256 checksum of the file.
-- **Return value**: `true` if the computed checksum matches the expected value; otherwise, `false`.
-- **Throws**: `ArgumentNullException` if `filePath` or `expectedChecksum` is null.
-- **Throws**: `FileNotFoundException` if the file does not exist.
+Returns the stored verification records for the given backup. It delegates to `IBackupRepository.GetVerificationHistoryAsync`.
 
-### `async Task<string> RestoreToTemporaryAsync`
+### `Task<(bool IsValid, string? Errors)> PerformIntegrityCheckAsync(string databasePath)`
 
-Extracts a backup archive to a temporary directory and returns the path to the extracted database.
+Opens the file read-only with Microsoft.Data.Sqlite and runs `PRAGMA integrity_check`.
 
-- **Parameters**:
-  - `backupPath`: Path to the backup archive to restore.
-- **Return value**: Path to the extracted SQLite database file within the temporary directory.
-- **Throws**: `ArgumentNullException` if `backupPath` is null.
-- **Throws**: `FileNotFoundException` if the backup file does not exist.
-- **Throws**: `InvalidOperationException` if extraction fails.
+- Returns `(true, null)` when the result is `ok`.
+- Returns `(false, result)` with SQLite's output otherwise.
+- Throws `ArgumentNullException` if `databasePath` is null (the package's own `ArgumentNullException` type, not the BCL one).
+- Throws `ArgumentException` if the path is empty or whitespace.
+- Throws `FileNotFoundException` if the file does not exist.
+- Wraps unexpected errors in `VerificationException`. `SqliteException`, `IOException`, and `UnauthorizedAccessException` are not wrapped and propagate as they are.
 
-### `async Task CleanupTemporaryFilesAsync`
+### `Task<bool> VerifyChecksumAsync(string filePath, string expectedChecksum)`
 
-Deletes all temporary files created by the service during verification or restoration.
+Computes the SHA256 hash of the file and compares it with `expectedChecksum`, ignoring case.
 
-- **Return value**: A `Task` representing the asynchronous cleanup operation.
-- **Throws**: `InvalidOperationException` if cleanup cannot be completed.
+- If `expectedChecksum` is null or empty, it logs a warning and returns `true`. A missing checksum therefore passes verification.
+
+### `Task<string> RestoreToTemporaryAsync(BackupResult backup)`
+
+Creates `Path.GetTempPath()/sqlite-verify-<guid>/restore-check.sqlite` and fills it according to the file extension:
+
+- `.enc`: decrypts with AES-256. The key is read from the `BACKUP_ENCRYPTION_KEY` environment variable, or from `AppSettings.EncryptionKey` if the variable is not set. If no valid key is available, it throws `VerificationException` with the backup ID.
+- Compressed extension (`BackupConstants.CompressedBackupExtension`): decompresses with `GZipStream`.
+- Any other extension: copies the file as-is.
+
+Returns the path to the temporary database file. The caller is responsible for cleanup. `VerifyBackupAsync` does this automatically.
+
+### `Task CleanupTemporaryFilesAsync(string tempDirectory)`
+
+Recursively deletes `tempDirectory` if it exists. The work runs on the thread pool.
 
 ## Usage
 
-### Example 1: Verify a Backup Archive
+```csharp
+public sealed class BackupVerifier(IVerificationService verification)
+{
+    public async Task<bool> CheckAsync(BackupResult backup, CancellationToken ct)
+    {
+        var result = await verification.VerifyBackupAsync(backup, ct);
+        return result.IntegrityCheckPassed;
+    }
+}
+```
+
+`RestoreVerification` is updated by `MarkCompleted(bool successful, string statusMessage)`, which sets the final status and message. `IntegrityCheckPassed` is a `bool`.
+
+## Notes
+
+- `CountRecordsAsync` (private) sums `COUNT(*)` across all tables in `sqlite_master`. If it fails, it logs a warning and returns `0`. A `0` therefore does not prove the database is empty.
+- The integrity check and the record count open the restored database read-only.
+- Temporary files are removed in `finally`, so a failed run does not leave a `sqlite-verify-*` directory behind.
+- `BackupCorruptedException`, `IntegrityCheckFailedException`, and `RestoreVerificationFailedException` are domain exceptions. See `docs/VerificationException.md` for the base type.
