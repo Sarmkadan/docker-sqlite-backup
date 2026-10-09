@@ -57,7 +57,10 @@ public class S3Configuration : StorageConfiguration
 
     /// <summary>
     /// Validates the S3 configuration.
+    /// Checks the configuration name, AWS credentials (minimum 16 characters each),
+    /// bucket name, region name and storage class.
     /// </summary>
+    /// <returns>True if all required fields are present and valid; otherwise, false.</returns>
     public override bool IsValid()
     {
         if (string.IsNullOrWhiteSpace(Name))
@@ -82,8 +85,11 @@ public class S3Configuration : StorageConfiguration
     }
 
     /// <summary>
-    /// Tests the S3 connection by listing buckets.
+    /// Tests the S3 connection by listing buckets and checking that the configured bucket exists.
+    /// Uses <see cref="RegionName"/> and, if set, <see cref="CustomEndpoint"/>.
+    /// Any exception is caught and reported as a failed test.
     /// </summary>
+    /// <returns>True if the configured bucket is found; otherwise, false.</returns>
     public override async Task<bool> TestConnectionAsync()
     {
         try
@@ -120,5 +126,10 @@ public class S3Configuration : StorageConfiguration
         return validClasses.Contains(storageClass, StringComparer.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Returns a string representation of the configuration for logging.
+    /// Includes the access key ID and secret access key in plain text, so do not log it unredacted.
+    /// </summary>
+    /// <returns>A string describing the S3 configuration.</returns>
     public override string ToString() => $"S3Configuration {{ AccessKeyId = {AccessKeyId}, SecretAccessKey = {SecretAccessKey}, BucketName = {BucketName}, RegionName = {RegionName}, ObjectKeyPrefix = {ObjectKeyPrefix}, UseSSL = {UseSSL} }}";
 }
