@@ -81,6 +81,7 @@ public class IntegrityReport
     /// </summary>
     public bool IsHealthy => PassedQuickCheck && PassedFullCheck && PassedForeignKeyCheck;
 
+    /// <summary>Returns a compact diagnostic string with the report identity, timing, and quick check result.</summary>
     public override string ToString() => $"IntegrityReport {{ Id = {Id}, DatabasePath = {DatabasePath}, CheckedAt = {CheckedAt}, Duration = {Duration}, PassedQuickCheck = {PassedQuickCheck}, QuickCheckErrors = {QuickCheckErrors} }}";
 
     /// <summary>
