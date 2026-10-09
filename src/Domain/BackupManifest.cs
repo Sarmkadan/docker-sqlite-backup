@@ -109,5 +109,8 @@ public class BackupManifest
 	/// </summary>
 	public string Notes { get; set; } = string.Empty;
 
-	public override string ToString() => $"BackupManifest {{ Version = {Version}, Id = {Id}, ScheduleId = {ScheduleId}, BackupJobId = {BackupJobId}, CreatedAt = {CreatedAt}, CompletedAt = {CompletedAt} }}";
+	/// <summary>
+	/// Returns a short diagnostic string with the manifest version, identifiers and timestamps.
+	/// </summary>
+	public override string ToString() =>$"BackupManifest {{ Version = {Version}, Id = {Id}, ScheduleId = {ScheduleId}, BackupJobId = {BackupJobId}, CreatedAt = {CreatedAt}, CompletedAt = {CompletedAt} }}";
 }
