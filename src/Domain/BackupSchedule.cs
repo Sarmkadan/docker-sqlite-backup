@@ -32,10 +32,10 @@ public class BackupSchedule
     /// <summary>Gets or sets the next calculated run time for this schedule.</summary>
     public DateTime? NextRunTime { get; set; }
 
-	/// <summary>
-	/// Gets or sets the next scheduled run time that was calculated when the schedule was last updated.
-	/// This is persisted to detect missed schedules after container restarts.
-	/// </summary>
+    /// <summary>
+    /// Gets or sets the next scheduled run time that was calculated when the schedule was last updated.
+    /// This is persisted to detect missed schedules after container restarts.
+    /// </summary>
 	public DateTime? NextScheduledRunTime { get; set; }
 
     /// <summary>Gets or sets the timestamp when this schedule was created.</summary>
@@ -106,11 +106,17 @@ public class BackupSchedule
     /// <summary>
     /// Validates that the specified database path exists and is accessible.
     /// </summary>
+    /// <returns>True if <see cref="DatabasePath"/> points to an existing file, false otherwise.</returns>
     public bool ValidateDatabasePath()
     {
         return File.Exists(DatabasePath);
     }
 
+    /// <summary>
+    /// Returns a diagnostic string representation of this schedule, including its identifier,
+    /// name, description, database path, cron expression and active state.
+    /// </summary>
+    /// <returns>A formatted string describing this schedule.</returns>
     public override string ToString()
     {
         return $"BackupSchedule {{ Id = {Id}, Name = {Name}, Description = {Description}, DatabasePath = {DatabasePath}, CronExpression = {CronExpression}, IsActive = {IsActive} }}";
