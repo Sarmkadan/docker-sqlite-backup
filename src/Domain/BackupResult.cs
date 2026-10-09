@@ -17,7 +17,7 @@ public class BackupResult
     /// <summary>Gets or sets the identifier of the associated backup job.</summary>
     public Guid BackupJobId { get; set; }
 
-    /// <summary>Gets or sets the current status of the backup.</summary>
+    /// <summary>Gets or sets the current status of the backup, stored as the integer value of <see cref="Constants.BackupStatus"/>.</summary>
     public int Status { get; set; } = (int)Constants.BackupStatus.Pending;
 
     /// <summary>Gets or sets the path where the backup file is stored.</summary>
@@ -26,11 +26,11 @@ public class BackupResult
     /// <summary>Gets or sets the size of the backup file in bytes.</summary>
     public long BackupFileSizeBytes { get; set; }
 
-        /// <summary>Gets or sets the size of the backup file before compression (if compressed).</summary>
-        public long? OriginalFileSizeBytes { get; set; }
+    /// <summary>Gets or sets the size of the backup file before compression, in bytes. Null when the backup was not compressed.</summary>
+    public long? OriginalFileSizeBytes { get; set; }
 
-        /// <summary>Gets or sets the compression ratio (original size / compressed size).</summary>
-        public double? CompressionRatio { get; set; }
+    /// <summary>Gets or sets the compression ratio (original size / compressed size). Null when the backup was not compressed.</summary>
+    public double? CompressionRatio { get; set; }
 
     /// <summary>Gets or sets the checksum (SHA256) of the backup file.</summary>
     public string Checksum { get; set; } = string.Empty;
@@ -68,7 +68,7 @@ public class BackupResult
     /// <summary>Gets or sets the S3 object key if stored in S3.</summary>
     public string? S3ObjectKey { get; set; }
 
-    /// <summary>Gets or sets the backup mode used to create this backup.</summary>
+    /// <summary>Gets or sets the backup mode used to create this backup, stored as the integer value of <see cref="Constants.BackupMode"/>.</summary>
     public int BackupMode { get; set; } = (int)Constants.BackupMode.Full;
 
     /// <summary>
