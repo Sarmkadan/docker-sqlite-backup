@@ -53,6 +53,10 @@ public class AzureConfiguration : StorageConfiguration
     /// </summary>
     public int SoftDeleteRetentionDays { get; set; } = 0;
 
+    /// <summary>
+    /// Returns a diagnostic string representation of this configuration.
+    /// Note: the output includes <see cref="ConnectionString"/> and <see cref="SasUri"/> verbatim.
+    /// </summary>
     public override string ToString() => $"AzureConfiguration {{ ConnectionString = {ConnectionString}, SasUri = {SasUri}, ContainerName = {ContainerName}, BlobPrefix = {BlobPrefix}, AccessTier = {AccessTier}, EnableImmutability = {EnableImmutability} }}";
 
     /// <inheritdoc />
@@ -105,6 +109,11 @@ public class AzureConfiguration : StorageConfiguration
             "Azure storage requires either ConnectionString or SasUri to be configured.");
     }
 
+    /// <summary>
+    /// Checks whether <paramref name="tier"/> is one of the supported Azure blob access tiers.
+    /// </summary>
+    /// <param name="tier">The access tier name to validate (case-sensitive).</param>
+    /// <returns><c>true</c> if the tier is <c>Hot</c>, <c>Cool</c>, or <c>Archive</c>; otherwise <c>false</c>.</returns>
     private static bool IsValidAccessTier(string tier) =>
         tier is "Hot" or "Cool" or "Archive";
 }
