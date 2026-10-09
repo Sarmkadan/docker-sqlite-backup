@@ -44,6 +44,10 @@ public class RotationPolicy
     /// <summary>
     /// Validates the rotation policy.
     /// </summary>
+    /// <returns>
+    /// <c>true</c> if <see cref="MaxBackupCount"/>, <see cref="MaxAgeDays"/> and
+    /// <see cref="MinimumBackupCount"/> are consistent; otherwise <c>false</c>.
+    /// </returns>
     public bool IsValid()
     {
         // MaxBackupCount of 0 means unlimited — skip count-based rotation entirely.
@@ -66,6 +70,19 @@ public class RotationPolicy
     /// <summary>
     /// Determines if a backup should be rotated (deleted) based on this policy.
     /// </summary>
+    /// <param name="totalBackupCount">The total number of backups currently stored.</param>
+    /// <param name="backupDate">The UTC creation date of the backup being evaluated.</param>
+    /// <param name="isFailed">
+    /// Whether the backup failed. Currently not used by the decision logic; failed-backup
+    /// handling is controlled by <see cref="DeleteFailedBackups"/> elsewhere.
+    /// </param>
+    /// <returns>
+    /// <c>true</c> if the backup matches the active <see cref="Strategy"/> rules; otherwise <c>false</c>.
+    /// </returns>
+    /// <remarks>
+    /// For <c>Combined</c>, the count rule respects <see cref="MinimumBackupCount"/>, but the age rule
+    /// does not, so an over-age backup can be selected even when it is among the minimum kept.
+    /// </remarks>
     public bool ShouldRotate(int totalBackupCount, DateTime backupDate, bool isFailed)
     {
         var strategy = (Constants.RotationStrategy)Strategy;
@@ -80,6 +97,11 @@ public class RotationPolicy
         };
     }
 
+    /// <summary>
+    /// Checks the count-based rotation rule.
+    /// </summary>
+    /// <param name="totalBackupCount">The total number of backups currently stored.</param>
+    /// <returns><c>true</c> if the count exceeds both <see cref="MaxBackupCount"/> and <see cref="MinimumBackupCount"/>.</returns>
     private bool ShouldRotateByCount(int totalBackupCount)
     {
         // MaxBackupCount of 0 means unlimited — never rotate by count.
@@ -89,10 +111,19 @@ public class RotationPolicy
         return totalBackupCount > MaxBackupCount && totalBackupCount > MinimumBackupCount;
     }
 
+    /// <summary>
+    /// Checks the age-based rotation rule.
+    /// </summary>
+    /// <param name="backupDate">The UTC creation date of the backup being evaluated.</param>
+    /// <returns><c>true</c> if the backup is older than <see cref="MaxAgeDays"/> days.</returns>
     private bool ShouldRotateByAge(DateTime backupDate)
     {
         return (DateTime.UtcNow - backupDate).TotalDays > MaxAgeDays;
     }
 
+    /// <summary>
+    /// Returns a short diagnostic description of the policy (identifiers and key settings, no timestamps).
+    /// </summary>
+    /// <returns>A string representation of the policy.</returns>
     public override string ToString() => $"RotationPolicy {{ Id = {Id}, ScheduleId = {ScheduleId}, Strategy = {Strategy}, MaxBackupCount = {MaxBackupCount}, MaxAgeDays = {MaxAgeDays}, VerifyBeforeDeletion = {VerifyBeforeDeletion} }}";
 }
