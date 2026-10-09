@@ -23,6 +23,9 @@ public sealed class ScheduleService : IScheduleService
         IBackupRepository repository,
         ILogger<ScheduleService> logger)
     {
+        System.ArgumentNullException.ThrowIfNull(repository);
+        System.ArgumentNullException.ThrowIfNull(logger);
+
         _repository = repository;
         _logger = logger;
     }
@@ -37,10 +40,7 @@ public sealed class ScheduleService : IScheduleService
     /// <exception cref="InvalidCronExpressionException">Thrown when cron expression is invalid.</exception>
     public async Task<BackupSchedule> CreateScheduleAsync(BackupSchedule schedule)
     {
-        if (schedule == null)
-        {
-            throw new ArgumentNullException(nameof(schedule));
-        }
+        System.ArgumentNullException.ThrowIfNull(schedule);
 
         if (!schedule.IsValid())
         {
@@ -84,10 +84,7 @@ public sealed class ScheduleService : IScheduleService
     /// <exception cref="ScheduleException">Thrown when update fails.</exception>
     public async Task<BackupSchedule> UpdateScheduleAsync(BackupSchedule schedule)
     {
-        if (schedule == null)
-        {
-            throw new ArgumentNullException(nameof(schedule));
-        }
+        System.ArgumentNullException.ThrowIfNull(schedule);
 
         if (!schedule.IsValid())
         {
