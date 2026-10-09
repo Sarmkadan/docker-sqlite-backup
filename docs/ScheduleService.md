@@ -1,212 +1,115 @@
 # ScheduleService
 
-The `ScheduleService` class provides CRUD operations and lifecycle management for backup schedules in the docker-sqlite-backup system. It handles creation, retrieval, updating, deletion, activation, and deactivation of `BackupSchedule` instances, as well as cron expression validation and next-execution-time calculation. All data-modifying operations are asynchronous, while validation and time calculation are synchronous.
+`ScheduleService` (`src/Services/ScheduleService.cs`) implements `IScheduleService` in namespace `DockerSqliteBackup.Services`. It manages `BackupSchedule` records: create, update, read, delete, activate/deactivate, cron validation and next-run calculation. Persistence is delegated to `IBackupRepository`. The class is `sealed` and is registered as a singleton in `Configuration/ServiceCollectionExtensions.cs`.
 
-## API
+## Constructor
 
-### `public ScheduleService`
+```csharp
+public ScheduleService(IBackupRepository repository, ILogger<ScheduleService> logger)
+```
 
-Constructor. Initializes a new instance of the service. No parameters.
+| Parameter | Description |
+|---|---|
+| `repository` | Storage for schedules (`IBackupRepository`, SQLite-backed in `src/Data`). |
+| `logger` | Logger used for informational and warning messages. |
 
----
+## Methods
 
-### `public async Task<BackupSchedule> CreateScheduleAsync(BackupSchedule schedule)`
+### `CreateScheduleAsync(BackupSchedule schedule)`
 
-Creates a new backup schedule and persists it.
+Validates and persists a new schedule.
 
-- **Parameters**  
-  `schedule` – A `BackupSchedule` object containing the schedule configuration (e.g., cron expression, database path, retention policy).
-- **Returns**  
-  The created `BackupSchedule` with its generated identifier and any server-assigned defaults.
-- **Throws**  
-  `ArgumentNullException` if `schedule` is `null`.  
-  `InvalidOperationException` if a schedule with the same identifier already exists.  
-  `ArgumentException` if the schedule’s cron expression is invalid.
+1. Throws `ArgumentNullException` (the project's own type in `DockerSqliteBackup.Exceptions`) if `schedule` is `null`.
+2. Throws `InvalidScheduleException` if `schedule.IsValid()` returns `false`.
+3. Throws `InvalidCronExpressionException` if the cron expression does not parse.
+4. If `schedule.ValidateDatabasePath()` fails (the file does not exist), logs a warning and **continues**. The schedule is still created.
+5. Sets `CreatedAt` and `LastModifiedAt` to `DateTime.UtcNow`.
+6. Calls `_repository.CreateScheduleAsync`. Any exception from the repository is wrapped in `ScheduleException`.
 
----
+Returns the schedule as returned by the repository.
 
-### `public Task<BackupSchedule> CreateScheduleAsync(BackupSchedule schedule)`
+### `CreateScheduleAsync(string name, string databasePath, CancellationToken cancellationToken = default)`
 
-Non-async overload that returns a `Task<BackupSchedule>`. Behaves identically to the async version but does not use the `async` keyword internally. Callers should still `await` the returned task.
+Convenience overload. Builds a `BackupSchedule` with `Name` and `DatabasePath` set, all other fields at their model defaults (cron `0 2 * * *`, active, 30-day retention), and delegates to the overload above. The `cancellationToken` parameter is **not** used.
 
-- **Parameters**  
-  Same as the async overload.
-- **Returns**  
-  A `Task` that resolves to the created `BackupSchedule`.
-- **Throws**  
-  Same as the async overload.
+### `UpdateScheduleAsync(BackupSchedule schedule)`
 
----
+Validates and updates an existing schedule.
 
-### `public async Task<BackupSchedule> UpdateScheduleAsync(BackupSchedule schedule)`
+1. `ArgumentNullException` if `schedule` is `null`.
+2. `InvalidScheduleException` if `schedule.IsValid()` is `false`.
+3. `InvalidCronExpressionException` if the cron expression is invalid.
+4. Sets `LastModifiedAt` to `DateTime.UtcNow`.
+5. Calls `_repository.UpdateScheduleAsync`. Repository exceptions are wrapped in `ScheduleException`.
 
-Updates an existing backup schedule.
+Logs the update and returns the repository result.
 
-- **Parameters**  
-  `schedule` – A `BackupSchedule` object with the updated fields. The schedule’s identifier must match an existing schedule.
-- **Returns**  
-  The updated `BackupSchedule` after persistence.
-- **Throws**  
-  `ArgumentNullException` if `schedule` is `null`.  
-  `KeyNotFoundException` if no schedule with the given identifier exists.  
-  `ArgumentException` if the updated cron expression is invalid.
+### `DeleteScheduleAsync(Guid scheduleId, CancellationToken cancellationToken = default)`
 
----
+Calls `_repository.DeleteScheduleAsync(scheduleId)` and logs the deletion. The `cancellationToken` is not forwarded. There is no existence check in the service. Any error comes from the repository unwrapped.
 
-### `public async Task DeleteScheduleAsync(Guid scheduleId)`
+### `GetScheduleAsync(Guid scheduleId, CancellationToken cancellationToken = default)`
 
-Deletes a backup schedule by its identifier.
+Returns the schedule from the repository, or `null` if not found. The `cancellationToken` is not used.
 
-- **Parameters**  
-  `scheduleId` – The unique identifier of the schedule to delete.
-- **Returns**  
-  `Task` (no value).
-- **Throws**  
-  `KeyNotFoundException` if no schedule with the given identifier exists.
+### `GetAllSchedulesAsync(CancellationToken cancellationToken = default)`
 
----
+Returns all schedules from the repository, regardless of `IsActive`. The `cancellationToken` is not used.
 
-### `public async Task<BackupSchedule?> GetScheduleAsync(Guid scheduleId)`
+### `GetActiveSchedulesAsync()`
 
-Retrieves a single backup schedule by its identifier.
+Returns the schedules the repository reports as active. The service does not filter them itself, so the definition of "active" is the repository's.
 
-- **Parameters**  
-  `scheduleId` – The unique identifier of the schedule.
-- **Returns**  
-  The matching `BackupSchedule`, or `null` if no schedule with that identifier exists.
-- **Throws**  
-  None.
+### `DeactivateScheduleAsync(Guid scheduleId, CancellationToken cancellationToken = default)`
 
----
+Loads the schedule. If found, sets `IsActive = false`, updates `LastModifiedAt`, saves via `UpdateScheduleAsync`, and logs. If not found, does nothing and does not throw.
 
-### `public async Task<IEnumerable<BackupSchedule>> GetActiveSchedulesAsync()`
+### `ActivateScheduleAsync(Guid scheduleId)`
 
-Retrieves all schedules that are currently active (i.e., enabled and not past their end date).
+Same as deactivate, but sets `IsActive = true`. If not found, does nothing and does not throw. It does **not** re-validate the cron expression or any other field.
 
-- **Parameters**  
-  None.
-- **Returns**  
-  An `IEnumerable<BackupSchedule>` containing the active schedules.
-- **Throws**  
-  None.
+### `bool ValidateCronExpression(string cronExpression)`
 
----
+Returns `true` if `Cronos.CronExpression.Parse` accepts the string. Any exception (including for `null`) returns `false`. The check is syntactic only.
 
-### `public async Task<IEnumerable<BackupSchedule>> GetAllSchedulesAsync()`
+### `DateTime? GetNextExecutionTime(BackupSchedule schedule)`
 
-Retrieves all backup schedules, regardless of activation state.
+Computes the next occurrence of `schedule.CronExpression` (Cronos).
 
-- **Parameters**  
-  None.
-- **Returns**  
-  An `IEnumerable<BackupSchedule>` containing every schedule.
-- **Throws**  
-  None.
+- Anchor: `schedule.NextScheduledRunTime`, or `DateTime.UtcNow` if that is `null`.
+- Returns the next occurrence in UTC (no time zone conversion).
+- On a parse or calculation error, logs a warning and returns `null`. It does not throw.
 
----
+## Exceptions
 
-### `public bool ValidateCronExpression(string expression)`
-
-Validates a cron expression string.
-
-- **Parameters**  
-  `expression` – The cron expression to validate (e.g., `"0 2 * * *"`).
-- **Returns**  
-  `true` if the expression is syntactically correct; otherwise `false`.
-- **Throws**  
-  `ArgumentNullException` if `expression` is `null`.
-
----
-
-### `public DateTime? GetNextExecutionTime(string cronExpression, DateTime? fromTime = null)`
-
-Calculates the next scheduled execution time for a given cron expression.
-
-- **Parameters**  
-  `cronExpression` – A valid cron expression.  
-  `fromTime` – Optional starting point for the calculation. If `null`, the current UTC time is used.
-- **Returns**  
-  A `DateTime?` representing the next execution time in UTC, or `null` if the expression does not yield a future time (e.g., a one-time expression in the past).
-- **Throws**  
-  `ArgumentNullException` if `cronExpression` is `null`.  
-  `ArgumentException` if `cronExpression` is invalid.
-
----
-
-### `public async Task DeactivateScheduleAsync(Guid scheduleId)`
-
-Deactivates a backup schedule, preventing it from running.
-
-- **Parameters**  
-  `scheduleId` – The identifier of the schedule to deactivate.
-- **Returns**  
-  `Task` (no value).
-- **Throws**  
-  `KeyNotFoundException` if no schedule with the given identifier exists.
-
----
-
-### `public async Task ActivateScheduleAsync(Guid scheduleId)`
-
-Activates a backup schedule, allowing it to run according to its cron expression.
-
-- **Parameters**  
-  `scheduleId` – The identifier of the schedule to activate.
-- **Returns**  
-  `Task` (no value).
-- **Throws**  
-  `KeyNotFoundException` if no schedule with the given identifier exists.  
-  `InvalidOperationException` if the schedule’s cron expression is invalid or its end date is in the past.
+| Exception | When |
+|---|---|
+| `ArgumentNullException` (project type) | `schedule` is `null` in Create/Update. |
+| `InvalidScheduleException` | `BackupSchedule.IsValid()` fails in Create/Update. |
+| `InvalidCronExpressionException` | Cron expression does not parse in Create/Update. |
+| `ScheduleException` | Repository call fails in Create/Update. The original exception is the inner exception. |
 
 ## Usage
 
-### Example 1: Creating and activating a schedule
-
 ```csharp
-var service = new ScheduleService();
-var newSchedule = new BackupSchedule
+// Injected via DI as IScheduleService
+var schedule = await scheduleService.CreateScheduleAsync("Nightly", "/data/app.sqlite");
+
+schedule.CronExpression = "0 3 * * *";   // 03:00 UTC daily
+schedule = await scheduleService.UpdateScheduleAsync(schedule);
+
+if (scheduleService.ValidateCronExpression(schedule.CronExpression))
 {
-    DatabasePath = "/data/mydb.sqlite",
-    CronExpression = "0 3 * * *",   // daily at 3 AM
-    RetentionDays = 7
-};
-
-// Create the schedule (async overload)
-BackupSchedule created = await service.CreateScheduleAsync(newSchedule);
-Console.WriteLine($"Created schedule with ID: {created.Id}");
-
-// Activate it
-await service.ActivateScheduleAsync(created.Id);
-```
-
-### Example 2: Validating a cron expression and retrieving active schedules
-
-```csharp
-var service = new ScheduleService();
-
-string cron = "*/5 * * * *"; // every 5 minutes
-if (!service.ValidateCronExpression(cron))
-{
-    Console.WriteLine("Invalid cron expression");
-    return;
+    DateTime? next = scheduleService.GetNextExecutionTime(schedule);
 }
 
-DateTime? nextRun = service.GetNextExecutionTime(cron);
-Console.WriteLine($"Next execution: {nextRun}");
-
-// Get all currently active schedules
-IEnumerable<BackupSchedule> active = await service.GetActiveSchedulesAsync();
-foreach (var s in active)
-{
-    Console.WriteLine($"Schedule {s.Id} – next run: {s.NextExecutionTime}");
-}
+await scheduleService.DeactivateScheduleAsync(schedule.Id);
 ```
 
 ## Notes
 
-- **Thread safety**: `ScheduleService` is not thread-safe. Concurrent calls to mutation methods (`CreateScheduleAsync`, `UpdateScheduleAsync`, `DeleteScheduleAsync`, `ActivateScheduleAsync`, `DeactivateScheduleAsync`) from multiple threads may lead to inconsistent state or data corruption. External synchronization (e.g., a lock) is required when the same instance is used concurrently.
-- **Cron validation**: `ValidateCronExpression` performs only syntactic validation. It does not check whether the expression will ever produce a valid future time; use `GetNextExecutionTime` for that purpose.
-- **Null handling**: All methods that accept a `BackupSchedule` or a string parameter throw `ArgumentNullException` when the argument is `null`. Identifier-based methods throw `KeyNotFoundException` when the identifier does not match an existing schedule.
-- **Time zone**: `GetNextExecutionTime` returns times in UTC. The cron expression is evaluated against UTC; no time zone conversion is applied.
-- **Activation constraints**: `ActivateScheduleAsync` will throw `InvalidOperationException` if the schedule’s cron expression is invalid or if its end date (if set) is in the past. Deactivation does not perform these checks.
-- **Non-async overload**: The non-async `CreateScheduleAsync` overload is provided for compatibility with synchronous call sites. It still returns a `Task` and should be awaited. Prefer the `async` overload in new code.
+- **Thread safety**: the class holds no mutable state of its own. Concurrency safety therefore depends on `IBackupRepository`. Read-modify-write sequences in Activate/Deactivate are not atomic, so concurrent changes to the same schedule can overwrite each other.
+- **Missing database file**: Create does not fail when `DatabasePath` does not exist. Only a warning is logged.
+- **Silent no-ops**: Activate/Deactivate ignore unknown IDs. Delete does not check existence.
+- **Time zone**: all times are UTC. Cron expressions are evaluated against UTC.
+- **Interface members with unused tokens**: several methods accept a `CancellationToken` that is never passed on.
