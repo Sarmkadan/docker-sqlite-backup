@@ -5,6 +5,8 @@ namespace DockerSqliteBackup.Domain;
 
 /// <summary>
 /// Represents a single backup job execution.
+/// Tracks its lifecycle (pending, in progress, completed or failed),
+/// timing, retry attempts and the associated <see cref="BackupResult"/>.
 /// </summary>
 public class BackupJob
 {
@@ -82,5 +84,10 @@ public class BackupJob
     {
         RetryCount++;
     }
+
+    /// <summary>
+    /// Returns a diagnostic string with the job's identifiers, status and timestamps.
+    /// </summary>
+    /// <returns>A human-readable representation of this backup job.</returns>
     public override string ToString() => $"BackupJob {{ Id = {Id}, ScheduleId = {ScheduleId}, Status = {Status}, CreatedAt = {CreatedAt}, StartedAt = {StartedAt}, CompletedAt = {CompletedAt} }}";
 }
