@@ -12,8 +12,20 @@ namespace DockerSqliteBackup.Health;
 /// </summary>
 public class HealthStatusStore
 {
+    /// <summary>
+    /// Shared JSON options used for both serialization and deserialization of the status file.
+    /// </summary>
     private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
+
+    /// <summary>
+    /// Fully resolved path of the status file.
+    /// </summary>
     private readonly string _statusFilePath;
+
+    /// <summary>
+    /// Serializes write operations within this instance so that <see cref="Save"/> and
+    /// <see cref="Update"/> do not interleave.
+    /// </summary>
     private readonly object _writeLock = new();
 
     /// <summary>
