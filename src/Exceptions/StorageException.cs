@@ -47,7 +47,15 @@ public class StorageException : DockerSqliteBackupException
 /// </summary>
 public class S3StorageException : StorageException
 {
+    /// <summary>Initializes a new instance of the S3StorageException class.</summary>
+    /// <param name="message">The error message.</param>
+    /// <param name="isTransient">Whether the error is transient and can be retried.</param>
     public S3StorageException(string message, bool isTransient = false) : base(message, "S3", isTransient) { }
+
+    /// <summary>Initializes a new instance of the S3StorageException class with an inner exception.</summary>
+    /// <param name="message">The error message.</param>
+    /// <param name="innerException">The exception that caused this error.</param>
+    /// <param name="isTransient">Whether the error is transient and can be retried.</param>
     public S3StorageException(string message, Exception innerException, bool isTransient = false) : base(message, innerException, isTransient) { }
 }
 
@@ -56,7 +64,15 @@ public class S3StorageException : StorageException
 /// </summary>
 public class LocalStorageException : StorageException
 {
+    /// <summary>Initializes a new instance of the LocalStorageException class.</summary>
+    /// <param name="message">The error message.</param>
+    /// <param name="isTransient">Whether the error is transient and can be retried.</param>
     public LocalStorageException(string message, bool isTransient = false) : base(message, "Local", isTransient) { }
+
+    /// <summary>Initializes a new instance of the LocalStorageException class with an inner exception.</summary>
+    /// <param name="message">The error message.</param>
+    /// <param name="innerException">The exception that caused this error.</param>
+    /// <param name="isTransient">Whether the error is transient and can be retried.</param>
     public LocalStorageException(string message, Exception innerException, bool isTransient = false) : base(message, innerException, isTransient) { }
 }
 
@@ -65,7 +81,15 @@ public class LocalStorageException : StorageException
 /// </summary>
 public class AzureStorageException : StorageException
 {
+    /// <summary>Initializes a new instance of the AzureStorageException class.</summary>
+    /// <param name="message">The error message.</param>
+    /// <param name="isTransient">Whether the error is transient and can be retried.</param>
     public AzureStorageException(string message, bool isTransient = false) : base(message, "Azure", isTransient) { }
+
+    /// <summary>Initializes a new instance of the AzureStorageException class with an inner exception.</summary>
+    /// <param name="message">The error message.</param>
+    /// <param name="innerException">The exception that caused this error.</param>
+    /// <param name="isTransient">Whether the error is transient and can be retried.</param>
     public AzureStorageException(string message, Exception innerException, bool isTransient = false) : base(message, innerException, isTransient) { }
 }
 
@@ -74,6 +98,9 @@ public class AzureStorageException : StorageException
 /// </summary>
 public class InsufficientStorageException : StorageException
 {
+    /// <summary>Initializes a new instance of the InsufficientStorageException class.</summary>
+    /// <param name="requiredBytes">The number of bytes required.</param>
+    /// <param name="availableBytes">The number of bytes available.</param>
     public InsufficientStorageException(long requiredBytes, long availableBytes)
         : base($"Insufficient storage. Required: {requiredBytes} bytes, Available: {availableBytes} bytes", "Local", false) { }
 }
