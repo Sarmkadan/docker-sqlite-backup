@@ -56,14 +56,13 @@ public class AppSettings
     }
 
     /// <summary>
-    /// Gets or sets the schedule check interval in seconds. Must be positive.
+    /// Gets or sets the schedule check interval in seconds. Must be positive; checked at host startup
+    /// by <see cref="AppSettingsOptionsValidator"/>.
     /// </summary>
     public int ScheduleCheckIntervalSeconds
     {
         get => _scheduleCheckIntervalSeconds;
-        set => _scheduleCheckIntervalSeconds = value > 0
-            ? value
-            : throw new ConfigurationException(nameof(ScheduleCheckIntervalSeconds), "Schedule check interval must be a positive number.");
+        set => _scheduleCheckIntervalSeconds = value;
     }
 
     /// <summary>
@@ -100,14 +99,13 @@ public class AppSettings
     }
 
     /// <summary>
-    /// Gets or sets the local storage path. Validates that it's not null or whitespace.
+    /// Gets or sets the local backup directory. Must exist and be writable; checked at host startup
+    /// by <see cref="AppSettingsOptionsValidator"/>.
     /// </summary>
     public string LocalStoragePath
     {
         get => _localStoragePath;
-        set => _localStoragePath = !string.IsNullOrWhiteSpace(value)
-            ? value
-            : throw new ConfigurationException(nameof(LocalStoragePath), "Local storage path cannot be null or whitespace.");
+        set => _localStoragePath = value;
     }
 
     public bool EnableVerificationByDefault { get; set; } = true;

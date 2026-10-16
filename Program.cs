@@ -41,6 +41,9 @@ var builder = Host.CreateDefaultBuilder(args)
     })
     .ConfigureServices((context, services) =>
     {
+        // Registered first so the ValidateOnStart hosted service runs before BackupWorker starts.
+        services.AddBackupOptions(context.Configuration);
+
         var appSettings = new AppSettings();
         context.Configuration.GetSection("AppSettings").Bind(appSettings);
 
