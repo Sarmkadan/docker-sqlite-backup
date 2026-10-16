@@ -5,7 +5,9 @@ using DockerSqliteBackup.Events;
 using DockerSqliteBackup.Exceptions;
 using DockerSqliteBackup.Health;
 using DockerSqliteBackup.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 using ArgumentNullException = DockerSqliteBackup.Exceptions.ArgumentNullException;
 
@@ -79,6 +81,37 @@ public static class ServiceCollectionExtensions
         {
             throw new ConfigurationException("Service registration", "Failed to register backup services.", ex);
         }
+    }
+
+    /// <summary>
+    /// Binds the <c>AppSettings</c> configuration section and validates it when the host starts.
+    /// An invalid value surfaces as an <see cref="Microsoft.Extensions.Options.OptionsValidationException"/>
+    /// from <c>IHost.StartAsync</c>, naming the offending property.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add services to.</param>
+    /// <param name="configuration">The configuration root containing the <c>AppSettings</c> section.</param>
+    /// <returns>The <see cref="IServiceCollection"/> for method chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="services"/> or <paramref name="configuration"/> is <see langword="null"/>.</exception>
+    public static IServiceCollection AddBackupOptions(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        if (services == null)
+        {
+            throw new ArgumentNullException(nameof(services));
+        }
+
+        if (configuration == null)
+        {
+            throw new ArgumentNullException(nameof(configuration));
+        }
+
+        services.AddOptions<AppSettings>()
+            .Bind(configuration.GetSection("AppSettings"))
+            .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<AppSettings>, AppSettingsOptionsValidator>();
+
+        return services;
     }
 
     /// <summary>
