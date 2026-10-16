@@ -96,6 +96,18 @@ These behaviours are visible in the source and should be kept in mind:
 - **Timestamps are not normalised.** `ClassifyBackup` compares against `DateTime.UtcNow`, so `backupDate` must be UTC. A local-time value shifts the result by the UTC offset.
 - **`CreatedAt` and `LastModifiedAt` are not updated automatically.** Callers must set `LastModifiedAt` when they change the policy.
 
+## Configuration and startup validation
+
+`RetentionPolicy` is bound from the `RetentionPolicy` configuration section (for example `RetentionPolicy__DailyRetentionDays` as an environment variable with the `BACKUP_` prefix). It is validated by `RetentionPolicyOptionsValidator` (`src/Configuration/RetentionPolicyOptionsValidator.cs`) when the host starts, through `ValidateOnStart`. The host refuses to start, with an `OptionsValidationException` naming the property, when:
+
+- `DailyRetentionDays`, `WeeklyRetentionWeeks`, `MonthlyRetentionMonths` or `MaxTotalStorageBytes` is negative.
+- All three tiers are `0`. Such a policy would expire every backup immediately. This is rejected outright; there is no opt-in flag.
+
+The startup validator does not require `Name`, which is empty when the policy comes from configuration. It also accepts `DailyRetentionDays = 0` when another tier is enabled. `IsValid()` still requires `DailyRetentionDays >= 1`, so the two checks differ on that point.
+
+There is no minimum-age guard in the current code, so no rule compares a minimum age with a maximum.
+
 ## Tests
 
-There are currently no unit tests for `RetentionPolicy` or `RetentionTier`. Adding them under `tests/docker-sqlite-backup.Tests/Domain/` is the obvious next step, covering the boundaries of each tier and the validation rules.
+- `tests/docker-sqlite-backup.Tests/Configuration/RetentionPolicyStartupValidationTests.cs` covers startup validation: the default policy starts, each negative value is rejected and named, and an all-zero policy is rejected.
+- There are still no unit tests for `RetentionPolicy.ClassifyBackup`, `IsExpired` or `RetentionTier` boundaries. Adding them under `tests/docker-sqlite-backup.Tests/Domain/` is the obvious next step.

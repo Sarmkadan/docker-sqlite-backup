@@ -1,6 +1,7 @@
 #nullable enable
 
 using DockerSqliteBackup.Data;
+using DockerSqliteBackup.Domain;
 using DockerSqliteBackup.Events;
 using DockerSqliteBackup.Exceptions;
 using DockerSqliteBackup.Health;
@@ -84,7 +85,12 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Binds the <c>AppSettings</c> configuration section and validates it when the host starts.
+    /// Configuration section name bound to <see cref="RetentionPolicy"/>.
+    /// </summary>
+    public const string RetentionPolicySectionName = "RetentionPolicy";
+
+    /// <summary>
+    /// Binds the <c>AppSettings</c> and <c>RetentionPolicy</c> configuration sections and validates them when the host starts.
     /// An invalid value surfaces as an <see cref="Microsoft.Extensions.Options.OptionsValidationException"/>
     /// from <c>IHost.StartAsync</c>, naming the offending property.
     /// </summary>
@@ -110,6 +116,11 @@ public static class ServiceCollectionExtensions
             .Bind(configuration.GetSection("AppSettings"))
             .ValidateOnStart();
         services.AddSingleton<IValidateOptions<AppSettings>, AppSettingsOptionsValidator>();
+
+        services.AddOptions<RetentionPolicy>()
+            .Bind(configuration.GetSection(RetentionPolicySectionName))
+            .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<RetentionPolicy>, RetentionPolicyOptionsValidator>();
 
         return services;
     }
