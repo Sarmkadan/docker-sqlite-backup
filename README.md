@@ -122,7 +122,7 @@ There is no restore command in the CLI. Restoring is a manual file copy with the
 
 - Deletion happens during rotation. Rotation uses one `RotationPolicy` row per backup schedule, stored in the `RotationPolicies` table. If a schedule has no row, rotation does nothing. No code in this repository creates a row outside of tests, so by default no backups are deleted.
 - `AppSettings__RetentionDays` and `AppSettings__MaxBackupCount` are bound from configuration, but no service reads them. Setting them does not change what gets deleted.
-- `RetentionPolicy` (`src/Domain/RetentionPolicy.cs`) models daily, weekly and monthly tiers through `DailyRetentionDays`, `WeeklyRetentionWeeks`, `MonthlyRetentionMonths` and `MaxTotalStorageBytes`. Nothing loads it from configuration and nothing enforces it, so it has no environment variables. Daily/weekly tiering is therefore not applied at runtime.
+- `RetentionPolicy` (`src/Domain/RetentionPolicy.cs`) models daily, weekly and monthly tiers through `DailyRetentionDays`, `WeeklyRetentionWeeks`, `MonthlyRetentionMonths` and `MaxTotalStorageBytes`. It is bound from the `RetentionPolicy` configuration section and validated at startup (keep-counts and storage cap must not be negative; at least one tier must be greater than zero). Nothing enforces it at runtime, so setting these values does not change what gets deleted.
 
 **`RotationPolicy` fields** (`src/Domain/RotationPolicy.cs`, saved with `IRotationService.SaveRotationPolicyAsync`):
 
