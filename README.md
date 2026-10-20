@@ -176,3 +176,27 @@ await rotationService.SaveRotationPolicyAsync(new RotationPolicy
 ```
 
 `RotationStrategy` is in `DockerSqliteBackup.Constants`, and `RotationPolicy` is in `DockerSqliteBackup.Domain`. A 7-daily / 4-weekly layout is not expressible with `RotationPolicy` alone. It is the shape `RetentionPolicy` describes, but that class is not wired up yet.
+
+## ScheduleService
+
+`src/Services/ScheduleService.cs` - manages CRUD operations and lifecycle for backup schedules. It validates schedule configuration and cron expressions (via the Cronos library) before persisting them through `IBackupRepository`.
+
+### Scheduling model
+
+Each `BackupSchedule` carries a cron expression (`CronExpression` field) that defines when a backup runs. The service validates the expression with `CronExpression.Parse` from Cronos. Next-execution time is computed relative to the schedule's `NextScheduledRunTime` (falling back to `DateTime.UtcNow`). Schedules have an `IsActive` flag toggled by activate/deactivate methods.
+
+### Key public methods
+
+| Method | Description |
+|---|---|
+| `CreateScheduleAsync(BackupSchedule)` | Validates the schedule and cron expression, sets timestamps, persists via repository. Throws `InvalidScheduleException` or `InvalidCronExpressionException` on bad input. |
+| `CreateScheduleAsync(string name, string databasePath)` | Convenience overload - builds a `BackupSchedule` from name and path, delegates to the full create. |
+| `UpdateScheduleAsync(BackupSchedule)` | Validates and persists changes. Throws `ScheduleException` on repository failure. |
+| `DeleteScheduleAsync(Guid)` | Removes a schedule by ID. |
+| `GetScheduleAsync(Guid)` | Returns a single schedule or `null`. |
+| `GetActiveSchedulesAsync()` | Returns all schedules where `IsActive` is true. |
+| `GetAllSchedulesAsync()` | Returns every schedule. |
+| `ActivateScheduleAsync(Guid)` | Sets `IsActive = true` and updates the timestamp. |
+| `DeactivateScheduleAsync(Guid)` | Sets `IsActive = false` and updates the timestamp. |
+| `ValidateCronExpression(string)` | Returns `true` if the expression is parseable by Cronos. |
+| `GetNextExecutionTime(BackupSchedule)` | Computes the next occurrence from the schedule's cron expression, or `null` on parse failure. |
