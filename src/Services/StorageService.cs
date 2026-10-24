@@ -145,6 +145,19 @@ public sealed class StorageService : IStorageService
     }
 
     /// <summary>
+    /// Lists existing backups as name, size and creation time, newest first.
+    /// </summary>
+    public async Task<IReadOnlyList<BackupFileInfo>> ListBackupInfosAsync(StorageConfiguration config)
+    {
+        var entries = await ListBackupsAsync(config);
+
+        return entries
+            .Select(entry => new BackupFileInfo(Path.GetFileName(entry.Path), entry.Size, entry.Modified))
+            .OrderByDescending(backup => backup.Created)
+            .ToList();
+    }
+
+    /// <summary>
     /// Tests the connection to the storage backend.
     /// </summary>
     public async Task<bool> TestConnectionAsync(StorageConfiguration config)

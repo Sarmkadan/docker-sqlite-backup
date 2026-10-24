@@ -5,8 +5,10 @@
 using DockerSqliteBackup;
 using DockerSqliteBackup.Configuration;
 using DockerSqliteBackup.Constants;
+using DockerSqliteBackup.Domain;
 using DockerSqliteBackup.Events;
 using DockerSqliteBackup.Health;
+using DockerSqliteBackup.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -30,6 +32,45 @@ if (args.Length > 0 && string.Equals(args[0], "healthcheck", StringComparison.Or
 
     Console.WriteLine(outcome.Reason);
     return outcome.IsHealthy ? 0 : 1;
+}
+
+// The '--list' flag prints the backups that already exist in local storage and exits
+// without starting the host. Local backups are written under AppContext.BaseDirectory/backups.
+if (args.Length > 0 && string.Equals(args[0], "--list", StringComparison.OrdinalIgnoreCase))
+{
+    var listConfiguration = new ConfigurationBuilder()
+        .AddJsonFile("appsettings.json", optional: false)
+        .AddEnvironmentVariables("BACKUP_")
+        .Build();
+
+    var listSettings = new AppSettings();
+    listConfiguration.GetSection("AppSettings").Bind(listSettings);
+
+    using var listServices = new ServiceCollection()
+        .AddLogging(logging => logging.AddConsole().SetMinimumLevel(LogLevel.Warning))
+        .AddBackupServices(listSettings)
+        .BuildServiceProvider();
+
+    var storageService = listServices.GetRequiredService<IStorageService>();
+    var backups = await storageService.ListBackupInfosAsync(new LocalStorageConfiguration
+    {
+        Name = "Local",
+        BaseDirectory = Path.Combine(AppContext.BaseDirectory, "backups"),
+    });
+
+    if (backups.Count == 0)
+    {
+        Console.WriteLine("No backups found.");
+        return 0;
+    }
+
+    Console.WriteLine($"{"Name",-40} {"Size",15}  {"Created (UTC)",-19}");
+    foreach (var backup in backups)
+    {
+        Console.WriteLine($"{backup.Name,-40} {backup.Size,15:N0}  {backup.Created:yyyy-MM-dd HH:mm:ss}");
+    }
+
+    return 0;
 }
 
 var builder = Host.CreateDefaultBuilder(args)
