@@ -58,6 +58,7 @@ The following environment variables are used (with defaults as shown in the dock
 - `AppSettings__EnableVerificationByDefault`: Whether to enable verification by default (default: `true`)
 - `AppSettings__RetentionDays`: Number of days to retain backups (default: `30`)
 - `AppSettings__MaxBackupCount`: Maximum number of backups to retain (default: `10`)
+- `AppSettings__DryRun`: Log the actions each schedule would take (backup, destination, rotation deletions) without writing, uploading, or deleting anything (default: `false`)
 - `Logging__LogLevel__Default`: Default log level (default: `Information`)
 
 ### Verifying the First Backup
