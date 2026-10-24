@@ -1,6 +1,7 @@
 using Xunit;
 using System;
 using DockerSqliteBackup.Configuration;
+using DockerSqliteBackup.Exceptions;
 
 namespace DockerSqliteBackup.Tests
 {
@@ -70,7 +71,7 @@ namespace DockerSqliteBackup.Tests
         public void Validate_ThrowsException_WhenInvalidEncryptionAndThrowOnError()
         {
             var settings = new AppSettings { EnableEncryption = true, EncryptionKey = "" };
-            Assert.Throws<InvalidOperationException>(() => AppSettingsExtensions.Validate(settings, true));
+            Assert.Throws<InvalidConfigurationException>(() => AppSettingsExtensions.Validate(settings, true));
         }
     }
 }

@@ -83,7 +83,7 @@ public static class AppSettingsExtensions
     /// <param name="throwOnError">Whether to throw an exception if validation fails.</param>
     /// <returns>True if all validations pass; otherwise, false.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="settings"/> is <see langword="null"/>.</exception>
-    /// <exception cref="InvalidOperationException">Thrown if validation fails and <paramref name="throwOnError"/> is true.</exception>
+    /// <exception cref="Exceptions.InvalidConfigurationException">Thrown if validation fails and <paramref name="throwOnError"/> is true.</exception>
     public static bool Validate(this AppSettings settings, bool throwOnError = false)
     {
         ArgumentNullException.ThrowIfNull(settings);
@@ -96,7 +96,8 @@ public static class AppSettingsExtensions
             isValid = false;
             if (throwOnError)
             {
-                throw new InvalidOperationException(
+                throw new Exceptions.InvalidConfigurationException(
+                    nameof(AppSettings.EncryptionKey),
                     "Encryption is enabled but no EncryptionKey is provided. Either set EnableEncryption to false or provide a valid EncryptionKey.");
             }
         }
@@ -107,7 +108,9 @@ public static class AppSettingsExtensions
             isValid = false;
             if (throwOnError)
             {
-                throw new InvalidOperationException("NotificationEmails cannot be null.");
+                throw new Exceptions.InvalidConfigurationException(
+                    nameof(AppSettings.NotificationEmails),
+                    "NotificationEmails cannot be null.");
             }
         }
 

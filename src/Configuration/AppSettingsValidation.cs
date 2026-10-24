@@ -90,7 +90,7 @@ public static class AppSettingsValidation
     /// </summary>
     /// <param name="value">The settings to validate.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
-    /// <exception cref="ArgumentException">Thrown if <paramref name="value"/> is not valid, containing a list of validation problems.</exception>
+    /// <exception cref="Exceptions.InvalidConfigurationException">Thrown if <paramref name="value"/> is not valid, containing a list of validation problems.</exception>
     public static void EnsureValid(this AppSettings value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -98,7 +98,7 @@ public static class AppSettingsValidation
         var problems = value.Validate();
         if (problems.Count > 0)
         {
-            throw new ArgumentException(
+            throw new Exceptions.InvalidConfigurationException(
                 $"AppSettings validation failed:{Environment.NewLine}- {
                     string.Join($"{Environment.NewLine}- ", problems)
                 }");
