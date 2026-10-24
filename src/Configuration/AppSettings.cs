@@ -113,6 +113,13 @@ public class AppSettings
     public bool CompressBackups { get; set; } = false;
 
     /// <summary>
+    /// When true, the worker only logs the actions it would take (source database, destination,
+    /// rotation deletions) and does not create, upload, verify, or delete any backup.
+    /// Set via <c>AppSettings__DryRun</c>.
+    /// </summary>
+    public bool DryRun { get; set; } = false;
+
+    /// <summary>
     /// Gets or sets the compression level for gzip compression (1-9, where 1 is fastest and 9 is best compression).
     /// Default is 6 (balanced compression).
     /// </summary>

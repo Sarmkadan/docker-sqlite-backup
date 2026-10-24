@@ -77,5 +77,10 @@ eventPublisher.Subscribe(healthStatusListener);
 logger.LogInformation("Docker SQLite Backup Tool v{Version}", BackupConstants.ApplicationVersion);
 logger.LogInformation("Database initialized at {DatabasePath}", appSettings.DatabasePath);
 
+if (appSettings.DryRun)
+{
+    logger.LogWarning("Dry-run mode enabled: no backups will be created, uploaded, verified, or deleted");
+}
+
 await host.RunAsync();
 return 0;

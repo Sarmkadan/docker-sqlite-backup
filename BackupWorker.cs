@@ -183,6 +183,12 @@ public class BackupWorker : BackgroundService
 
         try
         {
+            if (_appSettings.DryRun)
+            {
+                await LogDryRunActionsAsync(schedule);
+                return;
+            }
+
             _logger.LogInformation("Starting backup for schedule {ScheduleId}: {ScheduleName}",
                 schedule.Id, schedule.Name);
 
@@ -243,6 +249,61 @@ public class BackupWorker : BackgroundService
         {
             Interlocked.Decrement(ref _activeBackups);
         }
+    }
+
+    /// <summary>
+    /// Logs the actions a backup run for the schedule would take, without performing any of them.
+    /// Rotation candidates are read via <see cref="IRotationService.PreviewRotationAsync"/>, which only reads metadata.
+    /// </summary>
+    private async Task LogDryRunActionsAsync(BackupSchedule schedule)
+    {
+        _logger.LogInformation(
+            "[DRY RUN] Would back up {DatabasePath} ({BackupMode}) to {Destination} for schedule {ScheduleId}: {ScheduleName}",
+            schedule.DatabasePath,
+            (Constants.BackupMode)schedule.BackupMode,
+            DescribeDryRunDestination(schedule),
+            schedule.Id,
+            schedule.Name);
+
+        if (schedule.VerifyAfterBackup)
+        {
+            _logger.LogInformation("[DRY RUN] Would verify the new backup; rotation runs only if verification succeeds");
+        }
+
+        var (backupsToDelete, diskSpaceFreed) = await _rotationService.PreviewRotationAsync(schedule.Id);
+        var deletions = backupsToDelete.ToList();
+
+        foreach (var backup in deletions)
+        {
+            _logger.LogInformation(
+                "[DRY RUN] Would delete backup {BackupId} at {BackupFilePath} ({BackupFileSizeBytes} bytes)",
+                backup.Id,
+                backup.BackupFilePath,
+                backup.BackupFileSizeBytes);
+        }
+
+        _logger.LogInformation(
+            "[DRY RUN] Would delete {DeletedCount} old backups freeing {DiskSpaceFreed} bytes for schedule {ScheduleId}",
+            deletions.Count,
+            diskSpaceFreed,
+            schedule.Id);
+    }
+
+    /// <summary>
+    /// Describes where a backup for the schedule would be written. Local backups mirror the path
+    /// built by <c>BackupService</c>; remote backups use the bucket/container and key prefix.
+    /// </summary>
+    private static string DescribeDryRunDestination(BackupSchedule schedule)
+    {
+        return schedule.StorageConfiguration switch
+        {
+            S3Configuration s3 => $"s3://{s3.BucketName}/{s3.ObjectKeyPrefix}",
+            AzureConfiguration azure => $"azure://{azure.ContainerName}/{azure.BlobPrefix}",
+            _ => Path.Combine(
+                AppContext.BaseDirectory,
+                "backups",
+                string.Concat(schedule.Name.Split(Path.GetInvalidFileNameChars()))),
+        };
     }
 
     private async Task HandleSuccessfulBackupAsync(
