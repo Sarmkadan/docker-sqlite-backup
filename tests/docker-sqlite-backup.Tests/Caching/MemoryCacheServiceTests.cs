@@ -1,6 +1,7 @@
 // Author: Vladyslav Zaiets
 
 using DockerSqliteBackup.Caching;
+using DockerSqliteBackup.Tests.Caching;
 using FluentAssertions;
 using Xunit;
 
@@ -282,5 +283,50 @@ public class MemoryCacheServiceTests : IDisposable
         _sut.Set("overwrite-key", "updated");
 
         _sut.Get<string>("overwrite-key").Should().Be("updated");
+    }
+
+    /// <summary>
+    /// Verifies that an exception from the GetOrSet factory propagates and leaves no cached value behind.
+    /// </summary>
+    [Fact]
+    public void GetOrSet_FactoryThrows_ExceptionPropagatesAndNothingCached()
+    {
+        this.GetOrSet_FactoryThrows_PropagatesAndLeavesKeyUnset("factory-throws-key");
+    }
+
+    /// <summary>
+    /// Verifies that an exception from the GetOrSetAsync factory propagates and leaves no cached value behind.
+    /// </summary>
+    [Fact]
+    public async Task GetOrSetAsync_FactoryThrows_ExceptionPropagatesAndNothingCached()
+    {
+        await this.GetOrSetAsync_FactoryThrows_PropagatesAndLeavesKeyUnset("async-factory-throws-key");
+    }
+
+    /// <summary>
+    /// Verifies that reading a value as an incompatible type returns the default instead of throwing.
+    /// </summary>
+    [Fact]
+    public async Task Get_IncompatibleType_ReturnsDefault()
+    {
+        await this.Get_IncompatibleType_ReturnsDefaultWithoutThrowing("incompatible-type-key");
+    }
+
+    /// <summary>
+    /// Verifies that concurrent Set, Remove, and Get calls on one key never fail or surface values that were not written.
+    /// </summary>
+    [Fact]
+    public async Task ConcurrentSetGetRemove_SameKey_ObservesOnlyWrittenValues()
+    {
+        await this.ConcurrentSetGetRemove_SameKey_NeverObservesForeignValue("concurrent-key", 500);
+    }
+
+    /// <summary>
+    /// Verifies current behavior: a value produced by an in-flight GetOrSetAsync factory is stored even if Clear runs first.
+    /// </summary>
+    [Fact]
+    public async Task GetOrSetAsync_ClearWhileFactoryInFlight_StoresLateValue()
+    {
+        await this.GetOrSetAsync_ClearWhileFactoryInFlight_StoresValueAfterClear("in-flight-key");
     }
 }
