@@ -433,7 +433,7 @@ namespace DockerSqliteBackup.Tests.Configuration
         }
 
         [Fact]
-        public void EnsureValid_WithInvalidSettings_ThrowsArgumentException()
+        public void EnsureValid_WithInvalidSettings_ThrowsInvalidConfigurationException()
         {
             // Arrange
             var settings = new AppSettings
@@ -445,7 +445,7 @@ namespace DockerSqliteBackup.Tests.Configuration
             Action act = () => settings.EnsureValid();
 
             // Assert
-            act.Should().Throw<ArgumentException>();
+            act.Should().Throw<InvalidConfigurationException>();
         }
     }
 }
