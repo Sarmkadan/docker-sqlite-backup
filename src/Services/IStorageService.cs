@@ -42,6 +42,14 @@ public interface IStorageService
     Task<IEnumerable<(string Path, long Size, DateTime Modified)>> ListBackupsAsync(StorageConfiguration config);
 
     /// <summary>
+    /// Lists existing backups in the storage backend as name, size and creation time,
+    /// newest first.
+    /// </summary>
+    /// <param name="config">The storage configuration details for the backend.</param>
+    /// <returns>The backups found in the storage backend, ordered by <see cref="BackupFileInfo.Created"/> descending.</returns>
+    Task<IReadOnlyList<BackupFileInfo>> ListBackupInfosAsync(StorageConfiguration config);
+
+    /// <summary>
     /// Verifies the connection to the storage backend.
     /// </summary>
     /// <param name="config">The storage configuration details for the backend.</param>
