@@ -33,6 +33,18 @@ public static class IntegrityReportExtensions
     }
 
     /// <summary>
+    /// Gets the amount of unused space in the database file in bytes (free pages × page size).
+    /// </summary>
+    /// <param name="report">The integrity report.</param>
+    /// <returns>The free space in bytes, or 0 if free page count or page size is unavailable.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="report"/> is <c>null</c>.</exception>
+    public static long GetFreeSpaceInBytes(this IntegrityReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+        return report.FreePageCount * report.PageSize;
+    }
+
+    /// <summary>
     /// Gets the percentage of free pages in the database.
     /// </summary>
     /// <param name="report">The integrity report.</param>
