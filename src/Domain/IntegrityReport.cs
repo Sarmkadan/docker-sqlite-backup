@@ -81,8 +81,11 @@ public class IntegrityReport
     /// </summary>
     public bool IsHealthy => PassedQuickCheck && PassedFullCheck && PassedForeignKeyCheck;
 
-    /// <summary>Returns a compact diagnostic string with the report identity, timing, and quick check result.</summary>
-    public override string ToString() => $"IntegrityReport {{ Id = {Id}, DatabasePath = {DatabasePath}, CheckedAt = {CheckedAt}, Duration = {Duration}, PassedQuickCheck = {PassedQuickCheck}, QuickCheckErrors = {QuickCheckErrors} }}";
+    /// <summary>
+    /// Returns a compact diagnostic string with the report identity, timing, health, results of all three checks,
+    /// and key database metadata.
+    /// </summary>
+    public override string ToString() => $"IntegrityReport {{ Id = {Id}, DatabasePath = {DatabasePath}, CheckedAt = {CheckedAt}, Duration = {Duration}, IsHealthy = {IsHealthy}, PassedQuickCheck = {PassedQuickCheck}, QuickCheckErrors = {QuickCheckErrors}, PassedFullCheck = {PassedFullCheck}, FullCheckErrors = {FullCheckErrors}, PassedForeignKeyCheck = {PassedForeignKeyCheck}, ForeignKeyErrors = {ForeignKeyErrors}, PageCount = {PageCount}, TableCount = {TableCount}, JournalMode = {JournalMode} }}";
 
     /// <summary>
     /// Human-readable summary of the integrity report.
