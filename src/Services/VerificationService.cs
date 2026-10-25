@@ -333,7 +333,7 @@ public sealed class VerificationService : IVerificationService
             using var command = connection.CreateCommand();
             command.CommandText = ListTablesCommandText;
             using var reader = await command.ExecuteReaderAsync();
-            
+
             var tableNames = new List<string>();
             while (await reader.ReadAsync())
             {
