@@ -30,6 +30,8 @@ public class HealthCheckService
         IBackupEventPublisher? eventPublisher = null,
         AppSettings? appSettings = null)
     {
+        ArgumentNullException.ThrowIfNull(logger);
+
         _logger = logger;
         _eventPublisher = eventPublisher;
         _appSettings = appSettings;
