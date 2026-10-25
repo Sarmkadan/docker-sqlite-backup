@@ -18,6 +18,10 @@ namespace DockerSqliteBackup.Services;
 /// </summary>
 public sealed class RotationService : IRotationService
 {
+    private const string EmptyScheduleIdMessage = "Schedule ID cannot be empty.";
+    private const string InvalidPolicyMessage = "Rotation policy configuration is invalid";
+    private const string SavePolicyFailedMessage = "Failed to save rotation policy";
+
     private readonly IBackupRepository _repository;
     private readonly ILogger<RotationService> _logger;
 
@@ -48,7 +52,7 @@ public sealed class RotationService : IRotationService
     {
         if (scheduleId == Guid.Empty)
         {
-            throw new System.ArgumentException("Schedule ID cannot be empty.", nameof(scheduleId));
+            throw new System.ArgumentException(EmptyScheduleIdMessage, nameof(scheduleId));
         }
 
         using var scope = _logger.BeginScope("Rotation for schedule {ScheduleId}", scheduleId);
@@ -134,7 +138,7 @@ public sealed class RotationService : IRotationService
 
         if (!policy.IsValid())
         {
-            throw new ValidationException(nameof(policy), "Rotation policy configuration is invalid");
+            throw new ValidationException(nameof(policy), InvalidPolicyMessage);
         }
 
         policy.LastModifiedAt = DateTime.UtcNow;
@@ -147,7 +151,7 @@ public sealed class RotationService : IRotationService
         }
         catch (Exception ex)
         {
-            throw new RotationException("Failed to save rotation policy", ex);
+            throw new RotationException(SavePolicyFailedMessage, ex);
         }
     }
 
@@ -161,7 +165,7 @@ public sealed class RotationService : IRotationService
     /// </returns>
     public async Task<IEnumerable<BackupResult>> GetBackupsForRotationAsync(Guid scheduleId)
     {
-        var history = await _repository.GetBackupHistoryAsync(scheduleId, int.MaxValue);
+        var history = await _repository.GetBackupHistoryAsync(scheduleId, BackupConstants.FullBackupHistoryScanLimit);
         var policy = await _repository.GetRotationPolicyAsync(scheduleId);
 
         if (policy  is null)
