@@ -59,7 +59,7 @@ public sealed class RotationService : IRotationService
         var stopwatch = Stopwatch.StartNew();
 
         var policy = await _repository.GetRotationPolicyAsync(scheduleId);
-        if (policy  is null || policy.Strategy == (int)Constants.RotationStrategy.NoRotation)
+        if (policy is null || policy.Strategy == (int)Constants.RotationStrategy.NoRotation)
         {
             _logger.LogInformation("No rotation policy or rotation disabled for schedule {ScheduleId}", scheduleId);
             return 0;
@@ -168,7 +168,7 @@ public sealed class RotationService : IRotationService
         var history = await _repository.GetBackupHistoryAsync(scheduleId, BackupConstants.FullBackupHistoryScanLimit);
         var policy = await _repository.GetRotationPolicyAsync(scheduleId);
 
-        if (policy  is null)
+        if (policy is null)
         {
             return Enumerable.Empty<BackupResult>();
         }
@@ -247,8 +247,11 @@ public sealed class RotationService : IRotationService
         var backupsToDelete = backupsForRotation.ToList();
         var diskSpaceFreed = backupsToDelete.Sum(b => b.BackupFileSizeBytes);
 
-        _logger.LogInformation("Rotation preview completed for schedule {ScheduleId}. Would delete {DeletedCount} backups, freeing {DiskSpaceFreed} bytes",
-            scheduleId, backupsToDelete.Count, diskSpaceFreed);
+        _logger.LogInformation(
+            "Rotation preview completed for schedule {ScheduleId}. Would delete {DeletedCount} backups, freeing {DiskSpaceFreed} bytes",
+            scheduleId,
+            backupsToDelete.Count,
+            diskSpaceFreed);
 
         return (backupsToDelete, diskSpaceFreed);
     }
