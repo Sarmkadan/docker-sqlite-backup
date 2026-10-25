@@ -128,8 +128,9 @@ public class S3Configuration : StorageConfiguration
 
     /// <summary>
     /// Returns a string representation of the configuration for logging.
-    /// Includes the access key ID and secret access key in plain text, so do not log it unredacted.
+    /// Includes only non-secret fields; the access key ID and secret access key are never included.
+    /// The custom endpoint is reported only as set or unset, since it may contain credentials.
     /// </summary>
-    /// <returns>A string describing the S3 configuration.</returns>
-    public override string ToString() => $"S3Configuration {{ AccessKeyId = {AccessKeyId}, SecretAccessKey = {SecretAccessKey}, BucketName = {BucketName}, RegionName = {RegionName}, ObjectKeyPrefix = {ObjectKeyPrefix}, UseSSL = {UseSSL} }}";
+    /// <returns>A string describing the S3 configuration without credentials.</returns>
+    public override string ToString() => $"S3Configuration {{ BucketName = {BucketName}, RegionName = {RegionName}, ObjectKeyPrefix = {ObjectKeyPrefix}, StorageClass = {StorageClass}, UseSSL = {UseSSL}, CustomEndpoint = {(string.IsNullOrEmpty(CustomEndpoint) ? "unset" : "set")} }}";
 }
