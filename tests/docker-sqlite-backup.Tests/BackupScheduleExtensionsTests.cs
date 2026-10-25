@@ -129,6 +129,21 @@ public class BackupScheduleExtensionsTests
     }
 
     [Fact]
+    public void GetRetentionCutoff_WithRetentionDays_SubtractsDaysFromReference()
+    {
+        // Arrange
+        var referenceTime = new DateTime(2023, 01, 31, 12, 00, 00, DateTimeKind.Utc);
+        var schedule = CreateSchedule();
+        schedule.RetentionDays = 7;
+
+        // Act
+        var cutoff = schedule.GetRetentionCutoff(referenceTime);
+
+        // Assert
+        Assert.Equal(new DateTime(2023, 01, 24, 12, 00, 00, DateTimeKind.Utc), cutoff);
+    }
+
+    [Fact]
     public void GetBackupName_NullOrWhiteSpaceName_UsesDefault()
     {
         // Arrange

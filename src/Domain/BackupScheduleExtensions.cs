@@ -101,4 +101,19 @@ public static class BackupScheduleExtensions
             _ => ".db"
         };
     }
+
+    /// <summary>
+    /// Gets the cutoff instant before which backups created by this schedule are outside its retention window.
+    /// </summary>
+    /// <param name="schedule">The backup schedule.</param>
+    /// <param name="nowUtc">Optional reference time in UTC; defaults to current UTC time.</param>
+    /// <returns>The UTC instant <see cref="BackupSchedule.RetentionDays"/> before <paramref name="nowUtc"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="schedule"/> is null.</exception>
+    public static DateTime GetRetentionCutoff(this BackupSchedule schedule, DateTime? nowUtc = null)
+    {
+        ArgumentNullException.ThrowIfNull(schedule);
+
+        var reference = nowUtc ?? DateTime.UtcNow;
+        return reference.AddDays(-schedule.RetentionDays);
+    }
 }
