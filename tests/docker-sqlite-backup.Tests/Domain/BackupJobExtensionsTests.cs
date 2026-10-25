@@ -36,6 +36,20 @@ public class BackupJobExtensionsTests
     }
 
     [Fact]
+    public void GetStatusName_ReturnsEnumName_WhenStatusIsDefined()
+    {
+        var job = new BackupJob { Status = (int)BackupStatus.VerifiedSuccess };
+        job.GetStatusName().Should().Be("VerifiedSuccess");
+    }
+
+    [Fact]
+    public void GetStatusName_ReturnsNumericValue_WhenStatusIsUndefined()
+    {
+        var job = new BackupJob { Status = 99 };
+        job.GetStatusName().Should().Be("99");
+    }
+
+    [Fact]
     public void GetFormattedDuration_ReturnsExpectedFormat()
     {
         var startedAt = new DateTime(2025, 1, 1, 10, 0, 0);

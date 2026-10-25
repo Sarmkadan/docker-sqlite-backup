@@ -183,6 +183,21 @@ public static class BackupJobExtensions
     }
 
     /// <summary>
+    /// Gets the name of the backup job's status (e.g., "Success").
+    /// </summary>
+    /// <param name="job">The backup job.</param>
+    /// <returns>The <see cref="BackupStatus"/> name, or the numeric value as a string when it does not map to a defined status.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="job"/> is null.</exception>
+    public static string GetStatusName(this BackupJob job)
+    {
+        ArgumentNullException.ThrowIfNull(job);
+
+        return Enum.IsDefined(typeof(BackupStatus), job.Status)
+            ? Enum.GetName(typeof(BackupStatus), job.Status)!
+            : job.Status.ToString();
+    }
+
+    /// <summary>
     /// Returns a concise string suitable for audit logging.
     /// </summary>
     /// <param name="job">The backup job.</param>
