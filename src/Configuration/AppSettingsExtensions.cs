@@ -77,6 +77,19 @@ public static class AppSettingsExtensions
     }
 
     /// <summary>
+    /// Calculates the cutoff instant before which backups are considered outside the configured retention window.
+    /// </summary>
+    /// <param name="settings">The application settings. Cannot be <see langword="null"/>.</param>
+    /// <param name="nowUtc">The reference point in UTC. Backups created before the returned value are past retention.</param>
+    /// <returns>The UTC instant <see cref="AppSettings.RetentionDays"/> before <paramref name="nowUtc"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="settings"/> is <see langword="null"/>.</exception>
+    public static DateTime GetRetentionCutoffUtc(this AppSettings settings, DateTime nowUtc)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        return nowUtc.AddDays(-settings.RetentionDays);
+    }
+
+    /// <summary>
     /// Validates that the AppSettings object has all required values properly configured.
     /// </summary>
     /// <param name="settings">The application settings to validate. Cannot be <see langword="null"/>.</param>
