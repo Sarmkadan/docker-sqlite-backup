@@ -288,4 +288,18 @@ public static class EncryptionServiceExtensions
             throw;
         }
     }
+
+    /// <summary>
+    /// Determines whether encryption is enabled and a valid key is available, without logging or touching the file system.
+    /// </summary>
+    /// <param name="service">The encryption service instance.</param>
+    /// <returns><see langword="true"/> if encryption is enabled and a valid key is configured; otherwise <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="service"/> is <see langword="null"/>.</exception>
+    public static bool IsEncryptionReady(this EncryptionService service)
+    {
+        ArgumentNullException.ThrowIfNull(service);
+
+        var status = service.GetStatus();
+        return status.IsEnabled && status.HasValidKey;
+    }
 }
