@@ -1,10 +1,6 @@
 #nullable enable
 // Author: Vladyslav Zaiets
 
-using Amazon.S3;
-using Amazon.S3.Model;
-using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
 using DockerSqliteBackup.Domain;
 using DockerSqliteBackup.Exceptions;
 using Microsoft.Extensions.DependencyInjection;
