@@ -23,6 +23,30 @@ namespace DockerSqliteBackup.Services;
 /// </summary>
 public sealed class VerificationService : IVerificationService
 {
+    // Temporary restore layout
+    private const string TempDirectoryPrefix = "sqlite-verify-";
+    private const string RestoreCheckFileName = "restore-check.sqlite";
+
+    // SQLite statements and connection options
+    private const string ReadOnlyConnectionOptions = "Mode=ReadOnly;";
+    private const string IntegrityCheckCommandText = "PRAGMA integrity_check";
+    private const string IntegrityCheckPassedResult = "ok";
+    private const string ListTablesCommandText = "SELECT name FROM sqlite_master WHERE type='table'";
+    private const string CountRowsCommandPrefix = "SELECT COUNT(*) FROM \"";
+    private const string CountRowsCommandSuffix = "\"";
+
+    // Verification outcome messages
+    private const string VerificationSuccessMessage = "Backup verification successful";
+    private const string VerificationFailedMessagePrefix = "Verification failed: ";
+    private const string ChecksumMismatchMessagePrefix = "Checksum mismatch for backup file: ";
+    private const string IntegrityCheckFailedMessage = "Database integrity check failed";
+    private const string IntegrityCheckNotPerformedMessage = "Failed to perform database integrity check";
+    private const string DatabaseFileNotFoundMessage = "Database file not found for integrity check";
+    private const string DatabasePathWhitespaceMessage = "Database path cannot be null or whitespace.";
+    private const string EncryptionKeyMissingMessage =
+        "Backup file is encrypted but no valid decryption key is configured. " +
+        "Set BACKUP_ENCRYPTION_KEY or AppSettings__EncryptionKey.";
+
     private readonly IBackupRepository _repository;
     private readonly AppSettings _appSettings;
     private readonly ILogger<VerificationService> _logger;
@@ -75,7 +99,7 @@ public sealed class VerificationService : IVerificationService
             if (!await VerifyChecksumAsync(backup.BackupFilePath, backup.Checksum))
             {
                 throw new BackupCorruptedException(
-                    $"Checksum mismatch for backup file: {backup.BackupFilePath}",
+                    $"{ChecksumMismatchMessagePrefix}{backup.BackupFilePath}",
                     backup.Id);
             }
 
@@ -91,7 +115,7 @@ public sealed class VerificationService : IVerificationService
             if (!isValid)
             {
                 throw new IntegrityCheckFailedException(
-                    "Database integrity check failed",
+                    IntegrityCheckFailedMessage,
                     backup.Id,
                     errors);
             }
@@ -101,7 +125,7 @@ public sealed class VerificationService : IVerificationService
             verification.DatabaseSizeBytes = fileInfo.Length;
             verification.RecordCount = await CountRecordsAsync(tempPath);
 
-            verification.MarkCompleted(true, "Backup verification successful");
+            verification.MarkCompleted(true, VerificationSuccessMessage);
             _logger.LogInformation("Backup verification completed successfully for {BackupId}", backup.Id);
 
             if (_eventPublisher is not null)
@@ -119,7 +143,7 @@ public sealed class VerificationService : IVerificationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Backup verification failed for {BackupId}", backup.Id);
-            verification.MarkCompleted(false, $"Verification failed: {ex.Message}");
+            verification.MarkCompleted(false, $"{VerificationFailedMessagePrefix}{ex.Message}");
             verification.ErrorMessage = ex.Message;
 
             if (_eventPublisher is not null)
@@ -187,29 +211,29 @@ public sealed class VerificationService : IVerificationService
 
         if (string.IsNullOrWhiteSpace(databasePath))
         {
-            throw new ArgumentException(nameof(databasePath), "Database path cannot be null or whitespace.");
+            throw new ArgumentException(nameof(databasePath), DatabasePathWhitespaceMessage);
         }
 
         if (!File.Exists(databasePath))
         {
-            throw new FileNotFoundException("Database file not found for integrity check", databasePath);
+            throw new FileNotFoundException(DatabaseFileNotFoundMessage, databasePath);
         }
 
         try
         {
-            var connectionString = $"Data Source={databasePath};Mode=ReadOnly;";
+            var connectionString = $"Data Source={databasePath};{ReadOnlyConnectionOptions}";
             using var connection = new SqliteConnection(connectionString);
             await connection.OpenAsync();
 
             using var command = connection.CreateCommand();
-            command.CommandText = "PRAGMA integrity_check";
+            command.CommandText = IntegrityCheckCommandText;
             var result = (string?)await command.ExecuteScalarAsync();
 
-            return result == "ok" ? (true, null) : (false, result);
+            return result == IntegrityCheckPassedResult ? (true, null) : (false, result);
         }
         catch (Exception ex) when (ex is not SqliteException and not IOException and not UnauthorizedAccessException)
         {
-            throw new VerificationException("Failed to perform database integrity check", ex);
+            throw new VerificationException(IntegrityCheckNotPerformedMessage, ex);
         }
     }
 
@@ -241,22 +265,19 @@ public sealed class VerificationService : IVerificationService
     {
         System.ArgumentNullException.ThrowIfNull(backup);
 
-        var tempDir = Path.Combine(Path.GetTempPath(), $"sqlite-verify-{Guid.NewGuid()}");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"{TempDirectoryPrefix}{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
 
-        var tempDbPath = Path.Combine(tempDir, "restore-check.sqlite");
+        var tempDbPath = Path.Combine(tempDir, RestoreCheckFileName);
 
-        if (backup.BackupFilePath.EndsWith(".enc", StringComparison.OrdinalIgnoreCase))
+        if (backup.BackupFilePath.EndsWith(BackupConstants.EncryptedBackupExtension, StringComparison.OrdinalIgnoreCase))
         {
-            var encryptionKey = Environment.GetEnvironmentVariable("BACKUP_ENCRYPTION_KEY")
+            var encryptionKey = Environment.GetEnvironmentVariable(BackupConstants.EncryptionKeyEnvironmentVariable)
                                 ?? _appSettings.EncryptionKey;
 
             if (string.IsNullOrWhiteSpace(encryptionKey) || !EncryptionUtility.IsValidKey(encryptionKey))
             {
-                throw new VerificationException(
-                    "Backup file is encrypted but no valid decryption key is configured. " +
-                    "Set BACKUP_ENCRYPTION_KEY or AppSettings__EncryptionKey.",
-                    backup.Id);
+                throw new VerificationException(EncryptionKeyMissingMessage, backup.Id);
             }
 
             _logger.LogInformation("Decrypting encrypted backup for verification: {FilePath}", backup.BackupFilePath);
@@ -303,14 +324,14 @@ public sealed class VerificationService : IVerificationService
     {
         try
         {
-            var connectionString = $"Data Source={databasePath};Mode=ReadOnly;";
+            var connectionString = $"Data Source={databasePath};{ReadOnlyConnectionOptions}";
             using var connection = new SqliteConnection(connectionString);
             await connection.OpenAsync();
 
             long totalRecords = 0;
 
             using var command = connection.CreateCommand();
-            command.CommandText = "SELECT name FROM sqlite_master WHERE type='table'";
+            command.CommandText = ListTablesCommandText;
             using var reader = await command.ExecuteReaderAsync();
             
             var tableNames = new List<string>();
@@ -322,7 +343,7 @@ public sealed class VerificationService : IVerificationService
             foreach (var tableName in tableNames)
             {
                 using var countCommand = connection.CreateCommand();
-                countCommand.CommandText = $"SELECT COUNT(*) FROM \"{tableName}\"";
+                countCommand.CommandText = $"{CountRowsCommandPrefix}{tableName}{CountRowsCommandSuffix}";
                 var count = (long?)await countCommand.ExecuteScalarAsync() ?? 0;
                 totalRecords += count;
             }
