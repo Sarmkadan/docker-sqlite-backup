@@ -4,8 +4,15 @@ using Xunit;
 
 namespace DockerSqliteBackup.Tests;
 
+    /// <summary>
+    /// Unit tests for <see cref="DockerSqliteBackupException"/>, the base exception of the backup tool.
+    /// Verifies the constructors, the <c>Message</c> and <c>InnerException</c> handling, the base type relationship, and that the exception can be thrown and caught as its own type.
+    /// </summary>
 public class DockerSqliteBackupExceptionTests
 {
+    /// <summary>
+    /// Verifies that the parameterless constructor creates a usable exception with a non-empty default message and no inner exception.
+    /// </summary>
     [Fact]
     public void DockerSqliteBackupException_DefaultConstructor_ShouldCreateException()
     {
@@ -18,6 +25,9 @@ public class DockerSqliteBackupExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the message constructor stores the supplied message unchanged and leaves <c>InnerException</c> null.
+    /// </summary>
     [Fact]
     public void DockerSqliteBackupException_Constructor_WithMessage_ShouldSetMessage()
     {
@@ -32,6 +42,11 @@ public class DockerSqliteBackupExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the message constructor accepts null, empty, and whitespace-only messages without throwing, and leaves <c>InnerException</c> null.
+    /// The <c>Message</c> is asserted only to be non-null, because <see cref="System.Exception.Message"/> substitutes a default text when no message is given.
+    /// </summary>
+    /// <param name="message">The message value under test: null, empty, or whitespace.</param>
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -48,6 +63,9 @@ public class DockerSqliteBackupExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that the message and inner exception constructor stores both the message and the exact inner exception instance.
+    /// </summary>
     [Fact]
     public void DockerSqliteBackupException_Constructor_WithMessageAndInnerException_ShouldSetMessageAndInnerException()
     {
@@ -63,6 +81,10 @@ public class DockerSqliteBackupExceptionTests
         exception.InnerException.Should().BeSameAs(innerException);
     }
 
+    /// <summary>
+    /// Verifies that the message and inner exception constructor accepts empty or whitespace-only messages and still stores the supplied inner exception instance.
+    /// </summary>
+    /// <param name="message">The message value under test: empty or whitespace.</param>
     [Theory]
     [InlineData("")]
     [InlineData(" ")]
@@ -79,6 +101,9 @@ public class DockerSqliteBackupExceptionTests
         exception.InnerException.Should().BeSameAs(innerException);
     }
 
+    /// <summary>
+    /// Verifies that the message and inner exception constructor stores the message and keeps <c>InnerException</c> null when a null inner exception is passed.
+    /// </summary>
     [Fact]
     public void DockerSqliteBackupException_Constructor_WithNullInnerException_ShouldSetMessageAndNullInnerException()
     {
@@ -93,6 +118,9 @@ public class DockerSqliteBackupExceptionTests
         exception.InnerException.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="DockerSqliteBackupException"/> derives from <see cref="Exception"/>.
+    /// </summary>
     [Fact]
     public void DockerSqliteBackupException_InheritsFromException()
     {
@@ -106,6 +134,9 @@ public class DockerSqliteBackupExceptionTests
         exception.Should().BeAssignableTo<Exception>();
     }
 
+    /// <summary>
+    /// Verifies that the <c>Message</c> property returns the text passed to the message constructor.
+    /// </summary>
     [Fact]
     public void DockerSqliteBackupException_MessageProperty_ShouldBeReadable()
     {
@@ -117,6 +148,9 @@ public class DockerSqliteBackupExceptionTests
         exception.Message.Should().Be(message);
     }
 
+    /// <summary>
+    /// Verifies that the <c>InnerException</c> property returns the exact inner exception instance passed to the constructor.
+    /// </summary>
     [Fact]
     public void DockerSqliteBackupException_InnerExceptionProperty_ShouldBeReadable()
     {
@@ -128,6 +162,9 @@ public class DockerSqliteBackupExceptionTests
         exception.InnerException.Should().BeSameAs(innerException);
     }
 
+    /// <summary>
+    /// Verifies that <c>ToString()</c> output includes the outer message, the inner exception type name, and the inner exception message.
+    /// </summary>
     [Fact]
     public void DockerSqliteBackupException_ToString_ShouldIncludeAllInformation()
     {
@@ -145,6 +182,9 @@ public class DockerSqliteBackupExceptionTests
         toStringResult.Should().Contain("Inner error");
     }
 
+    /// <summary>
+    /// Verifies that the exception can be thrown and caught as <see cref="Exception"/>, keeps its concrete type, and keeps its message.
+    /// </summary>
     [Fact]
     public void DockerSqliteBackupException_CanBeCaughtAsBaseException()
     {
@@ -168,6 +208,9 @@ public class DockerSqliteBackupExceptionTests
         exception.Message.Should().Be(message);
     }
 
+    /// <summary>
+    /// Verifies that an <see cref="AggregateException"/> passed as the inner exception is stored by reference and keeps its type.
+    /// </summary>
     [Fact]
     public void DockerSqliteBackupException_WithComplexInnerException_ShouldPreserveStackTrace()
     {
