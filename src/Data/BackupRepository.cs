@@ -340,6 +340,7 @@ public class BackupRepository : IBackupRepository
 
     public async Task<RestoreVerification> SaveRestoreVerificationAsync(RestoreVerification verification)
     {
+        ArgumentNullException.ThrowIfNull(verification);
         using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
 
@@ -381,6 +382,7 @@ public class BackupRepository : IBackupRepository
 
     public async Task<BackupJob> CreateBackupJobAsync(BackupJob job)
     {
+        ArgumentNullException.ThrowIfNull(job);
         using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
 
@@ -397,6 +399,7 @@ public class BackupRepository : IBackupRepository
 
     public async Task<BackupJob> UpdateBackupJobAsync(BackupJob job)
     {
+        ArgumentNullException.ThrowIfNull(job);
         using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
 
