@@ -70,6 +70,11 @@ public abstract class BackupEvent
 
         EventType = eventType;
     }
+
+    /// <summary>
+    /// Returns a summary of the event's identifying fields (type, id, timestamp, correlation id).
+    /// </summary>
+    public override string ToString() => $"{GetType().Name} {{ EventType = {EventType}, EventId = {EventId}, OccurredAt = {OccurredAt:O}, CorrelationId = {CorrelationId} }}";
 }
 
 /// <summary>
