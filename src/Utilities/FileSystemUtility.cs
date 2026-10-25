@@ -174,6 +174,9 @@ public static class FileSystemUtility
     /// </summary>
     public static void CopyDirectory(string sourceDir, string destDir, bool recursive = true)
     {
+        ArgumentNullException.ThrowIfNull(sourceDir);
+        ArgumentNullException.ThrowIfNull(destDir);
+
         var dir = new DirectoryInfo(sourceDir);
 
         if (!dir.Exists)
