@@ -23,6 +23,10 @@ public static class EncryptionUtility
     /// <param name="base64Key">Base64-encoded 32-byte AES key.</param>
     public static async Task EncryptFileAsync(string sourcePath, string destinationPath, string base64Key)
     {
+        ArgumentNullException.ThrowIfNull(sourcePath);
+        ArgumentNullException.ThrowIfNull(destinationPath);
+        ArgumentNullException.ThrowIfNull(base64Key);
+
         ArgumentException.ThrowIfNullOrEmpty(nameof(sourcePath));
         ArgumentException.ThrowIfNullOrEmpty(nameof(destinationPath));
         ArgumentException.ThrowIfNullOrEmpty(nameof(base64Key));
@@ -54,6 +58,10 @@ public static class EncryptionUtility
     /// <param name="base64Key">Base64-encoded 32-byte AES key.</param>
     public static async Task DecryptFileAsync(string sourcePath, string destinationPath, string base64Key)
     {
+        ArgumentNullException.ThrowIfNull(sourcePath);
+        ArgumentNullException.ThrowIfNull(destinationPath);
+        ArgumentNullException.ThrowIfNull(base64Key);
+
         ArgumentException.ThrowIfNullOrEmpty(nameof(sourcePath));
         ArgumentException.ThrowIfNullOrEmpty(nameof(destinationPath));
         ArgumentException.ThrowIfNullOrEmpty(nameof(base64Key));
