@@ -399,3 +399,36 @@ The encrypted file format is `[16-byte IV][ciphertext]`. Each encrypt call gener
 - **Partial output on failure.** Neither encrypt nor decrypt removes the destination file when a write fails. A failed decrypt can leave partial plaintext on disk, so remove the destination path after a failure.
 - **Cancellation is checked once.** `ct` is checked before the work starts and is not passed to `EncryptionUtility`, so a running encrypt or decrypt cannot be cancelled.
 - **Plaintext temp files in the extension methods.** `src/Services/EncryptionServiceExtensions.cs` writes plaintext to `Path.GetTempFileName()` files. The string and stream encrypt methods and `DecryptStringAsync` delete their temp files in `finally`. `DecryptToStreamAsync` deletes them only on failure, so on success the decrypted temp file remains until the caller or the system removes it.
+
+## HealthCheckService
+
+`src/Health/HealthCheckService.cs` - runs an in-process health check of the backup environment. It evaluates three components (`storage`, `disk` and `database`) and combines them into a `HealthCheckResult`. The full reference is in [`docs/HealthCheckService.md`](docs/HealthCheckService.md).
+
+### Purpose and component checks
+
+Each component is checked in its own `try` block, so one failing check does not stop the others. A check that throws is reported as an unhealthy component with a generic message, and the exception is logged.
+
+- **`storage`**: creates the `backups` directory under `AppContext.BaseDirectory` if needed, then writes and deletes a `.health-check` file. Healthy when the write succeeds.
+- **`disk`**: reads the free space through `FileSystemUtility.GetAvailableDiskSpace()`. Unhealthy when free space is at or below 1 GB (the check is `> 1 GB` for healthy).
+- **`database`**: resolves `AppSettings.DatabasePath` (or `backups.sqlite` when no settings are given) against `AppContext.BaseDirectory` if the path is relative. A missing file is unhealthy. Otherwise the service opens the file with `Mode=ReadOnly` and runs `PRAGMA quick_check`. Healthy only when the result is `ok` (case-insensitive).
+
+The overall `Status` is `"healthy"` when every component is healthy, and `"degraded"` otherwise. A result that has not been produced by a check has the status `"unknown"`.
+
+### Key public methods
+
+| Method | Description |
+|---|---|
+| `HealthCheckService(ILogger<HealthCheckService>, IBackupEventPublisher? = null, AppSettings? = null)` | Constructor. Throws `ArgumentNullException` if the logger is null. The publisher and settings are optional. |
+| `PerformHealthCheckAsync(CancellationToken = default)` | Runs the three component checks, sets the overall status, publishes a `HealthCheckEvent` when a publisher was supplied, and returns the `HealthCheckResult`. The token is only passed to the publish step. An exception thrown by the publisher is not caught and propagates to the caller. |
+
+`ComponentHealth` and `HealthCheckResult` are public types in the same file:
+
+- `ComponentHealth` has `Name`, `IsHealthy`, `Message` and `CheckedAt` (UTC).
+- `HealthCheckResult` has `Status`, `CheckedAt` (UTC) and `Components`, a dictionary keyed by component name. Its `ToString()` returns `System is <status>`, followed by `. Issues: ...` listing each unhealthy component when any exist.
+
+The helper methods `Validate`, `IsValid` and `EnsureValid` in `src/Health/HealthCheckServiceValidation.cs` are extensions on `HealthCheckService`. The service has no public properties to validate, so they report no problems for a non-null instance.
+
+### Notes
+
+- **Not registered in DI.** Nothing in `ServiceCollectionExtensions` registers `HealthCheckService`. The Docker `healthcheck` subcommand reads `HealthStatusStore` through `DockerHealthCheckEvaluator` instead.
+- **Storage probe writes to disk.** Each run creates and deletes a file in the backups directory, so it needs write access there.
