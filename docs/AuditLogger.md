@@ -1,72 +1,148 @@
 # AuditLogger
 
-`AuditLogger` is a structured logging utility used in `docker-sqlite-backup` to record audit events related to backup operations, configuration changes, and data access. It captures contextual metadata such as timestamps, user identities, operation outcomes, and correlation identifiers to support traceability and compliance.
+`AuditLogger` (`src/Audit/AuditLogger.cs`) records audit events for backup operations, schedule changes, configuration changes, and data access. Each event is an `AuditEntry` serialized to JSON. Every entry is written to two places: the `ILogger<AuditLogger>` sink (as `AUDIT: {json}`) and an append-only audit file.
 
-## API
+Convenience methods live in `AuditLoggerExtensions` (`src/Audit/AuditLoggerExtensions.cs`): `LogSuccess` and `LogBackupResult`. See [Extensions](#extensions).
 
-### `public AuditLogger()`
-Initializes a new instance of the `AuditLogger` with default values for all properties. The `Timestamp` is set to the current UTC time, and `Success` defaults to `true`. Other properties (`Category`, `Action`, `TargetId`, `UserId`, `Details`, `CorrelationId`) must be set explicitly before logging.
+Tests: `tests/docker-sqlite-backup.Tests/AuditLoggerTests.cs`.
 
-### `public void LogBackupOperation(string targetId, bool success, string? details = null)`
-Records an audit event for a backup operation.
+## Constructor
 
-- **targetId**: Identifier of the target database or resource being backed up.
-- **success**: Indicates whether the backup operation completed successfully.
-- **details**: Optional additional context about the operation outcome or errors.
-- **Throws**: `ArgumentNullException` if `targetId` is `null`.
+### `public AuditLogger(ILogger<AuditLogger> logger, string? auditLogPath = null)`
 
-### `public void LogScheduleChange(string targetId, bool success, string? details = null)`
-Records an audit event for a change to the backup schedule configuration.
+| Parameter | Behavior |
+|---|---|
+| `logger` | Required. `null` throws `ArgumentNullException`. |
+| `auditLogPath` | Audit file path. `null` uses `audit.log` in `AppContext.BaseDirectory`. An empty string disables file output; entries go only to the logger. |
 
-- **targetId**: Identifier of the schedule or resource affected by the change.
-- **success**: Indicates whether the schedule change was applied successfully.
-- **details**: Optional additional context about the change or errors encountered.
-- **Throws**: `ArgumentNullException` if `targetId` is `null`.
+The repository does not register `AuditLogger` in its DI container. Construct it directly or register it in your own host.
 
-### `public void LogConfigChange(string targetId, bool success, string? details = null)`
-Records an audit event for a configuration change affecting the backup system.
+## Methods
 
-- **targetId**: Identifier of the configuration entity or resource modified.
-- **success**: Indicates whether the configuration change was applied successfully.
-- **details**: Optional additional context about the change or errors encountered.
-- **Throws**: `ArgumentNullException` if `targetId` is `null`.
+### `public void LogBackupOperation(Guid scheduleId, string operation, bool success, string? details = null)`
 
-### `public void LogDataAccess(string targetId, bool success, string? details = null)`
-Records an audit event for access to backup or database data.
+Writes an entry with `Category = "BACKUP"`, `Action = operation`, `TargetId = scheduleId.ToString()`, plus `Success` and `Details`. `UserId` is not set.
 
-- **targetId**: Identifier of the data resource accessed.
-- **success**: Indicates whether the data access completed successfully.
-- **details**: Optional additional context about the access or errors encountered.
-- **Throws**: `ArgumentNullException` if `targetId` is `null`.
+- **Throws** `ArgumentNullException` if `operation` is `null`, or `ArgumentException` if it is empty.
 
-### `public void LogEntry()`
-Records the current state of the audit logger as an audit event. This method uses the current values of all properties (`Timestamp`, `Category`, `Action`, `TargetId`, `UserId`, `Success`, `Details`, `CorrelationId`) to construct and emit the log entry. No parameters are accepted; all data must be set prior to calling this method.
+### `public void LogScheduleChange(Guid scheduleId, string action, Dictionary<string, string> changes)`
 
-### `public DateTime Timestamp`
-Gets or sets the UTC timestamp of the audit event. Defaults to the time of instantiation if not overridden.
+Writes an entry with `Category = "SCHEDULE"`, `Action = action`, `TargetId = scheduleId.ToString()`, and `Success = true`. `Details` is the changes joined as `Key=Value` pairs separated by `"; "`. An empty dictionary produces an empty `Details` string.
 
-### `public string Category`
-Gets or sets the category of the audit event (e.g., "Backup", "Schedule", "Config", "Access"). Must be set before calling `LogEntry()`.
+- **Note:** `Success` is always `true` here. Use `LogEntry` to record a failed schedule change.
+- **Throws** `ArgumentNullException` if `action` or `changes` is `null`, or `ArgumentException` if `action` is empty.
 
-### `public string Action`
-Gets or sets the specific action being audited (e.g., "BackupInitiated", "ScheduleUpdated", "ConfigModified", "DataRead"). Must be set before calling `LogEntry()`.
+### `public void LogConfigChange(string setting, string oldValue, string newValue, string? reason = null)`
 
-### `public string TargetId`
-Gets or sets the identifier of the target resource involved in the audited action. Must be set before calling `LogEntry()` or any of the specialized logging methods.
+Writes an entry with `Category = "CONFIG"`, `Action = "CHANGED"`, `TargetId = setting`, and `Success = true`. `Details` is `"{oldValue} -> {newValue}"`, with ` ({reason})` appended when `reason` is not `null`.
 
-### `public string? UserId`
-Gets or sets the identifier of the user or system responsible for the action. Optional; may be `null`.
+- **Throws** `ArgumentNullException` or `ArgumentException` if `setting`, `oldValue`, or `newValue` is `null` or empty.
 
-### `public bool Success`
-Gets or sets a value indicating whether the audited action completed successfully. Defaults to `true`.
+### `public void LogDataAccess(string resource, string action, string? userId = null, bool success = true)`
 
-### `public string? Details`
-Gets or sets additional contextual information about the event, such as error messages or state changes. Optional; may be `null`.
+Writes an entry with `Category = "DATA_ACCESS"`, `Action = action`, `TargetId = resource`, `UserId`, and `Success`. `Details` is not set.
 
-### `public Guid CorrelationId`
-Gets or sets a unique identifier for correlating related audit events across systems or logs. Defaults to a new `Guid` if not set.
+- **Throws** `ArgumentNullException` or `ArgumentException` if `resource` or `action` is `null` or empty.
+
+### `public void LogEntry(AuditEntry entry)`
+
+Writes `entry` as given. The caller controls every field, including `Timestamp` and `CorrelationId`. No field is validated.
+
+- If `entry` is `null`, the method returns without logging or writing anything.
+- `Timestamp` is not defaulted. If it is not set, it stays at `default(DateTime)`.
+
+## Output and error handling
+
+- Each public method logs an `Information` line when it starts and another when it finishes (for example, `LogBackupOperation called for ...`). `LogEntry` logs only its category.
+- The entry is serialized with `JsonSerializer.Serialize(entry)` using default options, so JSON property names are PascalCase.
+- The file write is `File.AppendAllText(path, json + Environment.NewLine)`. There is no rotation, buffering, or locking.
+- Serialization and file errors are caught and logged at `Error` as `Failed to write audit log entry`. They are not rethrown, so auditing never fails the caller.
+- Argument validation runs after the start log line and before any entry is built. An invalid argument throws and writes nothing.
+
+## `AuditEntry`
+
+`AuditEntry` (same file as `AuditLogger`) is a plain class with settable properties.
+
+| Property | Type | Default | Notes |
+|---|---|---|---|
+| `Timestamp` | `DateTime` | `default` | Set to `DateTime.UtcNow` by the `Log*` methods. |
+| `Category` | `string` | `""` | Free-form category. |
+| `Action` | `string` | `""` | Free-form action. |
+| `TargetId` | `string` | `""` | Identifier of the affected resource. |
+| `UserId` | `string?` | `null` | Actor identifier, if known. |
+| `Success` | `bool` | `false` | Defaults to `false`, unlike the `Log*` methods, which set it explicitly. |
+| `Details` | `string?` | `null` | Free-form context. |
+| `CorrelationId` | `Guid` | `Guid.NewGuid()` | A new value per instance. The `Log*` methods do not accept one. |
 
 ### `public override string ToString()`
-Returns a human-readable string representation of the audit event, combining all relevant properties in a structured format. Includes `Timestamp`, `Category`, `Action`, `TargetId`, `UserId`, `Success`, `Details`, and `CorrelationId`. No parameters or return value beyond the formatted string.
+
+Returns:
+
+```
+[{Timestamp:O}] {Category}/{Action} on {TargetId} - SUCCESS|FAILED[: {Details}][ (User: {UserId})]
+```
+
+`Details` and `UserId` are appended only when non-empty. `CorrelationId` is not included.
+
+## Extensions
+
+`AuditLoggerExtensions` are extension methods on `AuditLogger`. Both call `LogEntry`.
+
+### `public static void LogSuccess(this AuditLogger auditLogger, string category, string action, bool success)`
+
+Writes an entry with the given `Category`, `Action`, and `Success`, and `Timestamp = DateTime.UtcNow`. `TargetId` is not set.
+
+- **Throws** `ArgumentNullException` if `auditLogger` is `null`, or `ArgumentException` if `category` or `action` is `null` or empty.
+
+### `public static void LogBackupResult(this AuditLogger auditLogger, string targetId, string? userId, bool success)`
+
+Writes an entry with `Category = "Backup"`, `Action = "Operation"`, `TargetId = targetId`, `UserId = userId`, and `Success`.
+
+- **Note:** the category is `"Backup"`, while `LogBackupOperation` writes `"BACKUP"`. Filters on the category must match the method that produced the entry.
+- **Throws** `ArgumentNullException` if `auditLogger` is `null`, or `ArgumentException` if `targetId` is `null` or empty.
 
 ## Usage
+
+```csharp
+using DockerSqliteBackup.Audit;
+using Microsoft.Extensions.Logging.Abstractions;
+
+// Replace NullLogger with the host's ILogger<AuditLogger> in production.
+var auditLogger = new AuditLogger(
+    NullLogger<AuditLogger>.Instance,
+    auditLogPath: Path.Combine(Path.GetTempPath(), "audit.log"));
+
+var scheduleId = Guid.NewGuid();
+
+// Backup outcome
+auditLogger.LogBackupOperation(scheduleId, "BackupCreated", success: true, details: "Size=1048576 bytes");
+
+// Schedule change
+auditLogger.LogScheduleChange(scheduleId, "ScheduleUpdated", new Dictionary<string, string>
+{
+    ["CronExpression"] = "0 2 * * *",
+    ["Enabled"] = "true",
+});
+
+// Configuration change with a reason
+auditLogger.LogConfigChange("Compression", "None", "Gzip", reason: "Reduce storage usage");
+
+// Data access by a known user
+auditLogger.LogDataAccess("backups/app.db.gz", "Download", userId: "ops-user");
+
+// Extension method: failed backup with no user
+auditLogger.LogBackupResult(scheduleId.ToString(), userId: null, success: false);
+
+// Custom entry: failed schedule change, which LogScheduleChange cannot record
+auditLogger.LogEntry(new AuditEntry
+{
+    Timestamp = DateTime.UtcNow,
+    Category = "SCHEDULE",
+    Action = "ScheduleUpdateFailed",
+    TargetId = scheduleId.ToString(),
+    Success = false,
+    Details = "Invalid cron expression",
+});
+```
+
+Each call appends one JSON line to the audit file and logs it as `AUDIT: {json}`.
