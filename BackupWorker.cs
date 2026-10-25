@@ -71,6 +71,12 @@ public class BackupWorker : BackgroundService
 
                 foreach (var schedule in schedules)
                 {
+                    // Shutdown requested: start no further backups. Ones already running are awaited below.
+                    if (stoppingToken.IsCancellationRequested)
+                    {
+                        break;
+                    }
+
                     // Check if this schedule should run
                     if (ShouldExecuteSchedule(schedule))
                     {
@@ -79,7 +85,7 @@ public class BackupWorker : BackgroundService
                         // poll iteration, and so the dictionary is only ever touched by
                         // this thread.
                         _scheduleLastRun[schedule.Id] = DateTime.UtcNow;
-                        inFlightBackups.Add(ExecuteScheduleAsync(schedule, stoppingToken));
+                        inFlightBackups.Add(ExecuteScheduleAsync(schedule));
                     }
                 }
 
@@ -88,9 +94,8 @@ public class BackupWorker : BackgroundService
                     TimeSpan.FromSeconds(_appSettings.ScheduleCheckIntervalSeconds),
                     stoppingToken);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Backup Worker service is shutting down");
                 break;
             }
             catch (Exception ex)
@@ -101,13 +106,14 @@ public class BackupWorker : BackgroundService
                 {
                     await Task.Delay(ErrorRetryDelayMilliseconds, stoppingToken);
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
-                    _logger.LogInformation("Backup Worker service is shutting down");
                     break;
                 }
             }
         }
+
+        _logger.LogInformation("Backup Worker service is shutting down");
 
         var remainingBackups = inFlightBackups.Where(task => !task.IsCompleted).ToArray();
         _logger.LogInformation(
@@ -168,7 +174,7 @@ public class BackupWorker : BackgroundService
     /// <summary>
     /// Executes a backup for the specified schedule.
     /// </summary>
-    private async Task ExecuteScheduleAsync(BackupSchedule schedule, CancellationToken cancellationToken)
+    private async Task ExecuteScheduleAsync(BackupSchedule schedule)
     {
         // Rate limiting: don't exceed max concurrent backups
         if (Interlocked.Increment(ref _activeBackups) > _appSettings.MaxConcurrentBackups)
@@ -196,8 +202,9 @@ public class BackupWorker : BackgroundService
             var job = new BackupJob { ScheduleId = schedule.Id };
             job.MarkStarted();
 
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(TimeSpan.FromSeconds(_appSettings.BackupTimeoutSeconds));
+            // Not linked to the host's stopping token: on shutdown, a backup that has already started
+            // is allowed to finish its current file (ExecuteAsync waits for it). It is still bounded by its own timeout.
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_appSettings.BackupTimeoutSeconds));
 
             try
             {
@@ -207,19 +214,19 @@ public class BackupWorker : BackgroundService
 
                 if (result.IsSuccess)
                 {
-                    await HandleSuccessfulBackupAsync(schedule, job, result, cts, cancellationToken);
+                    await HandleSuccessfulBackupAsync(schedule, job, result, cts.Token);
                 }
                 else
                 {
                     job.MarkCompleted((int)BackupStatus.Failed);
                     await PublishFailureAsync(
                         schedule.Id,
-                        result.ErrorMessage ?? "Backup did not complete successfully",
-                        cancellationToken);
+                        result.ErrorMessage ?? "Backup did not complete successfully");
                 }
             }
             catch (OperationCanceledException)
             {
+                // The only token in play here is the per-backup timeout, so this is always a timeout.
                 _logger.LogError("Backup timeout for schedule {ScheduleId} after {TimeoutSeconds} seconds",
                     schedule.Id,
                     _appSettings.BackupTimeoutSeconds);
@@ -227,8 +234,7 @@ public class BackupWorker : BackgroundService
 
                 await PublishFailureAsync(
                     schedule.Id,
-                    $"Backup timed out after {_appSettings.BackupTimeoutSeconds} seconds",
-                    cancellationToken);
+                    $"Backup timed out after {_appSettings.BackupTimeoutSeconds} seconds");
             }
             catch (Exception ex)
             {
@@ -236,7 +242,7 @@ public class BackupWorker : BackgroundService
                     schedule.Id);
                 job.MarkCompleted((int)BackupStatus.Failed);
 
-                await PublishFailureAsync(schedule.Id, ex.Message, cancellationToken);
+                await PublishFailureAsync(schedule.Id, ex.Message);
             }
         }
         catch (Exception ex)
@@ -310,7 +316,6 @@ public class BackupWorker : BackgroundService
         BackupSchedule schedule,
         BackupJob job,
         BackupResult result,
-        CancellationTokenSource cts,
         CancellationToken cancellationToken)
     {
         var sizeMb = result.BackupFileSizeBytes / BytesPerMegabyte;
@@ -319,7 +324,7 @@ public class BackupWorker : BackgroundService
             "Backup completed for {DatabaseName}: {SizeMb:F1} MB in {DurationSec:F1}s — {BackupPath}",
             schedule.Name, sizeMb, durationSec, result.BackupFilePath);
 
-        await VerifyAndRotateAsync(schedule, result, cts.Token);
+        await VerifyAndRotateAsync(schedule, result, cancellationToken);
 
         // Update schedule's last backup time
         schedule.LastBackupAt = DateTime.UtcNow;
@@ -327,12 +332,13 @@ public class BackupWorker : BackgroundService
 
         job.MarkCompleted((int)BackupStatus.Success);
 
+        // The backup is already on disk, so its completion event is published even during shutdown.
         await _eventPublisher.PublishAsync(new BackupCompletedEvent
         {
             Result = result,
             Duration = TimeSpan.FromMilliseconds(result.DurationMilliseconds),
             ScheduleCronExpression = schedule.CronExpression
-        }, cancellationToken);
+        }, CancellationToken.None);
     }
 
     private async Task<bool> VerifyAndRotateAsync(
@@ -390,12 +396,16 @@ public class BackupWorker : BackgroundService
         }
     }
 
-    private Task PublishFailureAsync(Guid scheduleId, string message, CancellationToken cancellationToken)
+    /// <summary>
+    /// Publishes a failure event. Uses no cancellation token so that the failure is still reported
+    /// when the worker is shutting down or the backup has just timed out.
+    /// </summary>
+    private Task PublishFailureAsync(Guid scheduleId, string message)
     {
         return _eventPublisher.PublishAsync(new BackupFailedEvent
         {
             ScheduleId = scheduleId,
             ErrorMessage = message
-        }, cancellationToken);
+        }, CancellationToken.None);
     }
 }
