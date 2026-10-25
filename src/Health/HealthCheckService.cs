@@ -2,6 +2,7 @@
 // Author: Vladyslav Zaiets
 
 using DockerSqliteBackup.Configuration;
+using DockerSqliteBackup.Constants;
 using DockerSqliteBackup.Events;
 using DockerSqliteBackup.Utilities;
 using Microsoft.Data.Sqlite;
@@ -15,6 +16,29 @@ namespace DockerSqliteBackup.Health;
 /// </summary>
 public class HealthCheckService
 {
+    // Component identifiers
+    private const string StorageComponentName = "storage";
+    private const string DiskComponentName = "disk";
+    private const string DatabaseComponentName = "database";
+    private const string SystemComponentName = "system";
+
+    // Overall status values
+    private const string HealthyStatus = "healthy";
+    private const string DegradedStatus = "degraded";
+
+    // Storage probe
+    private const string HealthCheckFileName = ".health-check";
+    private const string HealthCheckFileContent = "health";
+
+    // Disk space threshold (in bytes)
+    private const long MinimumFreeDiskSpaceBytes = 1024L * 1024L * 1024L; // 1 GB
+
+    // Database
+    private const string DefaultDatabaseFileName = "backups.sqlite";
+    private const string ReadOnlyConnectionOptions = "Mode=ReadOnly;";
+    private const string QuickCheckCommandText = "PRAGMA quick_check";
+    private const string QuickCheckPassedResult = "ok";
+
     private readonly IBackupEventPublisher? _eventPublisher;
     private readonly ILogger<HealthCheckService> _logger;
     private readonly AppSettings? _appSettings;
@@ -55,43 +79,43 @@ public class HealthCheckService
         try
         {
             var storageHealth = CheckStorageHealth();
-            result.Components["storage"] = storageHealth;
+            result.Components[StorageComponentName] = storageHealth;
             _logger.LogInformation("Storage health check completed: {Status}", storageHealth.IsHealthy);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to check storage health");
-            result.Components["storage"] = new ComponentHealth { IsHealthy = false, Message = "Failed to check storage health" };
+            result.Components[StorageComponentName] = new ComponentHealth { IsHealthy = false, Message = "Failed to check storage health" };
         }
 
         // Check disk space
         try
         {
             var diskHealth = CheckDiskSpace();
-            result.Components["disk"] = diskHealth;
+            result.Components[DiskComponentName] = diskHealth;
             _logger.LogInformation("Disk space check completed: {Status}", diskHealth.IsHealthy);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to check disk space");
-            result.Components["disk"] = new ComponentHealth { IsHealthy = false, Message = "Failed to check disk space" };
+            result.Components[DiskComponentName] = new ComponentHealth { IsHealthy = false, Message = "Failed to check disk space" };
         }
 
         // Check database
         try
         {
             var dbHealth = CheckDatabaseHealth();
-            result.Components["database"] = dbHealth;
+            result.Components[DatabaseComponentName] = dbHealth;
             _logger.LogInformation("Database health check completed: {Status}", dbHealth.IsHealthy);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to check database health");
-            result.Components["database"] = new ComponentHealth { IsHealthy = false, Message = "Failed to check database health" };
+            result.Components[DatabaseComponentName] = new ComponentHealth { IsHealthy = false, Message = "Failed to check database health" };
         }
 
         // Calculate overall status
-        result.Status = result.Components.Values.All(c => c.IsHealthy) ? "healthy" : "degraded";
+        result.Status = result.Components.Values.All(c => c.IsHealthy) ? HealthyStatus : DegradedStatus;
 
         await PublishHealthCheckEventAsync(result, cancellationToken);
 
@@ -110,16 +134,16 @@ public class HealthCheckService
     {
         try
         {
-            var backupDir = Path.Combine(AppContext.BaseDirectory, "backups");
+            var backupDir = Path.Combine(AppContext.BaseDirectory, BackupConstants.BackupsDirectoryName);
             PathUtility.EnsureDirectoryExists(backupDir);
 
-            var testFile = Path.Combine(backupDir, ".health-check");
-            File.WriteAllText(testFile, "health");
+            var testFile = Path.Combine(backupDir, HealthCheckFileName);
+            File.WriteAllText(testFile, HealthCheckFileContent);
             File.Delete(testFile);
 
             return new ComponentHealth
             {
-                Name = "storage",
+                Name = StorageComponentName,
                 IsHealthy = true,
                 Message = "Storage is accessible and writable"
             };
@@ -128,7 +152,7 @@ public class HealthCheckService
         {
             return new ComponentHealth
             {
-                Name = "storage",
+                Name = StorageComponentName,
                 IsHealthy = false,
                 Message = $"Storage check failed: {ex.Message}"
             };
@@ -144,10 +168,9 @@ public class HealthCheckService
     {
         try
         {
-            const long minimumFreeSpace = 1024L * 1024L * 1024L; // 1 GB
             var availableSpace = FileSystemUtility.GetAvailableDiskSpace();
 
-            var isHealthy = availableSpace > minimumFreeSpace;
+            var isHealthy = availableSpace > MinimumFreeDiskSpaceBytes;
             var message = $"Free disk space: {StringUtility.FormatBytes(availableSpace)}";
 
             if (!isHealthy)
@@ -155,7 +178,7 @@ public class HealthCheckService
 
             return new ComponentHealth
             {
-                Name = "disk",
+                Name = DiskComponentName,
                 IsHealthy = isHealthy,
                 Message = message
             };
@@ -164,7 +187,7 @@ public class HealthCheckService
         {
             return new ComponentHealth
             {
-                Name = "disk",
+                Name = DiskComponentName,
                 IsHealthy = false,
                 Message = $"Disk check failed: {ex.Message}"
             };
@@ -183,7 +206,7 @@ public class HealthCheckService
     {
         try
         {
-            var databasePath = _appSettings?.DatabasePath ?? "backups.sqlite";
+            var databasePath = _appSettings?.DatabasePath ?? DefaultDatabaseFileName;
             if (!Path.IsPathRooted(databasePath))
             {
                 databasePath = Path.Combine(AppContext.BaseDirectory, databasePath);
@@ -193,23 +216,23 @@ public class HealthCheckService
             {
                 return new ComponentHealth
                 {
-                    Name = "database",
+                    Name = DatabaseComponentName,
                     IsHealthy = false,
                     Message = $"Database file not found: {databasePath}"
                 };
             }
 
-            using var connection = new SqliteConnection($"Data Source={databasePath};Mode=ReadOnly;");
+            using var connection = new SqliteConnection($"Data Source={databasePath};{ReadOnlyConnectionOptions}");
             connection.Open();
 
             using var command = connection.CreateCommand();
-            command.CommandText = "PRAGMA quick_check";
+            command.CommandText = QuickCheckCommandText;
             var result = command.ExecuteScalar() as string;
 
-            var isHealthy = string.Equals(result, "ok", StringComparison.OrdinalIgnoreCase);
+            var isHealthy = string.Equals(result, QuickCheckPassedResult, StringComparison.OrdinalIgnoreCase);
             return new ComponentHealth
             {
-                Name = "database",
+                Name = DatabaseComponentName,
                 IsHealthy = isHealthy,
                 Message = isHealthy
                     ? "Database is accessible"
@@ -220,7 +243,7 @@ public class HealthCheckService
         {
             return new ComponentHealth
             {
-                Name = "database",
+                Name = DatabaseComponentName,
                 IsHealthy = false,
                 Message = $"Database check failed: {ex.Message}"
             };
@@ -241,7 +264,7 @@ public class HealthCheckService
         {
             var @event = new HealthCheckEvent
             {
-                ComponentName = "system",
+                ComponentName = SystemComponentName,
                 Status = result.Status,
                 Message = $"Health check: {result.Status}"
             };
