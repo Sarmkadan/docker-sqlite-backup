@@ -87,4 +87,20 @@ public static class RotationServiceExtensions
 		var backups = await rotationService.GetBackupsForRotationAsync(scheduleId);
 		return backups.Count();
 	}
+
+	/// <summary>
+	/// Determines whether rotation is enabled for a schedule, i.e. a policy exists and its strategy is not <c>NoRotation</c>.
+	/// Read-only: does not evaluate backups or modify any state.
+	/// </summary>
+	/// <param name="rotationService">The rotation service instance.</param>
+	/// <param name="scheduleId">The schedule ID to check.</param>
+	/// <returns>True if a policy exists and rotation is not disabled; otherwise false.</returns>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="rotationService"/> is <see langword="null"/>.</exception>
+	public static async Task<bool> IsRotationEnabledAsync(this RotationService rotationService, Guid scheduleId)
+	{
+		ArgumentNullException.ThrowIfNull(rotationService);
+
+		var policy = await rotationService.GetRotationPolicyAsync(scheduleId);
+		return policy is not null && policy.Strategy != (int)Constants.RotationStrategy.NoRotation;
+	}
 }
