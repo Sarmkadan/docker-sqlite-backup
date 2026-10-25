@@ -201,3 +201,37 @@ Each `BackupSchedule` carries a cron expression (`CronExpression` field) that de
 | `DeactivateScheduleAsync(Guid)` | Sets `IsActive = false` and updates the timestamp. |
 | `ValidateCronExpression(string)` | Returns `true` if the expression is parseable by Cronos. |
 | `GetNextExecutionTime(BackupSchedule)` | Computes the next occurrence from the schedule's cron expression, or `null` on parse failure. |
+
+## AuditLogger
+
+`src/Audit/AuditLogger.cs` - records audit trail entries for backup operations, schedule changes, configuration changes, and data access. Each entry is an `AuditEntry` serialized as one JSON object per line. Entries are also emitted through `ILogger<AuditLogger>` as `AUDIT: {json}`.
+
+### Output
+
+- The file defaults to `audit.log` in `AppContext.BaseDirectory`. Pass `auditLogPath` to the constructor to override it.
+- Each entry is appended with `File.AppendAllText`, so the file grows across runs.
+- Write failures are caught and logged as errors; they never propagate to the caller.
+- `AuditEntry` has `Timestamp` (UTC), `Category`, `Action`, `TargetId`, `UserId`, `Success`, `Details`, and a `CorrelationId` that is generated per entry. `ToString()` returns a one-line human-readable summary.
+
+### Key public methods
+
+| Method | Description |
+|---|---|
+| `AuditLogger(ILogger<AuditLogger>, string? auditLogPath = null)` | Constructor. Throws `ArgumentNullException` if the logger is null. |
+| `LogBackupOperation(Guid scheduleId, string operation, bool success, string? details = null)` | Records a `BACKUP` entry for a schedule. Throws `ArgumentException` if `operation` is empty. |
+| `LogScheduleChange(Guid scheduleId, string action, Dictionary<string, string> changes)` | Records a `SCHEDULE` entry. `changes` is flattened to `key=value` pairs joined by `; `. Throws on empty `action` or null `changes`. |
+| `LogConfigChange(string setting, string oldValue, string newValue, string? reason = null)` | Records a `CONFIG` entry with action `CHANGED`, with details `old -> new (reason)`. Throws if any required argument is empty. |
+| `LogDataAccess(string resource, string action, string? userId = null, bool success = true)` | Records a `DATA_ACCESS` entry. Throws if `resource` or `action` is empty. |
+| `LogEntry(AuditEntry)` | Writes a caller-built entry as-is. A null entry is silently ignored. |
+
+Argument checks run before an entry is built, so invalid input throws and no audit line is written.
+
+### Extension methods
+
+`src/Audit/AuditLoggerExtensions.cs` - convenience wrappers over `LogEntry`, defined on `AuditLogger`:
+
+| Method | Description |
+|---|---|
+| `LogSuccess(category, action, success)` | Records an entry with no target. |
+| `LogBackupResult(targetId, userId, success)` | Records a `Backup` / `Operation` entry for a target. |
+| `LogFailure(category, action, targetId, exception)` | Records a failed entry. `Details` is `ExceptionType: message`; stack traces are omitted. |
