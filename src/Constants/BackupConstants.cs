@@ -43,6 +43,36 @@ public static class BackupConstants
     // Database
     public const int PageSizeDefault = 4096;
     public const int MaxPagesDefault = 1000000;
+    public const string WalCheckpointTruncateCommand = "PRAGMA wal_checkpoint(TRUNCATE)";
+    public const string EncryptionKeyEnvironmentVariable = "BACKUP_ENCRYPTION_KEY";
+
+    // SQLite primary result codes (Microsoft.Data.Sqlite SqliteException.SqliteErrorCode)
+    public const int SqliteErrorIoErr = 10;
+    public const int SqliteErrorCorrupt = 11;
+    public const int SqliteErrorNotFound = 12;
+    public const int SqliteErrorBusy = 5;
+    public const int SqliteErrorLocked = 6;
+
+    // Database Copy Retry (bounded exponential backoff with jitter)
+    public const int DatabaseCopyMaxRetries = 5;
+    public const int DatabaseCopyRetryBaseDelayMs = 100;
+    public const int DatabaseCopyRetryJitterExclusiveMaxMs = 50;
+
+    // Backup History
+    public const int DefaultBackupHistoryLimit = 10;
+    public const int FullBackupHistoryScanLimit = int.MaxValue;
+
+    // Backup File Layout
+    public const string BackupsDirectoryName = "backups";
+    public const string SqliteBackupFilePrefix = "backup_";
+    public const string SqliteBackupFileExtension = ".sqlite";
+    public const string BackupFileTimestampFormat = "yyyy-MM-dd_HH-mm-ss";
+    public const string EncryptedBackupExtension = ".enc";
+
+    // Manifest Storage Type
+    public const string ManifestStorageTypeLocal = "Local";
+    public const string ManifestStorageTypeS3 = "S3";
+    public const string StorageConfigurationSuffix = "Configuration";
 
     // Error Messages
     public const string ErrorDatabaseFileNotFound = "Database file not found at specified path";
