@@ -54,10 +54,10 @@ public class AzureConfiguration : StorageConfiguration
     public int SoftDeleteRetentionDays { get; set; } = 0;
 
     /// <summary>
-    /// Returns a diagnostic string representation of this configuration.
-    /// Note: the output includes <see cref="ConnectionString"/> and <see cref="SasUri"/> verbatim.
+    /// Returns a diagnostic summary of this configuration.
+    /// Secrets are never included: <see cref="ConnectionString"/> and <see cref="SasUri"/> are reported only as set or unset.
     /// </summary>
-    public override string ToString() => $"AzureConfiguration {{ ConnectionString = {ConnectionString}, SasUri = {SasUri}, ContainerName = {ContainerName}, BlobPrefix = {BlobPrefix}, AccessTier = {AccessTier}, EnableImmutability = {EnableImmutability} }}";
+    public override string ToString() => $"AzureConfiguration {{ ConnectionString = {(string.IsNullOrWhiteSpace(ConnectionString) ? "unset" : "set")}, SasUri = {(string.IsNullOrWhiteSpace(SasUri) ? "unset" : "set")}, ContainerName = {ContainerName}, BlobPrefix = {BlobPrefix}, AccessTier = {AccessTier}, EnableImmutability = {EnableImmutability} }}";
 
     /// <inheritdoc />
     public override bool IsValid()
