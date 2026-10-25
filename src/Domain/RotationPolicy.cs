@@ -125,5 +125,5 @@ public class RotationPolicy
     /// Returns a short diagnostic description of the policy (identifiers and key settings, no timestamps).
     /// </summary>
     /// <returns>A string representation of the policy.</returns>
-    public override string ToString() => $"RotationPolicy {{ Id = {Id}, ScheduleId = {ScheduleId}, Strategy = {Strategy}, MaxBackupCount = {MaxBackupCount}, MaxAgeDays = {MaxAgeDays}, VerifyBeforeDeletion = {VerifyBeforeDeletion} }}";
+    public override string ToString() => $"RotationPolicy {{ Id = {Id}, ScheduleId = {ScheduleId}, Strategy = {(Constants.RotationStrategy)Strategy}, MaxBackupCount = {MaxBackupCount}, MinimumBackupCount = {MinimumBackupCount}, MaxAgeDays = {MaxAgeDays}, VerifyBeforeDeletion = {VerifyBeforeDeletion} }}";
 }
