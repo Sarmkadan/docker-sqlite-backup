@@ -84,7 +84,7 @@ public sealed class BackupService : IBackupService
             {
                 // History is ordered newest-first; scan the whole history because the most
                 // recent entries are usually incrementals and the full baseline sits further back.
-                var baseBackup = (await _repository.GetBackupHistoryAsync(schedule.Id, int.MaxValue))
+                var baseBackup = (await _repository.GetBackupHistoryAsync(schedule.Id, BackupConstants.FullBackupHistoryScanLimit))
                     .FirstOrDefault(b => b.IsSuccess && b.BackupMode == (int)Constants.BackupMode.Full);
 
                 if (baseBackup is not null)
@@ -230,7 +230,7 @@ public sealed class BackupService : IBackupService
     /// <param name="scheduleId">The ID of the schedule.</param>
     /// <param name="limit">The maximum number of results to return.</param>
     /// <returns>An enumerable of <see cref="BackupResult"/> objects.</returns>
-    public async Task<IEnumerable<BackupResult>> GetBackupHistoryAsync(Guid scheduleId, int limit = 10)
+    public async Task<IEnumerable<BackupResult>> GetBackupHistoryAsync(Guid scheduleId, int limit = BackupConstants.DefaultBackupHistoryLimit)
     {
         return await _repository.GetBackupHistoryAsync(scheduleId, limit);
     }
@@ -283,16 +283,16 @@ private async Task SafeCopyDatabaseAsync(string sourcePath, string destinationPa
 		source.BackupDatabase(destination);
 		_logger.LogDebug("Database backed up using SQLite Online Backup API");
 	}
-	catch (SqliteException ex) when (ex.SqliteErrorCode == 5 ||
-								 ex.SqliteErrorCode == 6 ||
-								 ex.SqliteErrorCode == 10 || // SQLITE_BUSY_RECOVERY
-								 ex.SqliteErrorCode == 12) // SQLITE_BUSY_SNAPSHOT
+	catch (SqliteException ex) when (ex.SqliteErrorCode == BackupConstants.SqliteErrorBusy ||
+								 ex.SqliteErrorCode == BackupConstants.SqliteErrorLocked ||
+								 ex.SqliteErrorCode == BackupConstants.SqliteErrorIoErr ||
+								 ex.SqliteErrorCode == BackupConstants.SqliteErrorNotFound)
 	{
 		// Handle database locked errors with retry logic
 		_logger.LogWarning(ex, "Database is locked (SQLITE_BUSY/SQLITE_LOCKED), attempting retry with bounded backoff");
 		await RetryDatabaseCopyAsync(sourcePath, destinationPath);
 	}
-	catch (SqliteException ex) when (ex.SqliteErrorCode == 11)
+	catch (SqliteException ex) when (ex.SqliteErrorCode == BackupConstants.SqliteErrorCorrupt)
 	{
 		// Database is corrupt - cannot recover from this
 		_logger.LogError(ex, "Database file is corrupt (SQLITE_CORRUPT), cannot create backup");
@@ -309,7 +309,7 @@ private async Task SafeCopyDatabaseAsync(string sourcePath, string destinationPa
 	/// <summary>
 	/// Retries database copy operation with bounded exponential backoff and jitter
 	/// </summary>
-	private async Task RetryDatabaseCopyAsync(string sourcePath, string destinationPath, int maxRetries = 5)
+	private async Task RetryDatabaseCopyAsync(string sourcePath, string destinationPath, int maxRetries = BackupConstants.DatabaseCopyMaxRetries)
 	{
 		var lastException = default(Exception);
 		var random = new Random();
@@ -327,8 +327,8 @@ private async Task SafeCopyDatabaseAsync(string sourcePath, string destinationPa
 				lastException = ioEx;
 
 				// Exponential backoff with jitter: base delay * 2^attempt + random jitter
-				var baseDelayMs = 100 * (int)Math.Pow(2, attempt);
-				var jitterMs = random.Next(0, 50);
+				var baseDelayMs = BackupConstants.DatabaseCopyRetryBaseDelayMs * (int)Math.Pow(2, attempt);
+				var jitterMs = random.Next(0, BackupConstants.DatabaseCopyRetryJitterExclusiveMaxMs);
 				var delayMs = baseDelayMs + jitterMs;
 
 				_logger.LogWarning(ioEx, "Failed to copy database (attempt {Attempt}/{MaxRetries}), retrying in {DelayMs}ms",
@@ -343,9 +343,9 @@ private async Task SafeCopyDatabaseAsync(string sourcePath, string destinationPa
 
     private static string GenerateBackupPath(BackupSchedule schedule, DateTime timestamp)
     {
-        var baseDir = Path.Combine(AppContext.BaseDirectory, "backups");
+        var baseDir = Path.Combine(AppContext.BaseDirectory, BackupConstants.BackupsDirectoryName);
         var scheduleDir = Path.Combine(baseDir, SanitizeFileName(schedule.Name));
-        var fileName = $"backup_{timestamp:yyyy-MM-dd_HH-mm-ss}.sqlite";
+        var fileName = $"{BackupConstants.SqliteBackupFilePrefix}{timestamp.ToString(BackupConstants.BackupFileTimestampFormat)}{BackupConstants.SqliteBackupFileExtension}";
         return Path.Combine(scheduleDir, fileName);
     }
 
@@ -384,7 +384,7 @@ private async Task SafeCopyDatabaseAsync(string sourcePath, string destinationPa
             using var connection = new SqliteConnection($"Data Source={sourcePath}");
             await connection.OpenAsync();
             using var command = connection.CreateCommand();
-            command.CommandText = "PRAGMA wal_checkpoint(TRUNCATE)";
+            command.CommandText = BackupConstants.WalCheckpointTruncateCommand;
             await command.ExecuteNonQueryAsync();
             _logger.LogDebug("WAL checkpoint completed for {SourcePath}", sourcePath);
         }
@@ -418,7 +418,7 @@ private async Task SafeCopyDatabaseAsync(string sourcePath, string destinationPa
                 OriginalFileSizeBytes = backupResult.OriginalFileSizeBytes,
                 CompressionRatio = backupResult.CompressionRatio,
                 Checksum = backupResult.Checksum,
-                IsEncrypted = backupFilePath.EndsWith(".enc", StringComparison.OrdinalIgnoreCase),
+                IsEncrypted = backupFilePath.EndsWith(BackupConstants.EncryptedBackupExtension, StringComparison.OrdinalIgnoreCase),
                 IsCompressed = backupFilePath.EndsWith(BackupConstants.CompressedBackupExtension, StringComparison.OrdinalIgnoreCase),
                 BackupMode = ((Constants.BackupMode)backupResult.BackupMode).ToString(),
                 BaseBackupResultId = backupResult.BaseBackupResultId,
@@ -428,16 +428,16 @@ private async Task SafeCopyDatabaseAsync(string sourcePath, string destinationPa
             // Set storage type based on configuration
             if (schedule.StorageConfiguration is null or LocalStorageConfiguration)
             {
-                manifest.StorageType = "Local";
+                manifest.StorageType = BackupConstants.ManifestStorageTypeLocal;
             }
             else if (schedule.StorageConfiguration is S3Configuration)
             {
-                manifest.StorageType = "S3";
+                manifest.StorageType = BackupConstants.ManifestStorageTypeS3;
                 manifest.RemoteStorageKey = backupResult.S3ObjectKey;
             }
             else
             {
-                manifest.StorageType = schedule.StorageConfiguration.GetType().Name.Replace("Configuration", "");
+                manifest.StorageType = schedule.StorageConfiguration.GetType().Name.Replace(BackupConstants.StorageConfigurationSuffix, "");
             }
 
             // Write manifest file next to the backup
@@ -480,7 +480,7 @@ private async Task SafeCopyDatabaseAsync(string sourcePath, string destinationPa
 
         try
         {
-            var encryptedPath = backupPath + ".enc";
+            var encryptedPath = backupPath + BackupConstants.EncryptedBackupExtension;
             await EncryptionUtility.EncryptFileAsync(backupPath, encryptedPath, encryptionKey);
             File.Delete(backupPath);
             _logger.LogInformation("Backup archive encrypted with AES-256: {EncryptedPath}", encryptedPath);
@@ -518,7 +518,7 @@ private async Task SafeCopyDatabaseAsync(string sourcePath, string destinationPa
         if (!_appSettings.EnableEncryption)
             return null;
 
-        var key = Environment.GetEnvironmentVariable("BACKUP_ENCRYPTION_KEY")
+        var key = Environment.GetEnvironmentVariable(BackupConstants.EncryptionKeyEnvironmentVariable)
                   ?? _appSettings.EncryptionKey;
 
         if (string.IsNullOrWhiteSpace(key))
