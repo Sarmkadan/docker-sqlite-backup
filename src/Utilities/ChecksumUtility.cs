@@ -141,8 +141,11 @@ public static class ChecksumUtility
     /// Async wrapper around <see cref="GenerateQuickChecksum"/>. Returns a 16-character
     /// hex string derived from the file's size and boundary bytes.
     /// </summary>
-    public static Task<string> GenerateQuickChecksumAsync(string filePath) =>
-        Task.FromResult(GenerateQuickChecksum(filePath));
+    public static Task<string> GenerateQuickChecksumAsync(string filePath)
+    {
+        ArgumentNullException.ThrowIfNull(filePath);
+        return Task.FromResult(GenerateQuickChecksum(filePath));
+    }
 
     /// <summary>
     /// Generates a checksum for a collection of values.
