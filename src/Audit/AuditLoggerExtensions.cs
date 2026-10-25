@@ -53,4 +53,34 @@ public static class AuditLoggerExtensions
             Timestamp = DateTime.UtcNow,
         });
     }
+
+    /// <summary>
+    /// Logs a failed operation against a target, recording the exception type and message as details.
+    /// Stack traces are intentionally omitted to keep audit entries compact.
+    /// </summary>
+    /// <param name="auditLogger">The <see cref="AuditLogger"/> instance.</param>
+    /// <param name="category">The category of the log entry.</param>
+    /// <param name="action">The action that failed.</param>
+    /// <param name="targetId">The ID of the target the operation was applied to.</param>
+    /// <param name="exception">The exception describing the failure.</param>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="auditLogger"/> or <paramref name="exception"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="category"/>, <paramref name="action"/> or <paramref name="targetId"/> is null or empty.</exception>
+    public static void LogFailure(this AuditLogger auditLogger, string category, string action, string targetId, Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(auditLogger);
+        ArgumentException.ThrowIfNullOrEmpty(category);
+        ArgumentException.ThrowIfNullOrEmpty(action);
+        ArgumentException.ThrowIfNullOrEmpty(targetId);
+        ArgumentNullException.ThrowIfNull(exception);
+
+        auditLogger.LogEntry(new AuditEntry
+        {
+            Category = category,
+            Action = action,
+            TargetId = targetId,
+            Success = false,
+            Details = $"{exception.GetType().Name}: {exception.Message}",
+            Timestamp = DateTime.UtcNow,
+        });
+    }
 }
