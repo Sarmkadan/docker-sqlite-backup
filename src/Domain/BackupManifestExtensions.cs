@@ -94,4 +94,20 @@ public static class BackupManifestExtensions
 		var json = File.ReadAllText(filePath);
 		return FromJson(json);
 	}
+
+	/// <summary>
+	/// Calculates the time elapsed between the start (<see cref="BackupManifest.CreatedAt"/>)
+	/// and completion (<see cref="BackupManifest.CompletedAt"/>) of the backup described by the manifest.
+	/// </summary>
+	/// <param name="manifest">The manifest to inspect.</param>
+	/// <returns>The duration of the backup. Negative if <see cref="BackupManifest.CompletedAt"/> precedes <see cref="BackupManifest.CreatedAt"/>.</returns>
+	public static TimeSpan GetDuration(this BackupManifest manifest)
+	{
+		if (manifest is null)
+		{
+			throw new ArgumentNullException(nameof(manifest));
+		}
+
+		return manifest.CompletedAt - manifest.CreatedAt;
+	}
 }
