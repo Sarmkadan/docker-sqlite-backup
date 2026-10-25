@@ -49,6 +49,37 @@ public static class RestoreVerificationExtensions
         return FormatBytes(restoreVerification.DatabaseSizeBytes);
     }
 
+    /// <summary>
+    /// Formats the recorded verification duration to a human-readable string.
+    /// </summary>
+    /// <param name="restoreVerification">The restore verification to format the duration for.</param>
+    /// <returns>
+    /// A human-readable string such as "850 ms", "2.50 s", or "2m 30s", based on <see cref="RestoreVerification.DurationMilliseconds"/>.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="restoreVerification"/> is null.</exception>
+    public static string GetFormattedDuration(this RestoreVerification restoreVerification)
+    {
+        ArgumentNullException.ThrowIfNull(restoreVerification);
+
+        return FormatDuration(restoreVerification.DurationMilliseconds);
+    }
+
+    private static string FormatDuration(long milliseconds)
+    {
+        if (milliseconds < 1000)
+        {
+            return $"{milliseconds} ms";
+        }
+
+        if (milliseconds < 60_000)
+        {
+            return $"{(milliseconds / 1000.0).ToString("F2", CultureInfo.InvariantCulture)} s";
+        }
+
+        var span = TimeSpan.FromMilliseconds(milliseconds);
+        return $"{(int)span.TotalMinutes}m {span.Seconds}s";
+    }
+
     private static string FormatBytes(long bytes)
     {
         if (bytes < 1024)
