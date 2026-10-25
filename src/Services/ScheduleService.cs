@@ -16,6 +16,20 @@ namespace DockerSqliteBackup.Services;
 /// </summary>
 public sealed class ScheduleService : IScheduleService
 {
+    // Exception Messages
+    private const string ScheduleConfigurationInvalidMessage = "Schedule configuration is invalid";
+    private const string CreateScheduleFailedMessage = "Failed to create schedule in repository";
+    private const string UpdateScheduleFailedMessage = "Failed to update schedule in repository";
+
+    // Log Messages
+    private const string DatabasePathMissingLogMessage = "Database path does not exist for schedule {ScheduleId}: {DatabasePath}";
+    private const string ScheduleCreatedLogMessage = "Schedule created: {ScheduleId} - {ScheduleName}";
+    private const string ScheduleUpdatedLogMessage = "Schedule updated: {ScheduleId} - {ScheduleName}";
+    private const string ScheduleDeletedLogMessage = "Schedule deleted: {ScheduleId}";
+    private const string ScheduleDeactivatedLogMessage = "Schedule deactivated: {ScheduleId}";
+    private const string ScheduleActivatedLogMessage = "Schedule activated: {ScheduleId}";
+    private const string NextExecutionTimeFailedLogMessage = "Failed to calculate next execution time for schedule {ScheduleId}";
+
     private readonly IBackupRepository _repository;
     private readonly ILogger<ScheduleService> _logger;
 
@@ -44,7 +58,7 @@ public sealed class ScheduleService : IScheduleService
 
         if (!schedule.IsValid())
         {
-            throw new InvalidScheduleException("Schedule configuration is invalid", schedule.Id);
+            throw new InvalidScheduleException(ScheduleConfigurationInvalidMessage, schedule.Id);
         }
 
         if (!ValidateCronExpression(schedule.CronExpression))
@@ -54,7 +68,7 @@ public sealed class ScheduleService : IScheduleService
 
         if (!schedule.ValidateDatabasePath())
         {
-            _logger.LogWarning("Database path does not exist for schedule {ScheduleId}: {DatabasePath}",
+            _logger.LogWarning(DatabasePathMissingLogMessage,
                 schedule.Id, schedule.DatabasePath);
         }
 
@@ -64,12 +78,12 @@ public sealed class ScheduleService : IScheduleService
         try
         {
             var created = await _repository.CreateScheduleAsync(schedule);
-            _logger.LogInformation("Schedule created: {ScheduleId} - {ScheduleName}", created.Id, created.Name);
+            _logger.LogInformation(ScheduleCreatedLogMessage, created.Id, created.Name);
             return created;
         }
         catch (Exception ex)
         {
-            throw new ScheduleException("Failed to create schedule in repository", ex);
+            throw new ScheduleException(CreateScheduleFailedMessage, ex);
         }
     }
 
@@ -88,7 +102,7 @@ public sealed class ScheduleService : IScheduleService
 
         if (!schedule.IsValid())
         {
-            throw new InvalidScheduleException("Schedule configuration is invalid", schedule.Id);
+            throw new InvalidScheduleException(ScheduleConfigurationInvalidMessage, schedule.Id);
         }
 
         if (!ValidateCronExpression(schedule.CronExpression))
@@ -101,12 +115,12 @@ public sealed class ScheduleService : IScheduleService
         try
         {
             var updated = await _repository.UpdateScheduleAsync(schedule);
-            _logger.LogInformation("Schedule updated: {ScheduleId} - {ScheduleName}", updated.Id, updated.Name);
+            _logger.LogInformation(ScheduleUpdatedLogMessage, updated.Id, updated.Name);
             return updated;
         }
         catch (Exception ex)
         {
-            throw new ScheduleException("Failed to update schedule in repository", ex);
+            throw new ScheduleException(UpdateScheduleFailedMessage, ex);
         }
     }
 
@@ -116,7 +130,7 @@ public sealed class ScheduleService : IScheduleService
     public async Task DeleteScheduleAsync(Guid scheduleId, CancellationToken cancellationToken = default)
     {
         await _repository.DeleteScheduleAsync(scheduleId);
-        _logger.LogInformation("Schedule deleted: {ScheduleId}", scheduleId);
+        _logger.LogInformation(ScheduleDeletedLogMessage, scheduleId);
     }
 
     /// <summary>
@@ -186,7 +200,7 @@ public sealed class ScheduleService : IScheduleService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to calculate next execution time for schedule {ScheduleId}",
+            _logger.LogWarning(ex, NextExecutionTimeFailedLogMessage,
                 schedule.Id);
             return null;
         }
@@ -203,7 +217,7 @@ public sealed class ScheduleService : IScheduleService
             schedule.IsActive = false;
             schedule.LastModifiedAt = DateTime.UtcNow;
             await _repository.UpdateScheduleAsync(schedule);
-            _logger.LogInformation("Schedule deactivated: {ScheduleId}", scheduleId);
+            _logger.LogInformation(ScheduleDeactivatedLogMessage, scheduleId);
         }
     }
 
@@ -218,7 +232,7 @@ public sealed class ScheduleService : IScheduleService
             schedule.IsActive = true;
             schedule.LastModifiedAt = DateTime.UtcNow;
             await _repository.UpdateScheduleAsync(schedule);
-            _logger.LogInformation("Schedule activated: {ScheduleId}", scheduleId);
+            _logger.LogInformation(ScheduleActivatedLogMessage, scheduleId);
         }
     }
 }
