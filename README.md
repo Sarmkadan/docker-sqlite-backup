@@ -284,6 +284,49 @@ Two options change which candidates are removed:
 
 `NoRotation` is not handled the same way in every method. `GetBackupsForRotationAsync` and `CalculateDiskSpaceFreedAsync` do not check it, so with `DeleteFailedBackups` enabled they can report candidates that `ExecuteRotationAsync` will not delete. See [`docs/RotationService.md`](docs/RotationService.md#notes) for this and the other known limitations.
 
+## VerificationService
+
+`src/Services/VerificationService.cs` - implements `IVerificationService` as a sealed class. It checks that a backup file can be restored and that the restored SQLite database passes `PRAGMA integrity_check`, then counts its records. It is registered as a singleton by `AddBackupServices`. Nothing in `src/` calls `VerifyBackupAsync` at the moment, so verification runs only when a caller invokes it directly.
+
+### Purpose and verification steps
+
+`VerifyBackupAsync` runs these steps in order:
+
+1. **Checksum**: `VerifyChecksumAsync` compares the file's SHA-256 with `BackupResult.Checksum`. A mismatch throws `BackupCorruptedException`. An empty expected checksum is skipped and passes.
+2. **Restore** the file to a temporary location with `RestoreToTemporaryAsync` (see below).
+3. **Integrity check** the restored file with `PerformIntegrityCheckAsync`. A failed result throws `IntegrityCheckFailedException`.
+4. **Measure** the restored file. `DatabaseSizeBytes` is the file length. `RecordCount` is the sum of `COUNT(*)` over all user tables.
+5. **Complete** the `RestoreVerification` with success and the message `Backup verification successful`. If an `IBackupEventPublisher` was supplied, publish `RestoreVerificationCompletedEvent`.
+
+Any exception from these steps is caught and does not propagate. The verification is marked failed with `Verification failed: <message>`, `ErrorMessage` is set, and `RestoreVerificationFailedEvent` is published if a publisher was supplied. The failure stage is `ChecksumMismatch` for `BackupCorruptedException`, `IntegrityCheckFailed` for `IntegrityCheckFailedException`, `RestoreFailed` for `RestoreVerificationFailedException`, and `Unknown` for anything else.
+
+The `finally` block deletes the temporary directory and logs a warning if deletion fails. The `RestoreVerification` is then saved through `IBackupRepository.SaveRestoreVerificationAsync` and returned, whether the verification passed or failed.
+
+### Restore formats
+
+`RestoreToTemporaryAsync` chooses the restore method from the backup file's extension. It writes to `<temp>/sqlite-verify-<guid>/restore-check.sqlite`.
+
+- `.enc`: decrypted with AES-256. The key is read from `BACKUP_ENCRYPTION_KEY`, then from `AppSettings.EncryptionKey`. A missing or invalid key throws `VerificationException`.
+- `.gz`: decompressed with `GZipStream`.
+- Any other extension: copied with `File.Copy`.
+
+### Key public methods
+
+| Method | Description |
+|---|---|
+| `VerifyBackupAsync(BackupResult, CancellationToken = default)` | Runs the steps above and returns the `RestoreVerification`. Verification failures are reported in the returned object and are not thrown. Throws `ArgumentNullException` for a null backup. |
+| `GetVerificationHistoryAsync(Guid backupResultId)` | Returns the verification records for a backup from the repository. |
+| `PerformIntegrityCheckAsync(string databasePath)` | Opens the file read-only and runs `PRAGMA integrity_check`. Returns `(true, null)` when the result is `ok`, and `(false, result)` otherwise. Throws `ArgumentNullException` or `ArgumentException` for a null or whitespace path, and `FileNotFoundException` if the file is missing. Other errors are wrapped in `VerificationException`, except `SqliteException`, `IOException`, and `UnauthorizedAccessException`, which are rethrown as they are. |
+| `VerifyChecksumAsync(string filePath, string expectedChecksum)` | Computes the file's SHA-256 and compares it case-insensitively with the expected lowercase hex value. An empty expected value logs a warning and returns `true`. |
+| `RestoreToTemporaryAsync(BackupResult)` | Restores the backup to a temporary database file as described in [Restore formats](#restore-formats) and returns the path to that file. |
+| `CleanupTemporaryFilesAsync(string tempDirectory)` | Deletes the directory and its contents recursively if it exists. Throws `ArgumentNullException` for a null path. |
+
+### Known limitations
+
+- **Encrypted and compressed backups fail verification.** `BackupService` writes encrypted files first and then compresses them, so the name ends in `.enc.gz`. `RestoreToTemporaryAsync` checks for `.enc` at the end of the name, so it only decompresses. The result is still ciphertext, and the integrity check fails.
+- **Temporary directories are not removed.** `VerifyBackupAsync` stores the restored file path, not the directory, in `RestoreVerification.TemporaryDirectory`. The `finally` block checks that value with `Directory.Exists`, so the check is always false and the directory is left behind. If `RestoreToTemporaryAsync` throws, the directory is also left behind, because the property is never set in that case.
+- **Record counts can be silently zero.** If listing or counting tables fails, `CountRecordsAsync` logs a warning and returns `0`. A `RecordCount` of `0` does not prove the database is empty.
+
 ## AuditLogger
 
 `src/Audit/AuditLogger.cs` - records audit trail entries for backup operations, schedule changes, configuration changes, and data access. Each entry is an `AuditEntry` serialized as one JSON object per line. Entries are also emitted through `ILogger<AuditLogger>` as `AUDIT: {json}`.
