@@ -247,6 +247,43 @@ When the Online Backup API fails, the behavior depends on the SQLite error code:
 | `DeleteBackupAsync(Guid backupResultId)` | Deletes the local backup file if it exists and removes the repository record. It does not delete objects in remote storage. Throws `BackupException` if the result does not exist. |
 | `CalculateBackupChecksumAsync(string filePath)` | Returns the lowercase hex SHA-256 of a file. Throws `FileNotFoundException` if the file is missing, and `BackupException` on other read failures. |
 
+## RotationService
+
+`src/Services/RotationService.cs` - implements `IRotationService`. It stores the rotation policy for a schedule, decides which backups the policy would delete, deletes them, and previews the space that would be freed. Field-level policy details are in [Retention configuration](#retention-configuration). The full method-by-method reference is in [`docs/RotationService.md`](docs/RotationService.md).
+
+### Purpose and candidate selection
+
+Candidates come from the backup history in `IBackupRepository`, not from a directory scan. The history is sorted by `StartedAt`, newest first. The newest `MinimumBackupCount` backups are never candidates. Each remaining backup is checked against the policy's strategy. `remainingCount` drops by one for each candidate, so the count rule applies to what is left.
+
+### Rotation strategies
+
+The `Strategy` field of `RotationPolicy` maps to `DockerSqliteBackup.Constants.RotationStrategy`:
+
+| Value | Strategy | Rule for a candidate backup |
+|---|---|---|
+| `0` | `MaxFileCount` | Deleted when `MaxBackupCount > 0` and the remaining count is above `MaxBackupCount` (and above `MinimumBackupCount`). |
+| `1` | `MaxAge` | Deleted when the backup is older than `MaxAgeDays` (and the remaining count is above `MinimumBackupCount`). |
+| `2` | `Combined` | Deleted when either the count rule or the age rule matches. |
+| `3` | `NoRotation` | Nothing is deleted by `ExecuteRotationAsync` or `PreviewRotationAsync`. |
+
+Two options change which candidates are removed:
+
+- `DeleteFailedBackups` deletes failed backups beyond `MinimumBackupCount` directly, without checking the strategy.
+- `VerifyBeforeDeletion` keeps non-failed candidates whose `Status` is not `VerifiedSuccess`.
+
+### Key public methods
+
+| Method | Description |
+|---|---|
+| `ExecuteRotationAsync(Guid scheduleId)` | Deletes each candidate's file (if it exists) and its repository record. Returns the number of backups deleted. A failure on one backup is logged and skipped. Updates `LastRotatedAt`. Throws `ArgumentException` for an empty GUID. |
+| `PreviewRotationAsync(Guid scheduleId)` | Dry run. Returns the candidate backups and their total size in bytes without deleting anything. |
+| `GetBackupsForRotationAsync(Guid scheduleId)` | Returns the backups the current policy would delete. This is the shared candidate logic for execution, preview, and disk-space calculation. |
+| `CalculateDiskSpaceFreedAsync(Guid scheduleId)` | Returns the sum of `BackupFileSizeBytes` over the candidates. |
+| `GetRotationPolicyAsync(Guid scheduleId)` | Returns the stored policy, or `null` if none exists. |
+| `SaveRotationPolicyAsync(RotationPolicy policy)` | Validates the policy with `IsValid()`, sets `LastModifiedAt`, and saves it. Throws `ValidationException` for an invalid policy and `RotationException` if the save fails. |
+
+`NoRotation` is not handled the same way in every method. `GetBackupsForRotationAsync` and `CalculateDiskSpaceFreedAsync` do not check it, so with `DeleteFailedBackups` enabled they can report candidates that `ExecuteRotationAsync` will not delete. See [`docs/RotationService.md`](docs/RotationService.md#notes) for this and the other known limitations.
+
 ## AuditLogger
 
 `src/Audit/AuditLogger.cs` - records audit trail entries for backup operations, schedule changes, configuration changes, and data access. Each entry is an `AuditEntry` serialized as one JSON object per line. Entries are also emitted through `ILogger<AuditLogger>` as `AUDIT: {json}`.
