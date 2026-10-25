@@ -68,17 +68,27 @@ namespace DockerSqliteBackup.Integration;
 /// </remarks>
 public class WebhookClient
 {
+    private const int DefaultMaxRetries = 3;
+    private const int HttpTimeoutSeconds = 30;
+    private const string UserAgent = "docker-sqlite-backup/2.0";
+    private const string SignatureHeaderName = "X-Signature";
+    private const string JsonContentType = "application/json";
+    private const string BackupCompletedEventType = "backup.completed";
+    private const int RetryBaseDelayMilliseconds = 100;
+    private const string SignatureTimestampPrefix = "t=";
+    private const string SignatureVersionPrefix = "v1=";
+
     private static readonly HttpClient _http = new()
     {
-        Timeout = TimeSpan.FromSeconds(30),
-        DefaultRequestHeaders = { { "User-Agent", "docker-sqlite-backup/2.0" } }
+        Timeout = TimeSpan.FromSeconds(HttpTimeoutSeconds),
+        DefaultRequestHeaders = { { "User-Agent", UserAgent } }
     };
 
     private readonly ILogger<WebhookClient> _logger;
     private readonly int _maxRetries;
     private readonly string? _webhookSecret;
 
-    public WebhookClient(ILogger<WebhookClient> logger, int maxRetries = 3, string? webhookSecret = null)
+    public WebhookClient(ILogger<WebhookClient> logger, int maxRetries = DefaultMaxRetries, string? webhookSecret = null)
     {
         _logger = logger;
         _maxRetries = maxRetries;
@@ -91,7 +101,7 @@ public class WebhookClient
     /// <param name="logger">Logger instance.</param>
     /// <param name="settings">Application settings containing webhook secret.</param>
     /// <param name="maxRetries">Maximum number of retry attempts.</param>
-    public WebhookClient(ILogger<WebhookClient> logger, AppSettings settings, int maxRetries = 3)
+    public WebhookClient(ILogger<WebhookClient> logger, AppSettings settings, int maxRetries = DefaultMaxRetries)
         : this(logger, maxRetries, settings.WebhookSecret)
     {
     }
@@ -129,7 +139,7 @@ public class WebhookClient
         var signatureHex = BitConverter.ToString(signatureBytes).Replace("-", "").ToLowerInvariant();
 
         // Format: t=<timestamp>,v1=<hex-hmac-sha256>
-        return $"t={timestamp},v1={signatureHex}";
+        return $"{SignatureTimestampPrefix}{timestamp},{SignatureVersionPrefix}{signatureHex}";
     }
 
     public async Task SendBackupNotificationAsync(
@@ -145,7 +155,7 @@ public class WebhookClient
 
         var payload = new
         {
-            eventType = "backup.completed",
+            eventType = BackupCompletedEventType,
             timestamp = DateTime.UtcNow,
             data = new
             {
@@ -196,7 +206,7 @@ public class WebhookClient
         try
         {
             var json = JsonSerializer.Serialize(payload);
-            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+            using var content = new StringContent(json, Encoding.UTF8, JsonContentType);
 
             // Add HMAC-SHA256 signature header if secret is configured
             if (!string.IsNullOrEmpty(_webhookSecret))
@@ -204,7 +214,7 @@ public class WebhookClient
                 var signatureHeader = CreateSignatureHeader(json);
                 if (!string.IsNullOrEmpty(signatureHeader))
                 {
-                    content.Headers.Add("X-Signature", signatureHeader);
+                    content.Headers.Add(SignatureHeaderName, signatureHeader);
                 }
             }
 
@@ -218,7 +228,7 @@ public class WebhookClient
                       response.StatusCode == System.Net.HttpStatusCode.RequestTimeout) &&
                      attempt < _maxRetries)
             {
-                var delay = TimeSpan.FromMilliseconds(Math.Pow(2, attempt) * 100);
+                var delay = TimeSpan.FromMilliseconds(Math.Pow(2, attempt) * RetryBaseDelayMilliseconds);
                 _logger.LogWarning("Webhook failed with {Status}, retrying in {Delay}ms",
                     response.StatusCode, delay.TotalMilliseconds);
                 await Task.Delay(delay, cancellationToken);
