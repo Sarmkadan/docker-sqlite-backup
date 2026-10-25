@@ -360,3 +360,42 @@ Argument checks run before an entry is built, so invalid input throws and no aud
 | `LogSuccess(category, action, success)` | Records an entry with no target. |
 | `LogBackupResult(targetId, userId, success)` | Records a `Backup` / `Operation` entry for a target. |
 | `LogFailure(category, action, targetId, exception)` | Records a failed entry. `Details` is `ExceptionType: message`; stack traces are omitted. |
+
+## EncryptionService
+
+`src/Services/EncryptionService.cs` - implements `IEncryptionService` and provides AES-256-CBC encryption of backup files. It is registered as a singleton in `ServiceCollectionExtensions`. The cipher work and the file format are in `src/Utilities/EncryptionUtility.cs`. The full method-by-method reference is in [`docs/EncryptionService.md`](docs/EncryptionService.md).
+
+### Purpose and key resolution
+
+Encryption applies only when `AppSettings.EnableEncryption` is `true`. The key is resolved on each call:
+
+1. The `BACKUP_ENCRYPTION_KEY` environment variable, if it is set.
+2. Otherwise `AppSettings.EncryptionKey` (bound from `AppSettings__EncryptionKey`).
+
+The key must be Base64 that decodes to exactly 32 bytes. The lookup does not fall through on bad input. If the environment variable is set but empty, or set to an invalid value, the configuration key is not used and the resolved key is `null`. `GetStatus()` checks for an empty value differently and may report a configuration key as valid even when encryption will not use it, so compare `GetStatus()` with the actual behavior when debugging a key problem.
+
+The encrypted file format is `[16-byte IV][ciphertext]`. Each encrypt call generates a new random IV and writes it first. Padding is PKCS#7. Decryption reads the first 16 bytes as the IV. A file shorter than 16 bytes throws `InvalidDataException`.
+
+### Key public methods
+
+| Method | Description |
+|---|---|
+| `EncryptionService(AppSettings, ILogger<EncryptionService>)` | Constructor. Throws `ArgumentNullException` if either argument is null. |
+| `EncryptFileAsync(string sourcePath, string destinationPath, CancellationToken)` | Encrypts the source into the destination, overwriting it, and returns the destination path. Throws `ArgumentException` for empty paths, `FileNotFoundException` if the source is missing, and `InvalidOperationException` if no usable key is resolved. Errors during encryption are logged and rethrown. |
+| `DecryptFileAsync(string sourcePath, string destinationPath, CancellationToken)` | Decrypts the source into the destination and returns the destination path. Same argument and key checks as encryption, but the source must be an encrypted file. A wrong key or damaged data usually throws `CryptographicException`. |
+| `GenerateKey()` | Returns a new random 256-bit key as a Base64 string. It does not store the key. |
+| `ValidateKey(string?)` | Returns `true` if the value is Base64 that decodes to 32 bytes. Returns `false` for `null` or any other value. |
+| `IsEncryptionEnabled()` | Returns `AppSettings.EnableEncryption`. |
+| `GetActiveKey()` | Returns the resolved key, or `null` if encryption is disabled, no key is set, or the key is invalid. Logs a warning or error in those cases. |
+| `GetStatus()` | Returns an `EncryptionStatus` with `IsEnabled`, `HasValidKey`, `KeyFingerprint`, and `KeySource` (`Environment`, `Configuration`, or `None`). Does not log. |
+
+`KeyFingerprint` is the first 8 hex characters of the SHA-256 of the key bytes. It identifies the key without exposing it.
+
+### Security notes
+
+- **No authentication.** The mode is CBC with no HMAC or AEAD tag, so decryption does not detect changes to the ciphertext. A wrong key or a modified file usually fails with a padding error, but it can also return garbage. The checksum that `BackupService` records for the final file is the integrity check for `.enc` backups. That checksum is not a MAC: anyone who can change both the file and the stored checksum can hide the change.
+- **Keys are not logged or stored by this class.** Log messages contain file paths and the key source, never key material. `GetActiveKey()` returns the raw key to the caller, so do not log its return value.
+- **Keep the key out of config files.** Prefer the `BACKUP_ENCRYPTION_KEY` environment variable so the key is not in `appsettings.json` or source control. If the key is lost, encrypted backups cannot be recovered; the application does not escrow the key.
+- **Partial output on failure.** Neither encrypt nor decrypt removes the destination file when a write fails. A failed decrypt can leave partial plaintext on disk, so remove the destination path after a failure.
+- **Cancellation is checked once.** `ct` is checked before the work starts and is not passed to `EncryptionUtility`, so a running encrypt or decrypt cannot be cancelled.
+- **Plaintext temp files in the extension methods.** `src/Services/EncryptionServiceExtensions.cs` writes plaintext to `Path.GetTempFileName()` files. The string and stream encrypt methods and `DecryptStringAsync` delete their temp files in `finally`. `DecryptToStreamAsync` deletes them only on failure, so on success the decrypted temp file remains until the caller or the system removes it.
