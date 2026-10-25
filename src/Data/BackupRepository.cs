@@ -1,7 +1,6 @@
 #nullable enable
 // Author: Vladyslav Zaiets
 
-using System.Text.Json;
 using DockerSqliteBackup.Domain;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
@@ -82,10 +81,10 @@ public class BackupRepository : IBackupRepository
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
-            INSERT INTO BackupSchedules 
-            (Id, Name, Description, DatabasePath, CronExpression, IsActive, CreatedAt, LastModifiedAt, 
+            INSERT INTO BackupSchedules
+            (Id, Name, Description, DatabasePath, CronExpression, IsActive, CreatedAt, LastModifiedAt,
              LastBackupAt, RetentionDays, MaxBackupCount, NotificationEmails, VerifyAfterBackup, StorageType)
-            VALUES (@id, @name, @desc, @dbPath, @cron, @active, @created, @modified, @lastBackup, 
+            VALUES (@id, @name, @desc, @dbPath, @cron, @active, @created, @modified, @lastBackup,
                     @retention, @maxCount, @emails, @verify, @storageType)";
 
         AddParameters(command, schedule);
@@ -101,10 +100,10 @@ public class BackupRepository : IBackupRepository
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
-            UPDATE BackupSchedules SET 
-            Name=@name, Description=@desc, DatabasePath=@dbPath, CronExpression=@cron, 
-            IsActive=@active, LastModifiedAt=@modified, LastBackupAt=@lastBackup, 
-            RetentionDays=@retention, MaxBackupCount=@maxCount, NotificationEmails=@emails, 
+            UPDATE BackupSchedules SET
+            Name=@name, Description=@desc, DatabasePath=@dbPath, CronExpression=@cron,
+            IsActive=@active, LastModifiedAt=@modified, LastBackupAt=@lastBackup,
+            RetentionDays=@retention, MaxBackupCount=@maxCount, NotificationEmails=@emails,
             VerifyAfterBackup=@verify, StorageType=@storageType
             WHERE Id=@id";
 
@@ -185,12 +184,12 @@ public class BackupRepository : IBackupRepository
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
-            INSERT INTO BackupResults 
-            (Id, ScheduleId, BackupJobId, Status, BackupFilePath, BackupFileSizeBytes, Checksum, 
-             StartedAt, CompletedAt, DurationMilliseconds, ErrorMessage, StackTrace, IsVerified, 
+            INSERT INTO BackupResults
+            (Id, ScheduleId, BackupJobId, Status, BackupFilePath, BackupFileSizeBytes, Checksum,
+             StartedAt, CompletedAt, DurationMilliseconds, ErrorMessage, StackTrace, IsVerified,
              VerifiedAt, Notes, IsStoredInS3, IsStoredLocally, S3ObjectKey)
-            VALUES (@id, @scheduleId, @jobId, @status, @filePath, @fileSize, @checksum, 
-                    @started, @completed, @duration, @error, @stackTrace, @verified, 
+            VALUES (@id, @scheduleId, @jobId, @status, @filePath, @fileSize, @checksum,
+                    @started, @completed, @duration, @error, @stackTrace, @verified,
                     @verifiedAt, @notes, @s3Stored, @localStored, @s3Key)";
 
         AddParameters(command, result);
@@ -206,9 +205,9 @@ public class BackupRepository : IBackupRepository
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
-            UPDATE BackupResults SET 
+            UPDATE BackupResults SET
             Status=@status, BackupFilePath=@filePath, BackupFileSizeBytes=@fileSize, Checksum=@checksum,
-            StartedAt=@started, CompletedAt=@completed, DurationMilliseconds=@duration, 
+            StartedAt=@started, CompletedAt=@completed, DurationMilliseconds=@duration,
             ErrorMessage=@error, StackTrace=@stackTrace, IsVerified=@verified, VerifiedAt=@verifiedAt,
             Notes=@notes, IsStoredInS3=@s3Stored, IsStoredLocally=@localStored, S3ObjectKey=@s3Key
             WHERE Id=@id";
@@ -250,9 +249,9 @@ public class BackupRepository : IBackupRepository
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
-            SELECT * FROM BackupResults 
-            WHERE ScheduleId=@scheduleId 
-            ORDER BY StartedAt DESC 
+            SELECT * FROM BackupResults
+            WHERE ScheduleId=@scheduleId
+            ORDER BY StartedAt DESC
             LIMIT @limit";
         command.Parameters.AddWithValue("@scheduleId", scheduleId.ToString());
         command.Parameters.AddWithValue("@limit", limit);
@@ -289,7 +288,7 @@ public class BackupRepository : IBackupRepository
         ArgumentNullException.ThrowIfNull(policy);
         var existing = await GetRotationPolicyAsync(policy.ScheduleId);
 
-        if (existing  is not null)
+        if (existing is not null)
         {
             policy.Id = existing.Id;
             await UpdateRotationPolicyAsync(policy);
@@ -309,10 +308,10 @@ public class BackupRepository : IBackupRepository
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
-            INSERT INTO RotationPolicies 
-            (Id, ScheduleId, Strategy, MaxBackupCount, MaxAgeDays, VerifyBeforeDeletion, 
+            INSERT INTO RotationPolicies
+            (Id, ScheduleId, Strategy, MaxBackupCount, MaxAgeDays, VerifyBeforeDeletion,
              MinimumBackupCount, DeleteFailedBackups, CreatedAt, LastModifiedAt, LastRotatedAt)
-            VALUES (@id, @scheduleId, @strategy, @maxCount, @maxAge, @verify, 
+            VALUES (@id, @scheduleId, @strategy, @maxCount, @maxAge, @verify,
                     @minCount, @deleteFailed, @created, @modified, @lastRotated)";
 
         AddParameters(command, policy);
@@ -326,7 +325,7 @@ public class BackupRepository : IBackupRepository
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
-            UPDATE RotationPolicies SET 
+            UPDATE RotationPolicies SET
             Strategy=@strategy, MaxBackupCount=@maxCount, MaxAgeDays=@maxAge, VerifyBeforeDeletion=@verify,
             MinimumBackupCount=@minCount, DeleteFailedBackups=@deleteFailed, LastModifiedAt=@modified, LastRotatedAt=@lastRotated
             WHERE Id=@id";
@@ -346,10 +345,10 @@ public class BackupRepository : IBackupRepository
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
-            INSERT INTO RestoreVerifications 
-            (Id, BackupResultId, IsSuccessful, StatusMessage, StartedAt, CompletedAt, DurationMilliseconds, 
+            INSERT INTO RestoreVerifications
+            (Id, BackupResultId, IsSuccessful, StatusMessage, StartedAt, CompletedAt, DurationMilliseconds,
              RecordCount, DatabaseSizeBytes, IntegrityCheckPassed, IntegrityCheckErrors, TemporaryDirectory, ErrorMessage)
-            VALUES (@id, @backupId, @successful, @message, @started, @completed, @duration, 
+            VALUES (@id, @backupId, @successful, @message, @started, @completed, @duration,
                     @recordCount, @dbSize, @integrityPassed, @integrityErrors, @tempDir, @error)";
 
         AddParameters(command, verification);
@@ -387,7 +386,7 @@ public class BackupRepository : IBackupRepository
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
-            INSERT INTO BackupJobs 
+            INSERT INTO BackupJobs
             (Id, ScheduleId, Status, CreatedAt, StartedAt, CompletedAt, RetryCount, MaxRetries, IsProcessing)
             VALUES (@id, @scheduleId, @status, @created, @started, @completed, @retryCount, @maxRetries, @processing)";
 
@@ -403,7 +402,7 @@ public class BackupRepository : IBackupRepository
 
         using var command = connection.CreateCommand();
         command.CommandText = @"
-            UPDATE BackupJobs SET 
+            UPDATE BackupJobs SET
             Status=@status, StartedAt=@started, CompletedAt=@completed, RetryCount=@retryCount, IsProcessing=@processing
             WHERE Id=@id";
 
