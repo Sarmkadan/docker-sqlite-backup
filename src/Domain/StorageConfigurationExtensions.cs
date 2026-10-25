@@ -161,4 +161,23 @@ public static class StorageConfigurationExtensions
         var createdAt = configuration.CreatedAt > now ? now : configuration.CreatedAt;
         return (int)(now - createdAt).TotalDays;
     }
+
+    /// <summary>
+    /// Gets the short storage type name (for example "Local", "S3" or "Azure") without the configuration name.
+    /// </summary>
+    /// <param name="configuration">The configuration.</param>
+    /// <returns>The storage type name, or the runtime type name for unknown configuration types.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="configuration"/> is <see langword="null"/>.</exception>
+    public static string GetStorageTypeName(this StorageConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        return configuration switch
+        {
+            LocalStorageConfiguration => "Local",
+            S3Configuration => "S3",
+            AzureConfiguration => "Azure",
+            _ => configuration.GetType().Name
+        };
+    }
 }
