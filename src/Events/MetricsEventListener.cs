@@ -21,6 +21,10 @@ public class MetricsEventListener : IBackupEventListener
     private readonly Dictionary<string, int> _failureReasons = [];
     private readonly ILogger<MetricsEventListener> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MetricsEventListener"/> class.
+    /// </summary>
+    /// <param name="logger">Logger used to report metric updates and failures.</param>
     public MetricsEventListener(ILogger<MetricsEventListener> logger)
     {
         ArgumentNullException.ThrowIfNull(logger);
@@ -198,14 +202,51 @@ public class MetricsEventListener : IBackupEventListener
 /// </summary>
 public class BackupMetrics
 {
+    /// <summary>
+    /// Gets or sets the total number of backups recorded, both successful and failed.
+    /// </summary>
     public long TotalBackups { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of backups that completed successfully.
+    /// </summary>
     public long SuccessfulBackups { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of backups that failed.
+    /// </summary>
     public long FailedBackups { get; set; }
+
+    /// <summary>
+    /// Gets or sets the percentage of successful backups, from 0 to 100.
+    /// </summary>
     public double SuccessRate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total size in bytes of backup files produced by successful backups.
+    /// </summary>
     public long TotalBytesTransferred { get; set; }
+
+    /// <summary>
+    /// Gets or sets the average backup duration in seconds. The accumulated duration of
+    /// successful backups is divided by <see cref="TotalBackups"/>.
+    /// </summary>
     public double AverageDurationSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of failures per failure reason. Each reason is the first line
+    /// of the error message, truncated to 50 characters, or "Unknown" when no message is available.
+    /// </summary>
     public Dictionary<string, int> FailureReasons { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the number of restore verifications that have failed.
+    /// </summary>
     public long RestoreVerificationFailures { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time at which this metrics snapshot was captured.
+    /// </summary>
     public DateTime CapturedAt { get; set; }
 
     /// <summary>
