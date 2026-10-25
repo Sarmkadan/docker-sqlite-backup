@@ -32,6 +32,9 @@ public interface INotificationClient
 /// </summary>
 public class ConsoleNotificationClient : INotificationClient
 {
+    private const ConsoleColor NotificationColor = ConsoleColor.Yellow;
+    private const string NotificationFormat = "[{0}] {1}";
+
     /// <summary>
     /// Writes the notification to the console in yellow as <c>[title] message</c>.
     /// </summary>
@@ -44,8 +47,8 @@ public class ConsoleNotificationClient : INotificationClient
         ArgumentNullException.ThrowIfNull(title);
         ArgumentNullException.ThrowIfNull(message);
 
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.WriteLine($"[{title}] {message}");
+        Console.ForegroundColor = NotificationColor;
+        Console.WriteLine(string.Format(NotificationFormat, title, message));
         Console.ResetColor();
         return Task.CompletedTask;
     }
