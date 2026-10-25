@@ -98,5 +98,5 @@ public class BackupResult
     }
 
     /// <inheritdoc />
-    public override string ToString() => $"BackupResult {{ Id = {Id}, ScheduleId = {ScheduleId}, BackupJobId = {BackupJobId}, Status = {Status}, BackupFilePath = {BackupFilePath}, BackupFileSizeBytes = {BackupFileSizeBytes} }}";
+    public override string ToString() => $"BackupResult {{ Id = {Id}, Status = {(Constants.BackupStatus)Status}, SizeBytes = {BackupFileSizeBytes}, Duration = {DurationMilliseconds} ms, BackupFilePath = {BackupFilePath} }}";
 }
