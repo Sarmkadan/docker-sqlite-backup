@@ -1,139 +1,135 @@
 # HealthCheckService
 
-`HealthCheckService` provides a centralized mechanism for evaluating the overall health of the application and its constituent components. It aggregates the status of multiple subsystems into a single, timestamped result, exposing both a high-level summary and per-component details for diagnostic purposes.
+`HealthCheckService` (in `src/Health/HealthCheckService.cs`) runs an in-process health check of the backup worker's environment. It evaluates three components, `storage`, `disk` and `database`, and combines them into a single `HealthCheckResult` with an overall status of `"healthy"` or `"degraded"`. Each component is checked independently, so one failing check does not stop the others.
+
+The file also defines the supporting types `ComponentHealth` and `HealthCheckResult`.
 
 ## API
 
-### HealthCheckService
+### Constructor
 
 ```csharp
-public HealthCheckService()
+public HealthCheckService(
+    ILogger<HealthCheckService> logger,
+    IBackupEventPublisher? eventPublisher = null,
+    AppSettings? appSettings = null)
 ```
 
-Default constructor. Initializes a new instance of the service without pre-registered components. Components are typically added or resolved internally before a health check is performed.
+| Parameter | Description |
+|-----------|-------------|
+| `logger` | Required. Receives progress and outcome messages for each check. Throws `ArgumentNullException` when `null`. |
+| `eventPublisher` | Optional. When provided, a `HealthCheckEvent` is published after every check. When `null`, no event is published. |
+| `appSettings` | Optional. Supplies `DatabasePath` for the database check. When `null` or unset, the database check uses `backups.sqlite`. |
 
 ### PerformHealthCheckAsync
 
 ```csharp
-public async Task<HealthCheckResult> PerformHealthCheckAsync()
+public async Task<HealthCheckResult> PerformHealthCheckAsync(
+    CancellationToken cancellationToken = default)
 ```
 
-Executes health checks against all registered components asynchronously and returns an aggregated `HealthCheckResult`.
+Runs the three component checks in order and returns the aggregated result.
 
-- **Returns**: A `Task<HealthCheckResult>` whose result contains the overall status, a descriptive message, the timestamp of the check, and a dictionary of per-component results.
-- **Exceptions**: May throw if any underlying component check throws an unhandled exception, depending on the implementation’s error-handling strategy. The method itself does not define pre-condition guards.
+- **Components**: each check is wrapped in its own `try`/`catch`. An exception is logged and recorded as an unhealthy component instead of being thrown.
+- **Overall status**: `"healthy"` when every component is healthy, otherwise `"degraded"`.
+- **Event**: when an `IBackupEventPublisher` was supplied, a `HealthCheckEvent` with `ComponentName = "system"`, the overall `Status`, and the message `Health check: <status>` is published.
+- **Cancellation**: `cancellationToken` is passed only to the event publish step. The component checks themselves are synchronous and do not observe it.
+- **Exceptions**: exceptions thrown by the event publisher are not caught and propagate to the caller.
 
-### Name
+### Component checks
+
+These checks are `private` and run as part of `PerformHealthCheckAsync`. They are listed here because they determine the result.
+
+| Key | What is checked | Healthy when |
+|-----|-----------------|--------------|
+| `storage` | Creates and deletes a `.health-check` file in `backups` under `AppContext.BaseDirectory`. | The write and delete succeed. |
+| `disk` | Free space from `FileSystemUtility.GetAvailableDiskSpace()`. | Free space is strictly greater than 1 GB. |
+| `database` | Resolves `DatabasePath` (relative paths are resolved against `AppContext.BaseDirectory`), then opens it read-only and runs `PRAGMA quick_check`. | The file exists and `quick_check` returns `ok`. |
+
+When `DatabasePath` is missing from the settings, the default `backups.sqlite` is used.
+
+## Result types
+
+### ComponentHealth
 
 ```csharp
-public string Name { get; }
+public class ComponentHealth
+{
+    public string Name { get; set; }
+    public bool IsHealthy { get; set; }
+    public string Message { get; set; }
+    public DateTime CheckedAt { get; set; }   // defaults to DateTime.UtcNow
+}
 ```
 
-Gets the logical name of this health check service instance. Useful when multiple services are registered and need to be distinguished in logs or dashboards.
-
-### IsHealthy
+### HealthCheckResult
 
 ```csharp
-public bool IsHealthy { get; }
+public class HealthCheckResult
+{
+    public string Status { get; set; }                              // "unknown" until a check runs
+    public DateTime CheckedAt { get; set; }                         // set when the result is created
+    public Dictionary<string, ComponentHealth> Components { get; set; }
+    public override string ToString();
+}
 ```
 
-Indicates whether the most recent health check resulted in a fully healthy state. This property reflects the outcome of the last call to `PerformHealthCheckAsync`. Its value is `false` until the first check completes successfully.
+`ToString()` returns `System is <status>`. When one or more components are unhealthy, it appends `. Issues: <name>: <message>, ...`.
 
-### Message
+### Validation helpers
 
-```csharp
-public string Message { get; }
-```
-
-A human-readable summary describing the current health status. Typically set after a health check completes; may be `null` or empty before the first check.
-
-### CheckedAt
-
-```csharp
-public DateTime CheckedAt { get; }
-```
-
-The timestamp at which the last health check was performed. If no check has been executed, the value defaults to `DateTime.MinValue` or an equivalent sentinel.
-
-### Status
-
-```csharp
-public string Status { get; }
-```
-
-A string representation of the aggregate health status (e.g., `"Healthy"`, `"Degraded"`, `"Unhealthy"`). Derived from the combined states of all components after a check.
-
-### Components
-
-```csharp
-public Dictionary<string, ComponentHealth> Components { get; }
-```
-
-A dictionary keyed by component name, containing the detailed health status of each subsystem evaluated during the last check. Returns an empty dictionary before the first health check is performed.
-
-### ToString
-
-```csharp
-public override string ToString()
-```
-
-Returns a formatted string that includes the service name, overall status, message, and the timestamp of the last check. Intended for logging and diagnostic output.
+`HealthCheckServiceValidation` (in `src/Health/HealthCheckServiceValidation.cs`) provides the extension methods `Validate`, `IsValid` and `EnsureValid` for `HealthCheckService`. The service exposes no public properties, so these methods report no problems for a non-null instance.
 
 ## Usage
 
-### Example 1: Basic Health Check and Status Inspection
+### Example 1: Run a check and inspect the result
 
 ```csharp
-var healthService = new HealthCheckService();
+using DockerSqliteBackup.Configuration;
+using DockerSqliteBackup.Events;
+using DockerSqliteBackup.Health;
+using Microsoft.Extensions.Logging;
 
-// Perform the health check
-HealthCheckResult result = await healthService.PerformHealthCheckAsync();
+using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
 
-// Inspect the overall outcome
-Console.WriteLine($"Service: {healthService.Name}");
-Console.WriteLine($"Healthy: {healthService.IsHealthy}");
-Console.WriteLine($"Status: {healthService.Status}");
-Console.WriteLine($"Message: {healthService.Message}");
-Console.WriteLine($"Checked at: {healthService.CheckedAt:O}");
-
-// Drill into individual components
-foreach (var kvp in healthService.Components)
+var settings = new AppSettings
 {
-    Console.WriteLine($"  {kvp.Key}: {kvp.Value.Status}");
+    DatabasePath = "/data/backups.sqlite"
+};
+
+var publisher = new BackupEventPublisher(
+    loggerFactory.CreateLogger<BackupEventPublisher>());
+
+var healthCheck = new HealthCheckService(
+    loggerFactory.CreateLogger<HealthCheckService>(),
+    publisher,
+    settings);
+
+HealthCheckResult result = await healthCheck.PerformHealthCheckAsync();
+
+Console.WriteLine(result);   // e.g. "System is degraded. Issues: disk: Free disk space: 512 MB (Below minimum threshold)"
+
+foreach (var (name, component) in result.Components)
+{
+    Console.WriteLine($"{name}: healthy={component.IsHealthy}, {component.Message}");
 }
 ```
 
-### Example 2: Periodic Monitoring Loop
+### Example 2: Cancel a check that is taking too long
 
 ```csharp
-var healthService = new HealthCheckService();
-var cts = new CancellationTokenSource();
+using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 
-// Periodically check health every 30 seconds
-while (!cts.Token.IsCancellationRequested)
-{
-    await healthService.PerformHealthCheckAsync();
-
-    if (!healthService.IsHealthy)
-    {
-        // Log the degraded state with component details
-        var failedComponents = healthService.Components
-            .Where(c => c.Value.Status != "Healthy")
-            .Select(c => c.Key);
-
-        Console.WriteLine(
-            $"[{healthService.CheckedAt:HH:mm:ss}] Degraded: " +
-            $"{string.Join(", ", failedComponents)}");
-    }
-
-    await Task.Delay(TimeSpan.FromSeconds(30), cts.Token);
-}
+var result = await healthCheck.PerformHealthCheckAsync(cts.Token);
 ```
+
+The token affects only the event-publish step. The component checks run to completion regardless, so this does not bound how long the checks take.
 
 ## Notes
 
-- **Initial state**: Before the first call to `PerformHealthCheckAsync`, properties such as `IsHealthy`, `Status`, and `Message` reflect default or empty values. `CheckedAt` may be `DateTime.MinValue`. Consumers should guard against acting on uninitialized state.
-- **Thread safety**: The service is not guaranteed to be thread-safe. Concurrent calls to `PerformHealthCheckAsync` may overwrite the stored result properties (`IsHealthy`, `Message`, `CheckedAt`, `Status`, `Components`) in a non-atomic fashion. External synchronization is required if multiple threads access the instance simultaneously.
-- **Component failures**: If an individual component check throws an exception, the overall result depends on the internal aggregation policy. The exception may propagate directly, or the component may be recorded as unhealthy with an error message. Callers should not assume that `PerformHealthCheckAsync` always succeeds.
-- **Timestamp granularity**: `CheckedAt` uses `DateTime`, which has system-clock resolution. For high-precision timing requirements, consider supplementing with a separate stopwatch or diagnostic timestamp.
-- **Dictionary mutability**: The `Components` dictionary returned is the live internal collection. Modifying it externally may corrupt the service state. Treat it as read-only.
+- **Not registered in DI**: nothing in this repository registers or constructs `HealthCheckService` outside the `Health` folder and its tests. The Docker `healthcheck` subcommand reads `HealthStatusStore` through `DockerHealthCheckEvaluator` instead.
+- **Storage side effect**: each check creates and deletes `backups/.health-check`. The directory is created if it does not exist.
+- **Disk threshold**: the 1 GB minimum is hard-coded and uses a strict `>` comparison, so exactly 1 GB of free space is reported as unhealthy.
+- **Read-only database access**: the database is opened with `Mode=ReadOnly`, so the check does not modify it. The check fails if the file is missing; it does not create one.
+- **Fallback component name**: if an unexpected exception escapes a component check, the fallback `ComponentHealth` is created without a `Name`, so its `Name` is an empty string. The entry is still keyed by `storage`, `disk` or `database` in `Components`.
+- **Result is not cached**: each call creates a new `HealthCheckResult`. The service keeps no state between calls.
