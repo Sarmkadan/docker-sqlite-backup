@@ -30,4 +30,24 @@ public sealed class HealthStatusSnapshot
 
     /// <summary>Gets or sets the message accompanying the most recent restore verification result.</summary>
     public string? LastRestoreVerificationMessage { get; set; }
+
+    /// <summary>
+    /// Returns a one-line summary of the last backup status and the most recent recorded timestamp.
+    /// </summary>
+    public override string ToString()
+    {
+        var status = (LastBackupCompletedAt, LastBackupFailedAt) switch
+        {
+            (null, null) => "Unknown",
+            (_, null) => "Succeeded",
+            (null, _) => "Failed",
+            _ => LastBackupCompletedAt > LastBackupFailedAt ? "Succeeded" : "Failed"
+        };
+
+        var timestamp = new[] { LastBackupCompletedAt, LastBackupFailedAt, LastRestoreVerificationAt }
+            .Where(t => t.HasValue)
+            .Max();
+
+        return $"HealthStatusSnapshot {{ Status={status}, Timestamp={timestamp?.ToString("o") ?? "never"} }}";
+    }
 }
