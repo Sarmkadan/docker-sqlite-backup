@@ -20,6 +20,7 @@ public class EncryptionService : IEncryptionService
     private readonly ILogger<EncryptionService> _logger;
 
     private const string EnvKeyName = "BACKUP_ENCRYPTION_KEY";
+    private const int FingerprintLength = 8;
 
     /// <summary>
     /// Initializes a new instance of <see cref="EncryptionService"/>.
@@ -175,6 +176,6 @@ public class EncryptionService : IEncryptionService
     {
         var keyBytes = Convert.FromBase64String(base64Key);
         var hash = SHA256.HashData(keyBytes);
-        return Convert.ToHexString(hash)[..8].ToLowerInvariant();
+        return Convert.ToHexString(hash)[..FingerprintLength].ToLowerInvariant();
     }
 }
