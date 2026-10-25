@@ -49,4 +49,22 @@ public static class BackupResultExtensions
 
         return !string.IsNullOrEmpty(backupResult.ErrorMessage) || !string.IsNullOrEmpty(backupResult.StackTrace);
     }
+
+    /// <summary>
+    /// Gets the number of bytes saved by compression (original size minus stored size).
+    /// </summary>
+    /// <param name="backupResult">The backup result.</param>
+    /// <returns>
+    /// The number of bytes saved, or <see langword="null"/> when the backup was not compressed
+    /// (<see cref="BackupResult.OriginalFileSizeBytes"/> is not set). The value is negative if the compressed file is larger than the original.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="backupResult"/> is <see langword="null"/>.</exception>
+    public static long? GetSpaceSavedBytes(this BackupResult backupResult)
+    {
+        ArgumentNullException.ThrowIfNull(backupResult);
+
+        return backupResult.OriginalFileSizeBytes.HasValue
+            ? backupResult.OriginalFileSizeBytes.Value - backupResult.BackupFileSizeBytes
+            : null;
+    }
 }
