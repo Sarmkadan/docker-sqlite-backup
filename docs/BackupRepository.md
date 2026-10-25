@@ -1,22 +1,49 @@
 # BackupRepository
 
-`BackupRepository` serves as the central persistence layer for the docker-sqlite-backup system, encapsulating all database operations related to backup schedules, backup results, rotation policies, restore verifications, and backup jobs. It abstracts the underlying SQLite data store and provides asynchronous methods for creating, reading, updating, and deleting domain entities, along with initialization and health-check capabilities.
+`BackupRepository` (`src/Data/BackupRepository.cs`) is the SQLite persistence layer for backup metadata. It stores backup schedules, backup results, backup jobs, rotation policies, and restore verifications in a single SQLite database file. It implements `IBackupRepository`, and the services in `src/Services` (`BackupService`, `RotationService`, `VerificationService`, `ScheduleService`, and others) depend on that interface. Code should depend on `IBackupRepository` and only construct `BackupRepository` directly at the composition root or in tests.
+
+The class stores metadata only. Backup files themselves are handled by the storage backends.
+
+## Responsibilities
+
+- Create the metadata schema on demand (`InitializeAsync`).
+- Report whether the database is reachable (`HealthCheckAsync`).
+- Provide CRUD for schedules, backup results, and backup jobs.
+- Provide an upsert for the rotation policy of a schedule.
+- Record and read restore verification history.
+- Map between SQLite rows and the domain types in `DockerSqliteBackup.Domain`.
+
+## Storage model
+
+`InitializeAsync` creates these tables with `CREATE TABLE IF NOT EXISTS`:
+
+| Table | Primary key | Notes |
+|-------|-------------|-------|
+| `BackupSchedules` | `Id` | `Name` is `UNIQUE`. |
+| `BackupResults` | `Id` | `ScheduleId` and `BackupJobId` are `NOT NULL`. |
+| `RotationPolicies` | `Id` | `ScheduleId` is `UNIQUE`, so each schedule has at most one policy. |
+| `RestoreVerifications` | `Id` | `BackupResultId` is `NOT NULL`. |
+| `BackupJobs` | `Id` | `ScheduleId` is `NOT NULL`. |
+
+The schema declares foreign keys from results, policies, verifications, and jobs to their parent rows. This class never executes `PRAGMA foreign_keys = ON`, so SQLite does not enforce them on connections it opens unless the environment enables enforcement. See [Notes](#notes).
 
 ## API
 
 ### Constructor
 
 ```csharp
-public BackupRepository(string connectionString)
+public BackupRepository(string connectionString, ILogger<BackupRepository> logger)
 ```
 
-Creates a new instance of the repository configured to use the specified SQLite database.
+Creates a repository that opens a new SQLite connection for each operation.
 
 **Parameters:**
-- `connectionString` — The connection string pointing to the target SQLite database file.
+- `connectionString` — Microsoft.Data.Sqlite connection string, for example `Data Source=/data/backups.db`.
+- `logger` — Logger used for schema, health-check, and error messages.
 
 **Exceptions:**
-- `ArgumentNullException` — Thrown when `connectionString` is null or empty.
+- `ArgumentNullException` — `connectionString` or `logger` is `null`.
+- `ArgumentException` — `connectionString` is an empty string.
 
 ---
 
@@ -26,10 +53,10 @@ Creates a new instance of the repository configured to use the specified SQLite 
 public async Task InitializeAsync()
 ```
 
-Ensures that all required database tables, indexes, and schema objects exist. This method is idempotent and safe to call multiple times; it will not drop or alter existing data.
+Creates the five metadata tables if they do not already exist and logs `Database schema initialized successfully` on success. Existing tables and rows are not modified. The method does not create indexes or apply schema migrations, so changes to an existing table's definition are not applied to an existing database.
 
 **Exceptions:**
-- `SqliteException` — Thrown when the underlying database file cannot be accessed or the schema cannot be applied.
+- `SqliteException` — The database file cannot be opened or a `CREATE TABLE` statement fails. Not caught.
 
 ---
 
@@ -39,374 +66,316 @@ Ensures that all required database tables, indexes, and schema objects exist. Th
 public async Task<bool> HealthCheckAsync()
 ```
 
-Performs a lightweight connectivity and integrity check against the database. Returns `true` if the database is reachable and responds to a simple query; otherwise returns `false`.
+Opens a connection and runs `SELECT 1`. Returns `true` if both succeed.
 
 **Return value:**
-- `bool` — `true` when healthy, `false` otherwise.
+- `bool` — `true` if the database is reachable. `false` otherwise.
 
 **Exceptions:**
-- This method does not throw by design; all errors are caught and result in a `false` return.
+- None. Any exception is logged at `Error` level and converted to `false`.
+
+This check verifies connectivity only. It does not run `PRAGMA integrity_check`; use `IIntegrityCheckerService` for that.
 
 ---
 
-### CreateScheduleAsync
+### Schedule operations
+
+#### CreateScheduleAsync
 
 ```csharp
 public async Task<BackupSchedule> CreateScheduleAsync(BackupSchedule schedule)
 ```
 
-Persists a new backup schedule to the database. The `schedule` object must have its `Id` set to a default value (e.g., `null` or empty); the database assigns a unique identifier upon insertion.
-
-**Parameters:**
-- `schedule` — The `BackupSchedule` entity to persist.
-
-**Return value:**
-- `BackupSchedule` — The same entity with its `Id` populated.
+Inserts `schedule` as a new row and returns the same instance. `BackupSchedule.Id` is a `Guid` that defaults to `Guid.NewGuid()`, so callers normally do not set it.
 
 **Exceptions:**
-- `ArgumentNullException` — Thrown when `schedule` is null.
-- `InvalidOperationException` — Thrown when `schedule.Id` is already set to a non-default value.
+- `ArgumentNullException` — `schedule` is `null`.
+- `SqliteException` — The `Id` already exists, or `Name` duplicates an existing schedule (`UNIQUE` constraint).
 
----
-
-### UpdateScheduleAsync
+#### UpdateScheduleAsync
 
 ```csharp
 public async Task<BackupSchedule> UpdateScheduleAsync(BackupSchedule schedule)
 ```
 
-Updates an existing backup schedule. The entity must have a valid `Id` that corresponds to a row already in the database.
-
-**Parameters:**
-- `schedule` — The `BackupSchedule` entity with updated field values.
-
-**Return value:**
-- `BackupSchedule` — The updated entity as persisted.
+Overwrites every mutable column of the row whose `Id` matches `schedule.Id`, then returns `schedule`. The method does not check whether a row was matched. If no row has that `Id`, nothing is written and the input is still returned.
 
 **Exceptions:**
-- `ArgumentNullException` — Thrown when `schedule` is null.
-- `KeyNotFoundException` — Thrown when no schedule with the given `Id` exists.
+- `ArgumentNullException` — `schedule` is `null`.
 
----
-
-### DeleteScheduleAsync
+#### DeleteScheduleAsync
 
 ```csharp
-public async Task DeleteScheduleAsync(string scheduleId)
+public async Task DeleteScheduleAsync(Guid scheduleId)
 ```
 
-Removes a backup schedule and all associated backup results from the database. This is a cascading delete.
+Deletes the `BackupSchedules` row with the given `Id`. It does not delete related `BackupResults`, `BackupJobs`, or `RotationPolicies` rows. Deleting a missing schedule is a no-op.
 
-**Parameters:**
-- `scheduleId` — The unique identifier of the schedule to delete.
-
-**Exceptions:**
-- `ArgumentNullException` — Thrown when `scheduleId` is null or empty.
-- `KeyNotFoundException` — Thrown when no schedule with the given `scheduleId` exists.
-
----
-
-### GetScheduleAsync
+#### GetScheduleAsync
 
 ```csharp
-public async Task<BackupSchedule?> GetScheduleAsync(string scheduleId)
+public async Task<BackupSchedule?> GetScheduleAsync(Guid scheduleId)
 ```
 
-Retrieves a single backup schedule by its unique identifier. Returns `null` if no matching schedule exists.
+Returns the schedule with the given `Id`, or `null` if none exists.
 
-**Parameters:**
-- `scheduleId` — The unique identifier of the schedule.
-
-**Return value:**
-- `BackupSchedule?` — The matching schedule, or `null`.
-
----
-
-### GetAllSchedulesAsync
+#### GetAllSchedulesAsync
 
 ```csharp
 public async Task<IEnumerable<BackupSchedule>> GetAllSchedulesAsync()
 ```
 
-Returns every backup schedule stored in the database, regardless of its active status.
+Returns every schedule, active or not, ordered by `CreatedAt` descending. Returns an empty collection if there are none.
 
-**Return value:**
-- `IEnumerable<BackupSchedule>` — All schedules, which may be an empty collection.
-
----
-
-### GetActiveSchedulesAsync
+#### GetActiveSchedulesAsync
 
 ```csharp
 public async Task<IEnumerable<BackupSchedule>> GetActiveSchedulesAsync()
 ```
 
-Returns only those backup schedules whose `IsActive` property is set to `true`.
-
-**Return value:**
-- `IEnumerable<BackupSchedule>` — Active schedules, which may be an empty collection.
+Returns schedules with `IsActive = 1`, ordered by `Name` ascending. Returns an empty collection if there are none.
 
 ---
 
-### CreateBackupResultAsync
+### Backup result operations
+
+#### CreateBackupResultAsync
 
 ```csharp
 public async Task<BackupResult> CreateBackupResultAsync(BackupResult result)
 ```
 
-Records a new backup result associated with a schedule. The `result` must reference a valid `ScheduleId` and have a default `Id`.
-
-**Parameters:**
-- `result` — The `BackupResult` entity to persist.
-
-**Return value:**
-- `BackupResult` — The entity with its `Id` assigned.
+Inserts `result` as a new row and returns the same instance. `BackupResult.Id` defaults to `Guid.NewGuid()`.
 
 **Exceptions:**
-- `ArgumentNullException` — Thrown when `result` is null.
-- `InvalidOperationException` — Thrown when `result.Id` is already set or `ScheduleId` does not reference an existing schedule.
+- `ArgumentNullException` — `result` is `null`.
+- `SqliteException` — The `Id` already exists.
 
----
-
-### UpdateBackupResultAsync
+#### UpdateBackupResultAsync
 
 ```csharp
 public async Task<BackupResult> UpdateBackupResultAsync(BackupResult result)
 ```
 
-Updates an existing backup result (e.g., to record completion status, file size, or error messages).
-
-**Parameters:**
-- `result` — The `BackupResult` entity with updated fields.
-
-**Return value:**
-- `BackupResult` — The updated entity.
+Overwrites the mutable columns of the row whose `Id` matches `result.Id` and returns `result`. Like `UpdateScheduleAsync`, it does not report whether a row was matched. `ScheduleId` and `BackupJobId` are not included in the `UPDATE` statement, so they cannot be changed here.
 
 **Exceptions:**
-- `ArgumentNullException` — Thrown when `result` is null.
-- `KeyNotFoundException` — Thrown when no result with the given `Id` exists.
+- `ArgumentNullException` — `result` is `null`.
 
----
-
-### DeleteBackupResultAsync
+#### DeleteBackupResultAsync
 
 ```csharp
-public async Task DeleteBackupResultAsync(string resultId)
+public async Task DeleteBackupResultAsync(Guid resultId)
 ```
 
-Removes a single backup result record. Does not affect the parent schedule.
+Deletes the `BackupResults` row with the given `Id`. Deleting a missing result is a no-op. Verification rows that reference the result are not deleted by this method.
+
+#### GetBackupResultAsync
+
+```csharp
+public async Task<BackupResult?> GetBackupResultAsync(Guid resultId)
+```
+
+Returns the result with the given `Id`, or `null` if none exists.
+
+#### GetBackupHistoryAsync
+
+```csharp
+public async Task<IEnumerable<BackupResult>> GetBackupHistoryAsync(Guid scheduleId, int limit)
+```
+
+Returns up to `limit` results for `scheduleId`, ordered by `StartedAt` descending (newest first). `limit` has no default and is passed to SQLite as `LIMIT`.
 
 **Parameters:**
-- `resultId` — The unique identifier of the result to delete.
-
-**Exceptions:**
-- `ArgumentNullException` — Thrown when `resultId` is null or empty.
-- `KeyNotFoundException` — Thrown when no result with the given `resultId` exists.
+- `scheduleId` — The schedule whose results to return.
+- `limit` — Maximum number of rows to return.
 
 ---
 
-### GetBackupResultAsync
+### Rotation policy operations
+
+#### GetRotationPolicyAsync
 
 ```csharp
-public async Task<BackupResult?> GetBackupResultAsync(string resultId)
+public async Task<RotationPolicy?> GetRotationPolicyAsync(Guid scheduleId)
 ```
 
-Retrieves a single backup result by its identifier.
+Returns the rotation policy for `scheduleId`, or `null` if the schedule has none.
 
-**Parameters:**
-- `resultId` — The unique identifier of the result.
-
-**Return value:**
-- `BackupResult?` — The matching result, or `null`.
-
----
-
-### GetBackupHistoryAsync
-
-```csharp
-public async Task<IEnumerable<BackupResult>> GetBackupHistoryAsync(string scheduleId, int limit = 50)
-```
-
-Returns the most recent backup results for a given schedule, ordered by completion time descending. The `limit` parameter caps the number of returned rows.
-
-**Parameters:**
-- `scheduleId` — The schedule whose history to retrieve.
-- `limit` — Maximum number of results to return (default 50).
-
-**Return value:**
-- `IEnumerable<BackupResult>` — The history entries, which may be empty.
-
-**Exceptions:**
-- `ArgumentNullException` — Thrown when `scheduleId` is null or empty.
-
----
-
-### GetRotationPolicyAsync
-
-```csharp
-public async Task<RotationPolicy?> GetRotationPolicyAsync()
-```
-
-Retrieves the global backup rotation policy. There is at most one policy; returns `null` if none has been saved.
-
-**Return value:**
-- `RotationPolicy?` — The current policy, or `null`.
-
----
-
-### SaveRotationPolicyAsync
+#### SaveRotationPolicyAsync
 
 ```csharp
 public async Task<RotationPolicy> SaveRotationPolicyAsync(RotationPolicy policy)
 ```
 
-Persists the global rotation policy, overwriting any previously saved policy. This is an upsert operation.
+Upserts the policy keyed by `policy.ScheduleId`:
 
-**Parameters:**
-- `policy` — The `RotationPolicy` to save.
+1. Looks up the existing policy for `policy.ScheduleId`.
+2. If one exists, sets `policy.Id` to the existing row's `Id` (this mutates the argument), then updates the row.
+3. Otherwise inserts `policy` using `policy.Id`.
 
-**Return value:**
-- `RotationPolicy` — The saved policy.
+Returns `policy`. The lookup and the write are two separate statements without a transaction, so two concurrent saves for the same schedule can both try to insert and one will fail with a `UNIQUE` violation on `ScheduleId`.
 
 **Exceptions:**
-- `ArgumentNullException` — Thrown when `policy` is null.
+- `ArgumentNullException` — `policy` is `null`.
+- `SqliteException` — A concurrent insert won the race described above.
 
 ---
 
-### SaveRestoreVerificationAsync
+### Restore verification operations
+
+#### SaveRestoreVerificationAsync
 
 ```csharp
 public async Task<RestoreVerification> SaveRestoreVerificationAsync(RestoreVerification verification)
 ```
 
-Records a restore verification attempt. Each call inserts a new row; historical verifications are retained.
-
-**Parameters:**
-- `verification` — The `RestoreVerification` entity to persist.
-
-**Return value:**
-- `RestoreVerification` — The entity with its `Id` assigned.
+Inserts a verification record and returns the same instance. Each call adds a row; existing verifications are never updated.
 
 **Exceptions:**
-- `ArgumentNullException` — Thrown when `verification` is null.
+- `ArgumentNullException` — `verification` is `null`.
+- `SqliteException` — The `Id` already exists.
 
----
-
-### GetVerificationHistoryAsync
+#### GetVerificationHistoryAsync
 
 ```csharp
-public async Task<IEnumerable<RestoreVerification>> GetVerificationHistoryAsync(int limit = 20)
+public async Task<IEnumerable<RestoreVerification>> GetVerificationHistoryAsync(Guid backupResultId)
 ```
 
-Returns the most recent restore verification records, ordered by timestamp descending.
-
-**Parameters:**
-- `limit` — Maximum number of records to return (default 20).
-
-**Return value:**
-- `IEnumerable<RestoreVerification>` — The verification history, which may be empty.
+Returns every verification for `backupResultId`, ordered by `StartedAt` descending. The method has no row limit.
 
 ---
 
-### CreateBackupJobAsync
+### Backup job operations
+
+#### CreateBackupJobAsync
 
 ```csharp
 public async Task<BackupJob> CreateBackupJobAsync(BackupJob job)
 ```
 
-Persists a new backup job record representing a discrete execution of a backup schedule. The `job` must reference a valid `ScheduleId`.
-
-**Parameters:**
-- `job` — The `BackupJob` entity to create.
-
-**Return value:**
-- `BackupJob` — The entity with its `Id` assigned.
+Inserts `job` and returns the same instance. `BackupJob.Id` defaults to `Guid.NewGuid()`.
 
 **Exceptions:**
-- `ArgumentNullException` — Thrown when `job` is null.
-- `InvalidOperationException` — Thrown when `ScheduleId` does not reference an existing schedule.
+- `ArgumentNullException` — `job` is `null`.
+- `SqliteException` — The `Id` already exists.
 
----
-
-### UpdateBackupJobAsync
+#### UpdateBackupJobAsync
 
 ```csharp
 public async Task<BackupJob> UpdateBackupJobAsync(BackupJob job)
 ```
 
-Updates an existing backup job (e.g., to mark it as completed or record progress).
-
-**Parameters:**
-- `job` — The `BackupJob` entity with updated fields.
-
-**Return value:**
-- `BackupJob` — The updated entity.
+Overwrites `Status`, `StartedAt`, `CompletedAt`, `RetryCount`, and `IsProcessing` for the row whose `Id` matches `job.Id`, then returns `job`. Like the other `Update*` methods, it does not report whether a row was matched.
 
 **Exceptions:**
-- `ArgumentNullException` — Thrown when `job` is null.
-- `KeyNotFoundException` — Thrown when no job with the given `Id` exists.
+- `ArgumentNullException` — `job` is `null`.
+
+#### GetBackupJobAsync
+
+```csharp
+public async Task<BackupJob?> GetBackupJobAsync(Guid jobId)
+```
+
+Returns the job with the given `Id`, or `null` if none exists.
 
 ---
 
 ## Usage
 
-### Example 1: Creating a schedule and recording a backup result
+### Example 1: Initialize, create a schedule, and record a backup
 
 ```csharp
-var repo = new BackupRepository("Data Source=backups.db");
-await repo.InitializeAsync();
+using DockerSqliteBackup.Constants;
+using DockerSqliteBackup.Data;
+using DockerSqliteBackup.Domain;
+using Microsoft.Extensions.Logging;
 
-var schedule = new BackupSchedule
+ILogger<BackupRepository> logger = loggerFactory.CreateLogger<BackupRepository>();
+var repository = new BackupRepository("Data Source=/data/backups.db", logger);
+await repository.InitializeAsync();
+
+var schedule = await repository.CreateScheduleAsync(new BackupSchedule
 {
-    Name = "Daily PostgreSQL",
+    Name = "nightly-app-db",
+    DatabasePath = "/data/app.db",
     CronExpression = "0 2 * * *",
-    DatabasePath = "/data/pg.sqlite",
-    IsActive = true
-};
+    RetentionDays = 14
+});
 
-schedule = await repo.CreateScheduleAsync(schedule);
+var job = await repository.CreateBackupJobAsync(new BackupJob
+{
+    ScheduleId = schedule.Id
+});
 
-var result = new BackupResult
+var startedAt = DateTime.UtcNow;
+
+// ... perform the backup ...
+
+await repository.CreateBackupResultAsync(new BackupResult
 {
     ScheduleId = schedule.Id,
-    StartTime = DateTime.UtcNow.AddHours(-1),
-    EndTime = DateTime.UtcNow,
-    FileSizeBytes = 15_728_640,
-    Status = BackupStatus.Success
-};
+    BackupJobId = job.Id,
+    BackupFilePath = "/backups/app-20261025-020000.db.gz",
+    BackupFileSizeBytes = 15_728_640,
+    Checksum = "<sha256 of the backup file>",
+    StartedAt = startedAt,
+    CompletedAt = DateTime.UtcNow,
+    DurationMilliseconds = 120_000,
+    Status = (int)BackupStatus.Success
+});
 
-await repo.CreateBackupResultAsync(result);
+job.Status = (int)BackupStatus.Success;
+job.CompletedAt = DateTime.UtcNow;
+await repository.UpdateBackupJobAsync(job);
 ```
 
-### Example 2: Retrieving active schedules and checking health
+### Example 2: Check health and read recent history
 
 ```csharp
-var repo = new BackupRepository("Data Source=backups.db");
+var repository = new BackupRepository("Data Source=/data/backups.db", logger);
 
-bool isHealthy = await repo.HealthCheckAsync();
-if (!isHealthy)
+if (!await repository.HealthCheckAsync())
 {
     Console.WriteLine("Database is not reachable.");
     return;
 }
 
-IEnumerable<BackupSchedule> activeSchedules = await repo.GetActiveSchedulesAsync();
-
-foreach (var s in activeSchedules)
+foreach (var schedule in await repository.GetActiveSchedulesAsync())
 {
-    var history = await repo.GetBackupHistoryAsync(s.Id, limit: 5);
-    Console.WriteLine($"Schedule '{s.Name}' has {history.Count()} recent results.");
+    var history = (await repository.GetBackupHistoryAsync(schedule.Id, limit: 5)).ToList();
+    Console.WriteLine($"Schedule '{schedule.Name}' has {history.Count} recent results.");
 }
+```
+
+### Example 3: Upsert a rotation policy
+
+```csharp
+var policy = await repository.GetRotationPolicyAsync(schedule.Id)
+    ?? new RotationPolicy { ScheduleId = schedule.Id };
+
+policy.MaxBackupCount = 7;
+
+// Inserts on first call, updates on later calls. Sets policy.Id to the stored Id.
+await repository.SaveRotationPolicyAsync(policy);
 ```
 
 ---
 
 ## Notes
 
-- **Thread safety:** The repository itself does not manage connection pooling or enforce mutual exclusion. SQLite’s serialized mode or external synchronization (e.g., a semaphore) should be employed when multiple threads or processes access the same database file concurrently.
-- **Idempotency of `InitializeAsync`:** Repeated calls are safe and do not alter existing data. This method is suitable for use in application startup routines.
-- **Cascading deletes:** Deleting a schedule via `DeleteScheduleAsync` removes all associated backup results. Backup jobs tied to that schedule are also removed.
-- **Null returns:** `GetScheduleAsync`, `GetBackupResultAsync`, and `GetRotationPolicyAsync` return `null` when no matching record exists. Callers must guard against null references before accessing members of the returned objects.
-- **Default limits:** `GetBackupHistoryAsync` and `GetVerificationHistoryAsync` apply default row limits (50 and 20, respectively) to prevent unbounded result sets. Pass an explicit `limit` to override.
-- **Upsert semantics:** `SaveRotationPolicyAsync` overwrites any existing policy; there is no separate update method. The same upsert behavior applies to `SaveRestoreVerificationAsync` in the sense that each call inserts a new row rather than modifying an existing one.
-- **Entity identity:** Methods that create entities (`CreateScheduleAsync`, `CreateBackupResultAsync`, `CreateBackupJobAsync`, `SaveRestoreVerificationAsync`) expect the entity’s `Id` to be unset. Passing an entity with a pre-populated `Id` will result in an `InvalidOperationException`.
+- **Connections:** Every method opens and disposes its own `SqliteConnection`. The repository holds no connection state, so one instance can be shared, but concurrent writers still contend for SQLite's write lock and can receive `SqliteException` (for example, "database is locked").
+- **Foreign keys:** Because `PRAGMA foreign_keys` is never enabled here, the declared foreign keys are not enforced by this class. Deleting a schedule leaves its results, jobs, and policy in place. Callers that need cascading cleanup must delete those rows explicitly, or enable enforcement on the connection, before relying on it.
+- **Exceptions:** Only `HealthCheckAsync` swallows errors. Every other method lets `SqliteException` propagate to the caller.
+- **Update semantics:** `Update*` methods do not check the affected row count. A stale or wrong `Id` results in a silent no-op that still returns the input object.
+- **Identifiers:** IDs are `Guid` values stored as text. Callers supply them on creation (the default is `Guid.NewGuid()`).
+- **Timestamps:** `DateTime` values are converted with `ToUniversalTime()` before being written. Values read back are always `DateTimeKind.Utc`. Nullable timestamps are stored as `NULL` and read back as `null`.
+- **Empty strings for nulls:** Several nullable text properties (for example `Description`, `Checksum`, `ErrorMessage`, `StackTrace`, `Notes`, `S3ObjectKey`, `NotificationEmails`) are written as `""` when `null`. They are read back as `""`, not `null`.
+- **Null returns:** `GetScheduleAsync`, `GetBackupResultAsync`, `GetRotationPolicyAsync`, and `GetBackupJobAsync` return `null` when no row matches. Check for `null` before accessing members.
+- **Collections:** Methods returning `IEnumerable<T>` materialize the full result into a `List<T>`. `GetBackupHistoryAsync` is the only query with a caller-controlled limit. Use it for large tables.
+
+## Related
+
+- `src/Data/IBackupRepository.cs` — the interface this class implements.
+- `src/Domain/BackupSchedule.cs`, `BackupResult.cs`, `BackupJob.cs`, `RotationPolicy.cs`, `RestoreVerification.cs` — the entities persisted here.
+- `src/Constants/BackupStatus.cs` — values for the `Status` columns.
