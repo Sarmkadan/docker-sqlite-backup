@@ -86,8 +86,9 @@ public class BackupJob
     }
 
     /// <summary>
-    /// Returns a diagnostic string with the job's identifiers, status and timestamps.
+    /// Returns a diagnostic string with the job's identifiers, status, retry progress,
+    /// processing flag, timestamps and whether a result is attached.
     /// </summary>
     /// <returns>A human-readable representation of this backup job.</returns>
-    public override string ToString() => $"BackupJob {{ Id = {Id}, ScheduleId = {ScheduleId}, Status = {Status}, CreatedAt = {CreatedAt}, StartedAt = {StartedAt}, CompletedAt = {CompletedAt} }}";
+    public override string ToString() => $"BackupJob {{ Id = {Id}, ScheduleId = {ScheduleId}, Status = {Status}, Retries = {RetryCount}/{MaxRetries}, IsProcessing = {IsProcessing}, CreatedAt = {CreatedAt}, StartedAt = {StartedAt}, CompletedAt = {CompletedAt}, HasResult = {Result is not null} }}";
 }
