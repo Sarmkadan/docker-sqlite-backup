@@ -202,6 +202,51 @@ Each `BackupSchedule` carries a cron expression (`CronExpression` field) that de
 | `ValidateCronExpression(string)` | Returns `true` if the expression is parseable by Cronos. |
 | `GetNextExecutionTime(BackupSchedule)` | Computes the next occurrence from the schedule's cron expression, or `null` on parse failure. |
 
+## BackupService
+
+`src/Services/BackupService.cs` - implements `IBackupService`. It runs one backup for a `BackupSchedule` and returns a `BackupResult`. It is registered as a singleton by `AddBackupServices`, and `BackupWorker` calls it for each due schedule.
+
+### Purpose and pipeline position
+
+`BackupService` is the file-level step of the backup pipeline. `ScheduleService` decides when a backup is due, and `BackupWorker` calls `ExecuteBackupAsync`. On success, the worker runs verification and rotation, updates `LastBackupAt`, and publishes `BackupCompletedEvent`. On failure, it publishes a failure event. `BackupService` itself does not verify backups, rotate old files, or send notifications.
+
+`ExecuteBackupAsync` runs these steps in order:
+
+1. **Validate** the schedule. A null schedule throws `ArgumentNullException`. An invalid schedule throws `InvalidScheduleException`. A missing database file throws `DatabaseAccessException`.
+2. **Choose a path** of `<AppContext.BaseDirectory>/backups/<schedule name>/backup_<timestamp>.sqlite`. The schedule name is sanitized for use as a directory name. The directory is created if needed.
+3. **Snapshot** the database. Full mode copies the database with the SQLite Online Backup API from a read-only connection. Incremental mode (see below) first checkpoints the WAL.
+4. **Encrypt** the file if `EnableEncryption` is set and a valid key is found (AES-256, `.enc` suffix). The key is read from `BACKUP_ENCRYPTION_KEY`, then from `AppSettings.EncryptionKey`. A missing or invalid key logs a warning or error and the backup continues unencrypted.
+5. **Compress** the file with gzip (`.gz` suffix) if `CompressBackups` is set. If compression fails, the uncompressed file is kept and a warning is logged.
+6. **Checksum** the final file with SHA-256 and record its size.
+7. **Write a manifest** next to the backup as `<backup file>.meta.json`. This is best-effort: a failure is logged and the backup still succeeds.
+8. **Upload** to remote storage if the schedule has a storage configuration that is not `LocalStorageConfiguration`. This goes through `IStorageService.UploadBackupAsync`. Upload errors are not caught, so the backup is marked failed. For S3, `IsStoredInS3` and `S3ObjectKey` are set on the result.
+9. **Persist** the `BackupResult` in a `finally` block through `IBackupRepository.CreateBackupResultAsync`. A persistence failure is logged and not thrown.
+
+If a step throws, the result's status is set to `Failed` with the error message and stack trace, and the exception is rethrown.
+
+### Full and incremental modes
+
+- **Full** (`BackupMode.Full`, the default): every run makes a complete snapshot.
+- **Incremental** (`BackupMode.Incremental`): the service finds the most recent successful full result for the schedule, runs `PRAGMA wal_checkpoint(TRUNCATE)`, and copies the database again. The result's `BaseBackupResultId` is set to that full result. The file is still a complete copy of the current state, not a page-level diff. If no successful full backup exists, the run falls back to a full snapshot and the result's `BackupMode` is set to `Full`.
+
+### Snapshot errors
+
+When the Online Backup API fails, the behavior depends on the SQLite error code:
+
+- `BUSY`, `LOCKED`, `IOERR`, or `NOTFOUND`: the copy is retried with bounded exponential backoff and jitter. After the retries run out, `DatabaseAccessException` is thrown.
+- `CORRUPT`: `DatabaseAccessException` is thrown immediately.
+- Other SQLite errors: the service falls back to `File.Copy`.
+
+### Key public methods
+
+| Method | Description |
+|---|---|
+| `ExecuteBackupAsync(BackupSchedule, CancellationToken)` | Runs the pipeline above and returns the populated `BackupResult`. The token is accepted but not checked or forwarded inside the method, so the worker's timeout does not interrupt a copy that is already running. |
+| `GetBackupHistoryAsync(Guid scheduleId, int limit = 10)` | Returns the schedule's results from the repository, as the repository orders them. |
+| `GetBackupResultAsync(Guid backupResultId)` | Returns one result, or `null` if it does not exist. |
+| `DeleteBackupAsync(Guid backupResultId)` | Deletes the local backup file if it exists and removes the repository record. It does not delete objects in remote storage. Throws `BackupException` if the result does not exist. |
+| `CalculateBackupChecksumAsync(string filePath)` | Returns the lowercase hex SHA-256 of a file. Throws `FileNotFoundException` if the file is missing, and `BackupException` on other read failures. |
+
 ## AuditLogger
 
 `src/Audit/AuditLogger.cs` - records audit trail entries for backup operations, schedule changes, configuration changes, and data access. Each entry is an `AuditEntry` serialized as one JSON object per line. Entries are also emitted through `ILogger<AuditLogger>` as `AUDIT: {json}`.
