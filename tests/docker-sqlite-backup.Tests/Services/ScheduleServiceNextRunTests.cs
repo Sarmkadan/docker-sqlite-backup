@@ -193,25 +193,23 @@ namespace DockerSqliteBackup.Tests.Services
         [Fact]
         public void GetNextExecutionTime_PastScheduledTime_ReturnsNextDay()
         {
-            // Arrange - schedule for 2 AM, but we're testing when it's already past 2 AM
+            // Arrange - schedule for 2 AM, anchored at 3 AM so today's 2 AM has already passed
+            var anchor = new DateTime(2026, 1, 15, 3, 0, 0, DateTimeKind.Utc);
             var schedule = new BackupSchedule
             {
                 Name = "Past Time Backup",
                 DatabasePath = "/data/app.db",
-                CronExpression = "0 2 * * *"
+                CronExpression = "0 2 * * *",
+                NextScheduledRunTime = anchor
             };
 
-            // Force current time to be after 2 AM today
-            var now = DateTime.UtcNow;
-            var mockNow = new DateTime(now.Year, now.Month, now.Day, 3, 0, 0);
-
-            // Act - use reflection to set DateTime.UtcNow for testing
+            // Act
             var nextRun = _sut.GetNextExecutionTime(schedule);
 
             // Assert
             nextRun.Should().NotBeNull();
-            nextRun!.Value.Should().BeAfter(now);
-            nextRun.Value.Day.Should().Be(now.Day + 1); // Should be tomorrow
+            nextRun!.Value.Should().Be(new DateTime(2026, 1, 16, 2, 0, 0));
+            nextRun.Value.Should().BeAfter(anchor);
         }
 
         /// <summary>
