@@ -15,6 +15,11 @@ public class BackupEventPublisher : IBackupEventPublisher
     private readonly ILogger<BackupEventPublisher> _logger;
     private readonly object _subscriberLock = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BackupEventPublisher"/> class.
+    /// </summary>
+    /// <param name="logger">Logger used to report subscription changes and listener failures.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="logger"/> is null.</exception>
     public BackupEventPublisher(ILogger<BackupEventPublisher> logger)
     {
         ArgumentNullException.ThrowIfNull(logger);
