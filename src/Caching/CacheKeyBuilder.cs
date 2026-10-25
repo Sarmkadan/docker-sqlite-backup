@@ -104,9 +104,14 @@ public class CacheKeyBuilder
             .Add("summary")
             .Build();
 
-        public static string ConfigValue(string configKey) => new CacheKeyBuilder()
-            .Add("config")
-            .Add(configKey)
-            .Build();
+        public static string ConfigValue(string configKey)
+        {
+            ArgumentNullException.ThrowIfNull(configKey);
+
+            return new CacheKeyBuilder()
+                .Add("config")
+                .Add(configKey)
+                .Build();
+        }
     }
 }
